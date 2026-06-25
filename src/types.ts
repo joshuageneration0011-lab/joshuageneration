@@ -1,0 +1,77 @@
+export interface Sermon {
+  id: string;
+  title: string;
+  speaker: string;
+  duration: string;
+  thumbnail: string;
+  audioUrl?: string;
+  videoUrl?: string;
+  views: number;
+  date: string;
+  description: string;
+  category: string;
+}
+
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  coverUrl: string;
+  description: string;
+  category: string;
+  downloadUrl?: string;
+  readUrl?: string;
+  chapters?: {
+    title: string;
+    content: string;
+  }[];
+  amazonUrl?: string;
+  selarUrl?: string;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  description: string;
+  imageUrl: string;
+  speakers: string[];
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  author: string;
+  date: string;
+  readTime: string;
+  excerpt: string;
+  imageUrl: string;
+  category: string;
+  content?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
+  slug?: string;
+  isDeleted?: boolean;
+}
+
+export interface Testimony {
+  id: string;
+  name: string;
+  content: string;
+  imageUrl: string;
+  type: 'written' | 'video';
+  date: string;
+}
+
+export interface PrayerRequest {
+  id: string;
+  name: string;
+  request: string;
+  isAnonymous: boolean;
+  isUrgent: boolean;
+  prayerCount: number;
+  date: string;
+}
