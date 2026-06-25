@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { getSavedBlogPosts, saveBlogPosts } from '@/data/blogStore';
-import { getSavedBooks, saveBooks } from '@/data/bookStore';
-import { getSavedSermons, saveSermons } from '@/data/sermonStore';
+import { useState, useEffect } from 'react';
+import { getSavedBlogPosts, saveBlogPost, deleteBlogPost } from '@/data/blogStore';
+import { getSavedBooks, saveBook, deleteBook } from '@/data/bookStore';
+import { getSavedSermons, saveSermon, deleteSermon } from '@/data/sermonStore';
+import { api } from '@/utils/api';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import FeaturedSermons from '@/components/FeaturedSermons';
@@ -32,22 +33,60 @@ export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player
 export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<Page>('home');
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => api.isAuthenticated());
   const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [books, setBooks] = useState<Book[]>(getSavedBooks);
-  const [sermons, setSermons] = useState<Sermon[]>(getSavedSermons);
-  const [posts, setPosts] = useState<BlogPost[]>(getSavedBlogPosts);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [sermons, setSermons] = useState<Sermon[]>([]);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
-  const [mixlrUrl, setMixlrUrl] = useState(() => localStorage.getItem('mixlr_url') || 'https://mixlr.com/users/8375836/embed');
-  const [isRadioActive, setIsRadioActive] = useState(() => localStorage.getItem('radio_active') === 'true');
+  const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
+  const [isRadioActive, setIsRadioActive] = useState(false);
 
-  const handleUpdateRadio = (url: string, active: boolean) => {
+  // Fetch initial data from Backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const loadedSermons = await getSavedSermons();
+        setSermons(loadedSermons);
+      } catch (err) {
+        console.error('Failed to load sermons:', err);
+      }
+
+      try {
+        const loadedBooks = await getSavedBooks();
+        setBooks(loadedBooks);
+      } catch (err) {
+        console.error('Failed to load books:', err);
+      }
+
+      try {
+        const loadedPosts = await getSavedBlogPosts();
+        setPosts(loadedPosts);
+      } catch (err) {
+        console.error('Failed to load posts:', err);
+      }
+
+      try {
+        const radio = await api.getRadio();
+        setMixlrUrl(radio.url);
+        setIsRadioActive(radio.active);
+      } catch (err) {
+        console.error('Failed to load radio settings:', err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleUpdateRadio = async (url: string, active: boolean) => {
     setMixlrUrl(url);
     setIsRadioActive(active);
-    localStorage.setItem('mixlr_url', url);
-    localStorage.setItem('radio_active', String(active));
+    try {
+      await api.saveRadio(url, active);
+    } catch (err) {
+      console.error('Failed to save radio settings:', err);
+    }
   };
 
   const navigate = (page: Page) => {
@@ -86,19 +125,82 @@ export default function App() {
     return (
       <AdminDashboard
         posts={posts}
-        onUpdatePosts={(newPosts) => {
+        onUpdatePosts={async (newPosts) => {
+          if (newPosts.length < posts.length) {
+            const deleted = posts.find(p => !newPosts.some(x => x.id === p.id));
+            if (deleted) {
+              try {
+                await deleteBlogPost(deleted.id);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          } else {
+            const changed = newPosts.find(p => {
+              const original = posts.find(x => x.id === p.id);
+              return !original || JSON.stringify(original) !== JSON.stringify(p);
+            });
+            if (changed) {
+              try {
+                await saveBlogPost(changed);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
           setPosts(newPosts);
-          saveBlogPosts(newPosts);
         }}
         books={books}
-        onUpdateBooks={(newBooks) => {
+        onUpdateBooks={async (newBooks) => {
+          if (newBooks.length < books.length) {
+            const deleted = books.find(b => !newBooks.some(x => x.id === b.id));
+            if (deleted) {
+              try {
+                await deleteBook(deleted.id);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          } else {
+            const changed = newBooks.find(b => {
+              const original = books.find(x => x.id === b.id);
+              return !original || JSON.stringify(original) !== JSON.stringify(b);
+            });
+            if (changed) {
+              try {
+                await saveBook(changed);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
           setBooks(newBooks);
-          saveBooks(newBooks);
         }}
         sermons={sermons}
-        onUpdateSermons={(newSermons) => {
+        onUpdateSermons={async (newSermons) => {
+          if (newSermons.length < sermons.length) {
+            const deleted = sermons.find(s => !newSermons.some(x => x.id === s.id));
+            if (deleted) {
+              try {
+                await deleteSermon(deleted.id);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          } else {
+            const changed = newSermons.find(s => {
+              const original = sermons.find(x => x.id === s.id);
+              return !original || JSON.stringify(original) !== JSON.stringify(s);
+            });
+            if (changed) {
+              try {
+                await saveSermon(changed);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
           setSermons(newSermons);
-          saveSermons(newSermons);
         }}
         mixlrUrl={mixlrUrl}
         isRadioActive={isRadioActive}

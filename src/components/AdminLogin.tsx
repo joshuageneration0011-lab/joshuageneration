@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { api } from '../utils/api';
 
 interface AdminLoginProps {
   onLogin: () => void;
@@ -13,7 +14,7 @@ export default function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -24,15 +25,18 @@ export default function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
 
     setIsLoading(true);
 
-    // Simulate authentication
-    setTimeout(() => {
-      if (email === 'admin@joshuagen.org' && password === 'admin123') {
+    try {
+      const result = await api.login(email, password);
+      if (result.success) {
         onLogin();
       } else {
-        setError('Invalid credentials. Try admin@joshuagen.org / admin123');
+        setError(result.error || 'Invalid credentials. Try admin@joshuagen.org / admin123');
         setIsLoading(false);
       }
-    }, 1200);
+    } catch (err) {
+      setError('Failed to connect to the authentication server.');
+      setIsLoading(false);
+    }
   };
 
   return (

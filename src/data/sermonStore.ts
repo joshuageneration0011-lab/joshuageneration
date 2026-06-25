@@ -1,25 +1,23 @@
-import { sermons as defaultSermons } from './mockData';
+import { api } from '../utils/api';
 import type { Sermon } from '../types';
 
-export const getSavedSermons = (): Sermon[] => {
-  const saved = localStorage.getItem('jg_sermons');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch (e) {
-      console.error('Error parsing saved sermons:', e);
-    }
+export const getSavedSermons = async (): Promise<Sermon[]> => {
+  try {
+    return await api.getSermons();
+  } catch (e) {
+    console.error('Error fetching sermons from API:', e);
+    return [];
   }
-
-  // Initialize store with default sermons
-  localStorage.setItem('jg_sermons', JSON.stringify(defaultSermons));
-  return defaultSermons;
 };
 
-export const saveSermons = (sermons: Sermon[]) => {
-  localStorage.setItem('jg_sermons', JSON.stringify(sermons));
+export const saveSermon = async (sermon: Sermon): Promise<Sermon> => {
+  const saved = await api.saveSermon(sermon);
   window.dispatchEvent(new Event('sermons_updated'));
+  return saved;
+};
+
+export const deleteSermon = async (id: string): Promise<boolean> => {
+  const success = await api.deleteSermon(id);
+  window.dispatchEvent(new Event('sermons_updated'));
+  return success;
 };
