@@ -103,7 +103,6 @@ interface AdminDashboardProps {
   mixlrUrl: string;
   isRadioActive: boolean;
   onUpdateRadio: (url: string, active: boolean) => void;
-  onSignOut?: () => void;
 }
 
 export default function AdminDashboard({ 
@@ -115,8 +114,7 @@ export default function AdminDashboard({
   onUpdateSermons,
   mixlrUrl,
   isRadioActive,
-  onUpdateRadio,
-  onSignOut
+  onUpdateRadio
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -200,10 +198,7 @@ export default function AdminDashboard({
         </nav>
 
         <div className="p-3 border-t border-gray-200">
-          <button 
-            onClick={onSignOut}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-650 hover:bg-red-50 transition-all text-sm font-medium"
-          >
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-sm font-medium">
             <LogOut className="w-4 h-4" />
             {isSidebarOpen && <span>Sign Out</span>}
           </button>

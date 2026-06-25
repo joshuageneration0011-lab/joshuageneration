@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { api } from '../utils/api';
 
 interface AdminLoginProps {
   onLogin: () => void;
@@ -25,14 +24,15 @@ export default function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
 
     setIsLoading(true);
 
-    api.login(email, password)
-      .then(() => {
+    // Simulate authentication
+    setTimeout(() => {
+      if (email === 'admin@joshuagen.org' && password === 'admin123') {
         onLogin();
-      })
-      .catch((err) => {
-        setError(err.message || 'Invalid credentials. Try admin@joshuagen.org / admin123');
+      } else {
+        setError('Invalid credentials. Try admin@joshuagen.org / admin123');
         setIsLoading(false);
-      });
+      }
+    }, 1200);
   };
 
   return (
