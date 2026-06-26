@@ -9,6 +9,7 @@ const navLinks = [
   { name: 'Books', href: '#books', icon: BookOpen, page: 'books' as Page },
   { name: 'Blog', href: '#blog', icon: Library, page: 'blog' as Page },
   { name: 'Events', href: '#events', icon: Gift },
+  { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
 ];
 
 interface NavbarProps {
@@ -32,6 +33,12 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
 
   const handleLinkClick = (link: typeof navLinks[0], e: React.MouseEvent) => {
     console.log('[Navbar] Clicked link:', link.name, 'page:', link.page);
+    if ('external' in link && link.external) {
+      e.preventDefault();
+      setIsOpen(false);
+      window.open(link.href, '_blank', 'noopener,noreferrer');
+      return;
+    }
     e.preventDefault();
     setIsOpen(false);
     if (link.page && onNavigate) {
