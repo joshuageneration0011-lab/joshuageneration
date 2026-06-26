@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { BlogPost, Book, Sermon } from '@/types';
-import { resolveApiUrl } from '@/utils/api';
+import { api, resolveApiUrl } from '@/utils/api';
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events';
 
