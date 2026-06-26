@@ -15,6 +15,19 @@ function getHeaders() {
   return headers;
 }
 
+async function handleResponse(res: Response, defaultError: string) {
+  if (res.status === 401) {
+    localStorage.removeItem('jg_admin_token');
+    window.dispatchEvent(new Event('jg_unauthorized'));
+    throw new Error('Session expired. Please log in again.');
+  }
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || defaultError);
+  }
+  return res;
+}
+
 export const api = {
   // Authentication
   async login(email: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
@@ -56,10 +69,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(sermon),
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to save sermon');
-    }
+    await handleResponse(res, 'Failed to save sermon');
     const data = await res.json();
     return data.item;
   },
@@ -69,10 +79,7 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to delete sermon');
-    }
+    await handleResponse(res, 'Failed to delete sermon');
     return true;
   },
 
@@ -89,10 +96,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(book),
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to save book');
-    }
+    await handleResponse(res, 'Failed to save book');
     const data = await res.json();
     return data.item;
   },
@@ -102,10 +106,7 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to delete book');
-    }
+    await handleResponse(res, 'Failed to delete book');
     return true;
   },
 
@@ -122,10 +123,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(post),
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to save blog post');
-    }
+    await handleResponse(res, 'Failed to save blog post');
     const data = await res.json();
     return data.item;
   },
@@ -135,10 +133,7 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to delete blog post');
-    }
+    await handleResponse(res, 'Failed to delete blog post');
     return true;
   },
 
@@ -155,10 +150,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify({ url, active }),
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to save radio settings');
-    }
+    await handleResponse(res, 'Failed to save radio settings');
     return true;
   },
 
@@ -185,6 +177,12 @@ export const api = {
       }
       
       xhr.onload = () => {
+        if (xhr.status === 401) {
+          localStorage.removeItem('jg_admin_token');
+          window.dispatchEvent(new Event('jg_unauthorized'));
+          reject(new Error('Session expired. Please log in again.'));
+          return;
+        }
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const res = JSON.parse(xhr.responseText);

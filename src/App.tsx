@@ -53,20 +53,30 @@ export default function App() {
   const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
   const [isRadioActive, setIsRadioActive] = useState(false);
 
-  // Sync hash routing on popstate/hashchange
+  // Sync hash routing on popstate/hashchange & handle global auth session expiration
   useEffect(() => {
     const handleHashChange = () => {
       const page = getPageFromHash();
       setCurrentPage(page);
     };
+    const handleUnauthorized = () => {
+      setIsAdminAuthenticated(false);
+      navigate('admin-login');
+      alert('Session expired. Please log in again.');
+    };
+    
     window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('jg_unauthorized', handleUnauthorized);
     
     // Set default hash if not present
     if (!window.location.hash) {
       window.location.hash = 'home';
     }
     
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('jg_unauthorized', handleUnauthorized);
+    };
   }, []);
 
   // Redirect detail views to list views if reloaded with empty state
