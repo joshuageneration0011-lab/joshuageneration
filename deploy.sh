@@ -18,4 +18,9 @@ cd server
 npm install
 pm2 restart joshuagen-backend --update-env
 
+# Copy Nginx config and reload Nginx
+echo "Reloading Nginx..."
+cp /var/www/joshuageneration/nginx.conf /etc/nginx/sites-available/joshuageneration
+nginx -t && systemctl reload nginx
+
 echo "Deployment complete!"
