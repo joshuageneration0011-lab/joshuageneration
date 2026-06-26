@@ -30,9 +30,18 @@ import type { Sermon, Book, BlogPost } from '@/types';
 
 export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate';
 
+const getPageFromHash = (): Page => {
+  const hash = window.location.hash.replace('#', '') as Page;
+  const validPages: Page[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate'];
+  if (validPages.includes(hash)) {
+    return hash;
+  }
+  return 'home';
+};
+
 export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [currentPage, setCurrentPage] = useState<Page>(() => getPageFromHash());
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => api.isAuthenticated());
   const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -43,6 +52,33 @@ export default function App() {
 
   const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
   const [isRadioActive, setIsRadioActive] = useState(false);
+
+  // Sync hash routing on popstate/hashchange
+  useEffect(() => {
+    const handleHashChange = () => {
+      const page = getPageFromHash();
+      setCurrentPage(page);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // Set default hash if not present
+    if (!window.location.hash) {
+      window.location.hash = 'home';
+    }
+    
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Redirect detail views to list views if reloaded with empty state
+  useEffect(() => {
+    if (currentPage === 'sermon-player' && !selectedSermon) {
+      navigate('sermons');
+    } else if (currentPage === 'book-details' && !selectedBook) {
+      navigate('books');
+    } else if (currentPage === 'blog-details' && !selectedPost) {
+      navigate('blog');
+    }
+  }, [currentPage, selectedSermon, selectedBook, selectedPost]);
 
   // Fetch initial data from Backend
   useEffect(() => {
@@ -91,6 +127,7 @@ export default function App() {
 
   const navigate = (page: Page) => {
     console.log('[Routing] Navigating to page:', page);
+    window.location.hash = page;
     setCurrentPage(page);
     window.scrollTo(0, 0);
   };
