@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Calendar, Clock, Share2, Link, Check } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Share2, Link, Check, MessageSquare } from 'lucide-react';
 import type { BlogPost } from '@/types';
 import { updatePageSEO } from '@/utils/seo';
 
@@ -12,6 +12,53 @@ interface BlogPostReaderProps {
 
 export default function BlogPostReader({ posts, post, onBack, onPostSelect }: BlogPostReaderProps) {
   const [copied, setCopied] = useState(false);
+  const [comments, setComments] = useState<{ id: string; name: string; text: string; date: string }[]>([]);
+  const [newCommentName, setNewCommentName] = useState('');
+  const [newCommentText, setNewCommentText] = useState('');
+
+  useEffect(() => {
+    const storageKey = `jg_blog_comments_${post.id}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      setComments(JSON.parse(stored));
+    } else {
+      const initial = [
+        {
+          id: '1',
+          name: 'Sarah Adebayo',
+          text: 'This was such a timely and encouraging word. Thank you for sharing these powerful insights!',
+          date: '2 hours ago'
+        },
+        {
+          id: '2',
+          name: 'Brother David',
+          text: 'Amen! The message on divine authority really resonated with me. God bless the ministry team.',
+          date: 'Yesterday'
+        }
+      ];
+      localStorage.setItem(storageKey, JSON.stringify(initial));
+      setComments(initial);
+    }
+  }, [post.id]);
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentName.trim() || !newCommentText.trim()) return;
+
+    const newComment = {
+      id: Date.now().toString(),
+      name: newCommentName.trim(),
+      text: newCommentText.trim(),
+      date: 'Just now'
+    };
+
+    const updated = [newComment, ...comments];
+    setComments(updated);
+    localStorage.setItem(`jg_blog_comments_${post.id}`, JSON.stringify(updated));
+
+    setNewCommentName('');
+    setNewCommentText('');
+  };
 
   // Dynamic SEO Configuration for the specific blog post article
   useEffect(() => {
@@ -132,6 +179,81 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
                   <Share2 className="w-3.5 h-3.5 text-[#25D366]" />
                   WhatsApp
                 </button>
+              </div>
+            </div>
+
+            {/* Comments Section */}
+            <div className="mt-12 border-t border-gray-100 pt-10">
+              <div className="flex items-center gap-2 mb-8">
+                <MessageSquare className="w-5 h-5 text-royal-blue-600" />
+                <h3 className="text-xl font-bold text-gray-900">
+                  Comments ({comments.length})
+                </h3>
+              </div>
+
+              {/* Comment Form */}
+              <form onSubmit={handleAddComment} className="mb-10 bg-gray-50 border border-gray-100 p-6 rounded-2xl">
+                <h4 className="text-sm font-bold text-gray-900 mb-4">Leave a Comment</h4>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label htmlFor="comment-name" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Your Name</label>
+                    <input
+                      id="comment-name"
+                      type="text"
+                      value={newCommentName}
+                      onChange={(e) => setNewCommentName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm transition-all"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="comment-text" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Your Comment</label>
+                    <textarea
+                      id="comment-text"
+                      rows={4}
+                      value={newCommentText}
+                      onChange={(e) => setNewCommentText(e.target.value)}
+                      placeholder="Write your thoughts..."
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm transition-all resize-none"
+                      required
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={!newCommentName.trim() || !newCommentText.trim()}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-royal-blue-600 to-royal-blue-700 hover:from-royal-blue-700 hover:to-royal-blue-800 disabled:opacity-50 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md shadow-royal-blue-500/10 cursor-pointer"
+                    >
+                      Post Comment
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              {/* Comments List */}
+              <div className="space-y-6">
+                {comments.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No comments yet. Be the first to share your thoughts!</p>
+                ) : (
+                  comments.map((comment) => {
+                    const initials = comment.name ? comment.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                    return (
+                      <div key={comment.id} className="flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
+                          {initials}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
+                            <span className="text-[10px] font-semibold text-gray-400">{comment.date}</span>
+                          </div>
+                          <p className="text-gray-600 text-sm leading-relaxed">{comment.text}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
