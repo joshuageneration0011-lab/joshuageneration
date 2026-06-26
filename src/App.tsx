@@ -133,6 +133,7 @@ export default function App() {
                 await deleteBlogPost(deleted.id);
               } catch (e) {
                 console.error(e);
+                throw e;
               }
             }
           } else {
@@ -145,6 +146,7 @@ export default function App() {
                 await saveBlogPost(changed);
               } catch (e) {
                 console.error(e);
+                throw e;
               }
             }
           }
@@ -159,6 +161,7 @@ export default function App() {
                 await deleteBook(deleted.id);
               } catch (e) {
                 console.error(e);
+                throw e;
               }
             }
           } else {
@@ -171,6 +174,7 @@ export default function App() {
                 await saveBook(changed);
               } catch (e) {
                 console.error(e);
+                throw e;
               }
             }
           }
@@ -185,6 +189,7 @@ export default function App() {
                 await deleteSermon(deleted.id);
               } catch (e) {
                 console.error(e);
+                throw e;
               }
             }
           } else {
@@ -197,6 +202,7 @@ export default function App() {
                 await saveSermon(changed);
               } catch (e) {
                 console.error(e);
+                throw e;
               }
             }
           }

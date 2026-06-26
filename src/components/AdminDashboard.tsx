@@ -591,7 +591,7 @@ function UsersTab() {
 // ====== SERMONS TAB ======
 interface SermonsTabProps {
   sermons: Sermon[];
-  onUpdateSermons: (sermons: Sermon[]) => void;
+  onUpdateSermons: (sermons: Sermon[]) => Promise<void> | void;
 }
 
 function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
@@ -614,6 +614,12 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [audioUploadWarning, setAudioUploadWarning] = useState('');
 
+  // Direct Upload State
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const openNewForm = () => {
     setEditingSermon(null);
     setTitle('');
@@ -628,6 +634,10 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     setThumbnailSourceMode('upload');
     setAudioSourceMode('upload');
     setAudioUploadWarning('');
+    setThumbnailFile(null);
+    setAudioFile(null);
+    setIsUploading(false);
+    setUploadProgress(0);
     setIsFormOpen(true);
   };
 
@@ -642,9 +652,13 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     setThumbnail(sermon.thumbnail);
     setAudioUrl(sermon.audioUrl || '');
     setVideoUrl(sermon.videoUrl || '');
-    setThumbnailSourceMode(sermon.thumbnail && sermon.thumbnail.startsWith('data:') ? 'upload' : 'url');
-    setAudioSourceMode(sermon.audioUrl && sermon.audioUrl.startsWith('data:') ? 'upload' : 'url');
+    setThumbnailSourceMode(sermon.thumbnail && sermon.thumbnail.startsWith('/api/uploads/') ? 'upload' : 'url');
+    setAudioSourceMode(sermon.audioUrl && sermon.audioUrl.startsWith('/api/uploads/') ? 'upload' : 'url');
     setAudioUploadWarning('');
+    setThumbnailFile(null);
+    setAudioFile(null);
+    setIsUploading(false);
+    setUploadProgress(0);
     setIsFormOpen(true);
   };
 
@@ -669,13 +683,8 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setThumbnail(event.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    setThumbnailFile(file);
+    setThumbnail(URL.createObjectURL(file));
   };
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -683,7 +692,6 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     if (!file) return;
 
     setAudioUploadWarning('');
-    // Check for 100MB maximum size limit
     if (file.size > 100 * 1024 * 1024) {
       alert('Audio file exceeds the maximum limit of 100MB. Please select a smaller file.');
       return;
@@ -691,45 +699,71 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
       setAudioUploadWarning('Note: Large audio file selected. Uploading might take a few moments depending on your network speed.');
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setAudioUrl(event.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    setAudioFile(file);
+    setAudioUrl(URL.createObjectURL(file));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !speaker.trim() || !description.trim()) {
       alert('Please fill out all required fields: Title, Speaker, and Description.');
       return;
     }
 
-    const sermonData: Sermon = {
-      id: editingSermon ? editingSermon.id : 's_' + Date.now(),
-      title: title.trim(),
-      speaker: speaker.trim(),
-      category: category.trim(),
-      date: date || new Date().toISOString().split('T')[0],
-      duration: duration.trim() || '45:00',
-      description: description.trim(),
-      thumbnail: thumbnail.trim() || 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
-      audioUrl: audioUrl.trim(),
-      videoUrl: videoUrl.trim(),
-      views: editingSermon ? editingSermon.views : Math.floor(Math.random() * 200) + 50
-    };
+    setIsUploading(true);
+    setUploadProgress(0);
 
-    let updatedSermons: Sermon[];
-    if (editingSermon) {
-      updatedSermons = sermons.map(s => s.id === editingSermon.id ? sermonData : s);
-    } else {
-      updatedSermons = [...sermons, sermonData];
+    try {
+      let finalThumbnail = thumbnail;
+      let finalAudioUrl = audioUrl;
+
+      // 1. Upload Thumbnail if a new file is pending
+      if (thumbnailFile) {
+        setUploadProgress(5);
+        finalThumbnail = await api.uploadFile(thumbnailFile);
+      }
+
+      // 2. Upload Audio if a new file is pending
+      if (audioFile) {
+        setUploadProgress(15);
+        finalAudioUrl = await api.uploadFile(audioFile, (pct) => {
+          const overallProgress = 15 + Math.round((pct * 80) / 100);
+          setUploadProgress(overallProgress);
+        });
+      }
+
+      setUploadProgress(98);
+
+      const sermonData: Sermon = {
+        id: editingSermon ? editingSermon.id : 's_' + Date.now(),
+        title: title.trim(),
+        speaker: speaker.trim(),
+        category: category.trim(),
+        date: date || new Date().toISOString().split('T')[0],
+        duration: duration.trim() || '45:00',
+        description: description.trim(),
+        thumbnail: finalThumbnail.trim() || 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
+        audioUrl: finalAudioUrl.trim(),
+        videoUrl: videoUrl.trim(),
+        views: editingSermon ? editingSermon.views : Math.floor(Math.random() * 200) + 50
+      };
+
+      let updatedSermons: Sermon[];
+      if (editingSermon) {
+        updatedSermons = sermons.map(s => s.id === editingSermon.id ? sermonData : s);
+      } else {
+        updatedSermons = [...sermons, sermonData];
+      }
+
+      await onUpdateSermons(updatedSermons);
+      setIsFormOpen(false);
+    } catch (err: any) {
+      console.error('Failed to create/update sermon:', err);
+      alert(err.message || 'Failed to save sermon. Please try again.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
-
-    onUpdateSermons(updatedSermons);
-    setIsFormOpen(false);
   };
 
   // Stats calculation
@@ -1095,16 +1129,33 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 flex-shrink-0">
-                <button 
-                  type="button" 
-                  onClick={() => setIsFormOpen(false)}
-                  className="px-5 py-2.5 border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-semibold text-gray-600 transition-all"
-                >Cancel</button>
-                <button 
-                  type="submit"
-                  className="px-5 py-2.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-royal-blue-500/20 hover:scale-[1.02] active:scale-100 transition-all"
-                >{editingSermon ? 'Save Changes' : 'Create Sermon'}</button>
+              <div className="pt-4 border-t border-gray-100 flex-shrink-0">
+                {isUploading ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-gray-605">
+                      <span>Uploading media files...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-royal-blue-600 transition-all duration-300 rounded-full" 
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-end gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsFormOpen(false)}
+                      className="px-5 py-2.5 border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-semibold text-gray-600 transition-all"
+                    >Cancel</button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-royal-blue-500/20 hover:scale-[1.02] active:scale-100 transition-all"
+                    >{editingSermon ? 'Save Changes' : 'Create Sermon'}</button>
+                  </div>
+                )}
               </div>
             </form>
           </div>

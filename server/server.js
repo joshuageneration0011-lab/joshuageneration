@@ -522,6 +522,40 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST Upload (Direct binary file streaming)
+  if (pathname === '/api/upload' && method === 'POST') {
+    try {
+      const filename = parsedUrl.searchParams.get('filename') || 'upload';
+      const ext = path.extname(filename).toLowerCase();
+      const cleanFilename = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+      
+      const uploadDir = path.join(DATA_DIR, 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      const filePath = path.join(uploadDir, cleanFilename);
+      const fileStream = fs.createWriteStream(filePath);
+      
+      req.pipe(fileStream);
+      
+      req.on('end', () => {
+        console.log(`Saved direct binary upload to ${filePath}`);
+        sendJson(res, 200, { url: `/api/uploads/${cleanFilename}` });
+      });
+      
+      req.on('error', (err) => {
+        console.error('Error receiving binary upload:', err);
+        try { fs.unlinkSync(filePath); } catch (e) {}
+        sendJson(res, 500, { error: 'Failed to write upload stream' });
+      });
+    } catch (e) {
+      console.error('Upload handler exception:', e);
+      sendJson(res, 500, { error: 'Upload failed' });
+    }
+    return;
+  }
+
   // POST Sermons (Save or Update)
   if (pathname === '/api/sermons' && method === 'POST') {
     try {

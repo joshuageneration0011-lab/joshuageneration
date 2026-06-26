@@ -160,6 +160,49 @@ export const api = {
       throw new Error(errData.error || 'Failed to save radio settings');
     }
     return true;
+  },
+
+  uploadFile(file: File, onProgress?: (pct: number) => void): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const url = `${API_BASE_URL}/api/upload?filename=${encodeURIComponent(file.name)}`;
+      
+      xhr.open('POST', url, true);
+      
+      const token = localStorage.getItem('jg_admin_token');
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentage = Math.round((e.loaded * 100) / e.total);
+            onProgress(percentage);
+          }
+        });
+      }
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const res = JSON.parse(xhr.responseText);
+            resolve(res.url);
+          } catch (e) {
+            reject(new Error('Invalid upload response'));
+          }
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      };
+      
+      xhr.onerror = () => {
+        reject(new Error('Network error during upload'));
+      };
+      
+      xhr.send(file);
+    });
   }
 };
 
