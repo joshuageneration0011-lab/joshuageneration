@@ -545,76 +545,82 @@ const server = http.createServer(async (req, res) => {
 
       // Check and handle base64 uploads for audioUrl
       if (item.audioUrl && item.audioUrl.startsWith('data:')) {
-        const matches = item.audioUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          // Delete old audio file if it was locally uploaded
-          if (existingSermon) {
-            const oldAudio = existingSermon.audioUrl || existingSermon.audio_url;
-            if (oldAudio && oldAudio.startsWith('/api/uploads/')) {
-              const oldPath = path.join(DATA_DIR, 'uploads', path.basename(oldAudio));
-              if (fs.existsSync(oldPath)) {
-                try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old audio file', e); }
+        const commaIndex = item.audioUrl.indexOf(',');
+        if (commaIndex !== -1) {
+          const prefix = item.audioUrl.substring(0, commaIndex);
+          const base64Data = item.audioUrl.substring(commaIndex + 1);
+          const mimeMatch = prefix.match(/data:([^;]+);base64/);
+          if (mimeMatch) {
+            const mimeType = mimeMatch[1];
+            // Delete old audio file if it was locally uploaded
+            if (existingSermon) {
+              const oldAudio = existingSermon.audioUrl || existingSermon.audio_url;
+              if (oldAudio && oldAudio.startsWith('/api/uploads/')) {
+                const oldPath = path.join(DATA_DIR, 'uploads', path.basename(oldAudio));
+                if (fs.existsSync(oldPath)) {
+                  try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old audio file', e); }
+                }
               }
             }
+
+            const buffer = Buffer.from(base64Data, 'base64');
+            let ext = '.mp3';
+            if (mimeType.includes('wav')) ext = '.wav';
+            else if (mimeType.includes('ogg')) ext = '.ogg';
+            else if (mimeType.includes('aac')) ext = '.aac';
+            else if (mimeType.includes('m4a') || mimeType.includes('x-m4a')) ext = '.m4a';
+
+            const uploadDir = path.join(DATA_DIR, 'uploads');
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            const filename = `audio_${item.id}_${Date.now()}${ext}`;
+            const filepath = path.join(uploadDir, filename);
+            fs.writeFileSync(filepath, buffer);
+            item.audioUrl = `/api/uploads/${filename}`;
+            console.log(`Saved audio file to ${filepath}`);
           }
-
-          const mimeType = matches[1];
-          const base64Data = matches[2];
-          const buffer = Buffer.from(base64Data, 'base64');
-          
-          let ext = '.mp3';
-          if (mimeType.includes('wav')) ext = '.wav';
-          else if (mimeType.includes('ogg')) ext = '.ogg';
-          else if (mimeType.includes('aac')) ext = '.aac';
-          else if (mimeType.includes('m4a') || mimeType.includes('x-m4a')) ext = '.m4a';
-
-          const uploadDir = path.join(DATA_DIR, 'uploads');
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
-
-          const filename = `audio_${item.id}_${Date.now()}${ext}`;
-          const filepath = path.join(uploadDir, filename);
-          fs.writeFileSync(filepath, buffer);
-          item.audioUrl = `/api/uploads/${filename}`;
-          console.log(`Saved audio file to ${filepath}`);
         }
       }
 
       // Check and handle base64 uploads for thumbnail
       if (item.thumbnail && item.thumbnail.startsWith('data:')) {
-        const matches = item.thumbnail.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          // Delete old thumbnail file if it was locally uploaded
-          if (existingSermon) {
-            const oldThumb = existingSermon.thumbnail || existingSermon.thumbnail_url;
-            if (oldThumb && oldThumb.startsWith('/api/uploads/')) {
-              const oldPath = path.join(DATA_DIR, 'uploads', path.basename(oldThumb));
-              if (fs.existsSync(oldPath)) {
-                try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old thumbnail file', e); }
+        const commaIndex = item.thumbnail.indexOf(',');
+        if (commaIndex !== -1) {
+          const prefix = item.thumbnail.substring(0, commaIndex);
+          const base64Data = item.thumbnail.substring(commaIndex + 1);
+          const mimeMatch = prefix.match(/data:([^;]+);base64/);
+          if (mimeMatch) {
+            const mimeType = mimeMatch[1];
+            // Delete old thumbnail file if it was locally uploaded
+            if (existingSermon) {
+              const oldThumb = existingSermon.thumbnail || existingSermon.thumbnail_url;
+              if (oldThumb && oldThumb.startsWith('/api/uploads/')) {
+                const oldPath = path.join(DATA_DIR, 'uploads', path.basename(oldThumb));
+                if (fs.existsSync(oldPath)) {
+                  try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old thumbnail file', e); }
+                }
               }
             }
+
+            const buffer = Buffer.from(base64Data, 'base64');
+            let ext = '.jpg';
+            if (mimeType.includes('png')) ext = '.png';
+            else if (mimeType.includes('webp')) ext = '.webp';
+            else if (mimeType.includes('gif')) ext = '.gif';
+
+            const uploadDir = path.join(DATA_DIR, 'uploads');
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            const filename = `thumb_${item.id}_${Date.now()}${ext}`;
+            const filepath = path.join(uploadDir, filename);
+            fs.writeFileSync(filepath, buffer);
+            item.thumbnail = `/api/uploads/${filename}`;
+            console.log(`Saved thumbnail file to ${filepath}`);
           }
-
-          const mimeType = matches[1];
-          const base64Data = matches[2];
-          const buffer = Buffer.from(base64Data, 'base64');
-          
-          let ext = '.jpg';
-          if (mimeType.includes('png')) ext = '.png';
-          else if (mimeType.includes('webp')) ext = '.webp';
-          else if (mimeType.includes('gif')) ext = '.gif';
-
-          const uploadDir = path.join(DATA_DIR, 'uploads');
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
-
-          const filename = `thumb_${item.id}_${Date.now()}${ext}`;
-          const filepath = path.join(uploadDir, filename);
-          fs.writeFileSync(filepath, buffer);
-          item.thumbnail = `/api/uploads/${filename}`;
-          console.log(`Saved thumbnail file to ${filepath}`);
         }
       }
 
