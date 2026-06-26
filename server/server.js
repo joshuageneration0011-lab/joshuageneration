@@ -302,6 +302,8 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
   const method = req.method;
 
+  console.log(`[${new Date().toISOString()}] ${method} ${pathname}`);
+
   // Handle CORS Preflight Options
   if (method === 'OPTIONS') {
     res.writeHead(204, {
