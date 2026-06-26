@@ -21,6 +21,10 @@ try {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
+  const uploadsDir = path.join(DATA_DIR, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
 }
 
 const SERMONS_FILE = path.join(DATA_DIR, 'sermons.json');
@@ -456,6 +460,59 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET Uploaded Files (Audio & Images)
+  if (pathname.startsWith('/api/uploads/') && method === 'GET') {
+    try {
+      const filename = path.basename(pathname);
+      const filePath = path.join(DATA_DIR, 'uploads', filename);
+      if (fs.existsSync(filePath)) {
+        const ext = path.extname(filename).toLowerCase();
+        let contentType = 'application/octet-stream';
+        if (ext === '.mp3') contentType = 'audio/mpeg';
+        else if (ext === '.wav') contentType = 'audio/wav';
+        else if (ext === '.ogg') contentType = 'audio/ogg';
+        else if (ext === '.aac') contentType = 'audio/aac';
+        else if (ext === '.m4a') contentType = 'audio/x-m4a';
+        else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+        else if (ext === '.png') contentType = 'image/png';
+        else if (ext === '.webp') contentType = 'image/webp';
+        else if (ext === '.gif') contentType = 'image/gif';
+
+        const stat = fs.statSync(filePath);
+        const range = req.headers.range;
+
+        if (range) {
+          const parts = range.replace(/bytes=/, "").split("-");
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+          const chunksize = (end - start) + 1;
+          const file = fs.createReadStream(filePath, { start, end });
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunksize,
+            'Content-Type': contentType,
+            'Access-Control-Allow-Origin': '*'
+          });
+          file.pipe(res);
+        } else {
+          res.writeHead(200, {
+            'Content-Length': stat.size,
+            'Content-Type': contentType,
+            'Access-Control-Allow-Origin': '*',
+            'Accept-Ranges': 'bytes'
+          });
+          fs.createReadStream(filePath).pipe(res);
+        }
+      } else {
+        sendJson(res, 404, { error: 'File not found' });
+      }
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to retrieve file' });
+    }
+    return;
+  }
+
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
   const user = getAuthenticatedUser(req);
   if (!user) {
@@ -470,6 +527,95 @@ const server = http.createServer(async (req, res) => {
       if (!item.id || !item.title || !item.speaker) {
         sendJson(res, 400, { error: 'Sermon id, title and speaker are required' });
         return;
+      }
+
+      // Get existing sermon if any to clean up replaced uploads
+      let existingSermon = null;
+      if (pool) {
+        const result = await pool.query('SELECT audio_url, thumbnail FROM sermons WHERE id = $1', [item.id]);
+        if (result.rowCount > 0) {
+          existingSermon = result.rows[0];
+        }
+      } else {
+        if (fs.existsSync(SERMONS_FILE)) {
+          const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+          existingSermon = data.find(x => x.id === item.id);
+        }
+      }
+
+      // Check and handle base64 uploads for audioUrl
+      if (item.audioUrl && item.audioUrl.startsWith('data:')) {
+        const matches = item.audioUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          // Delete old audio file if it was locally uploaded
+          if (existingSermon) {
+            const oldAudio = existingSermon.audioUrl || existingSermon.audio_url;
+            if (oldAudio && oldAudio.startsWith('/api/uploads/')) {
+              const oldPath = path.join(DATA_DIR, 'uploads', path.basename(oldAudio));
+              if (fs.existsSync(oldPath)) {
+                try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old audio file', e); }
+              }
+            }
+          }
+
+          const mimeType = matches[1];
+          const base64Data = matches[2];
+          const buffer = Buffer.from(base64Data, 'base64');
+          
+          let ext = '.mp3';
+          if (mimeType.includes('wav')) ext = '.wav';
+          else if (mimeType.includes('ogg')) ext = '.ogg';
+          else if (mimeType.includes('aac')) ext = '.aac';
+          else if (mimeType.includes('m4a') || mimeType.includes('x-m4a')) ext = '.m4a';
+
+          const uploadDir = path.join(DATA_DIR, 'uploads');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+
+          const filename = `audio_${item.id}_${Date.now()}${ext}`;
+          const filepath = path.join(uploadDir, filename);
+          fs.writeFileSync(filepath, buffer);
+          item.audioUrl = `/api/uploads/${filename}`;
+          console.log(`Saved audio file to ${filepath}`);
+        }
+      }
+
+      // Check and handle base64 uploads for thumbnail
+      if (item.thumbnail && item.thumbnail.startsWith('data:')) {
+        const matches = item.thumbnail.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          // Delete old thumbnail file if it was locally uploaded
+          if (existingSermon) {
+            const oldThumb = existingSermon.thumbnail || existingSermon.thumbnail_url;
+            if (oldThumb && oldThumb.startsWith('/api/uploads/')) {
+              const oldPath = path.join(DATA_DIR, 'uploads', path.basename(oldThumb));
+              if (fs.existsSync(oldPath)) {
+                try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete old thumbnail file', e); }
+              }
+            }
+          }
+
+          const mimeType = matches[1];
+          const base64Data = matches[2];
+          const buffer = Buffer.from(base64Data, 'base64');
+          
+          let ext = '.jpg';
+          if (mimeType.includes('png')) ext = '.png';
+          else if (mimeType.includes('webp')) ext = '.webp';
+          else if (mimeType.includes('gif')) ext = '.gif';
+
+          const uploadDir = path.join(DATA_DIR, 'uploads');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+
+          const filename = `thumb_${item.id}_${Date.now()}${ext}`;
+          const filepath = path.join(uploadDir, filename);
+          fs.writeFileSync(filepath, buffer);
+          item.thumbnail = `/api/uploads/${filename}`;
+          console.log(`Saved thumbnail file to ${filepath}`);
+        }
       }
 
       if (pool) {
@@ -510,6 +656,36 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/api/sermons/') && method === 'DELETE') {
     try {
       const id = pathname.substring('/api/sermons/'.length);
+
+      // Check if we need to clean up local uploads
+      let sermon = null;
+      if (pool) {
+        const result = await pool.query('SELECT audio_url, thumbnail FROM sermons WHERE id = $1', [id]);
+        if (result.rowCount > 0) {
+          sermon = result.rows[0];
+        }
+      } else {
+        const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+        sermon = data.find(x => x.id === id);
+      }
+
+      if (sermon) {
+        const audioUrl = sermon.audioUrl || sermon.audio_url;
+        const thumbnailUrl = sermon.thumbnail || sermon.thumbnail_url;
+        if (audioUrl && audioUrl.startsWith('/api/uploads/')) {
+          const filepath = path.join(DATA_DIR, 'uploads', path.basename(audioUrl));
+          if (fs.existsSync(filepath)) {
+            try { fs.unlinkSync(filepath); } catch (e) { console.error('Failed to delete audio file', e); }
+          }
+        }
+        if (thumbnailUrl && thumbnailUrl.startsWith('/api/uploads/')) {
+          const filepath = path.join(DATA_DIR, 'uploads', path.basename(thumbnailUrl));
+          if (fs.existsSync(filepath)) {
+            try { fs.unlinkSync(filepath); } catch (e) { console.error('Failed to delete thumbnail file', e); }
+          }
+        }
+      }
+
       if (pool) {
         await pool.query('DELETE FROM sermons WHERE id = $1', [id]);
       } else {

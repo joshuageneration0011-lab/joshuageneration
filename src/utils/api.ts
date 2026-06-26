@@ -162,3 +162,11 @@ export const api = {
     return true;
   }
 };
+
+export function resolveApiUrl(url: string | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('/') && !url.startsWith('//')) {
+    return `${API_BASE_URL}${url}`;
+  }
+  return url;
+}

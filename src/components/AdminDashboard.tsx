@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { BlogPost, Book, Sermon } from '@/types';
+import { resolveApiUrl } from '@/utils/api';
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events';
 
@@ -682,12 +683,12 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     if (!file) return;
 
     setAudioUploadWarning('');
-    // Warn about browser localstorage capacity
-    if (file.size > 8 * 1024 * 1024) {
-      alert('File exceeds 8MB. Local browser storage capacity is limited. We highly recommend using a Web URL link for longer sermons.');
+    // Check for 100MB maximum size limit
+    if (file.size > 100 * 1024 * 1024) {
+      alert('Audio file exceeds the maximum limit of 100MB. Please select a smaller file.');
       return;
-    } else if (file.size > 3.5 * 1024 * 1024) {
-      setAudioUploadWarning('Warning: Audio file size is > 3.5MB. Storing large files in localStorage might run out of capacity.');
+    } else if (file.size > 50 * 1024 * 1024) {
+      setAudioUploadWarning('Note: Large audio file selected. Uploading might take a few moments depending on your network speed.');
     }
 
     const reader = new FileReader();
@@ -812,7 +813,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                 <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <img src={s.thumbnail} alt={s.title} className="w-12 aspect-[16/10] object-cover rounded-lg shadow-sm border border-gray-100 flex-shrink-0" />
+                      <img src={resolveApiUrl(s.thumbnail)} alt={s.title} className="w-12 aspect-[16/10] object-cover rounded-lg shadow-sm border border-gray-100 flex-shrink-0" />
                       <div className="min-w-0">
                         <p className="text-gray-900 text-sm font-semibold truncate max-w-[240px]">{s.title}</p>
                         <p className="text-gray-500 text-[10px] truncate max-w-[240px]">{s.speaker}</p>
@@ -1003,7 +1004,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
 
                 {thumbnail && (
                   <div className="flex items-center gap-3 p-2 rounded-xl border border-gray-100 bg-white shadow-sm max-w-xs">
-                    <img src={thumbnail} alt="Thumbnail preview" className="w-16 aspect-[16/10] object-cover rounded-lg shadow-sm" />
+                    <img src={resolveApiUrl(thumbnail)} alt="Thumbnail preview" className="w-16 aspect-[16/10] object-cover rounded-lg shadow-sm" />
                     <button 
                       type="button" 
                       onClick={() => setThumbnail('')}
@@ -1070,7 +1071,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <audio src={audioUrl} controls className="h-8 max-w-[160px] sm:max-w-none accent-royal-blue-600" />
+                      <audio src={resolveApiUrl(audioUrl)} controls className="h-8 max-w-[160px] sm:max-w-none accent-royal-blue-600" />
                       <button 
                         type="button" 
                         onClick={() => setAudioUrl('')}

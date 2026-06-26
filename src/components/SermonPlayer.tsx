@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
+import { resolveApiUrl } from '@/utils/api';
 
 interface SermonPlayerProps {
   sermons: Sermon[];
@@ -153,7 +154,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
               {/* Audio Element (hidden) */}
               <audio
                 ref={audioRef}
-                src={sermon.audioUrl}
+                src={resolveApiUrl(sermon.audioUrl)}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={handleMediaEnd}
@@ -398,7 +399,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                   >
                     <div className="w-20 aspect-video rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
                       <img
-                        src={rel.thumbnail}
+                        src={resolveApiUrl(rel.thumbnail)}
                         alt={rel.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
