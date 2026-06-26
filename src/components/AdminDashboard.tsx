@@ -142,7 +142,7 @@ export default function AdminDashboard({
     <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        'fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300',
+        'hidden lg:flex fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex-col transition-transform duration-300',
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-16'
       )}>
         <div className="p-4 flex items-center justify-between border-b border-gray-200">
