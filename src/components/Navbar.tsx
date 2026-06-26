@@ -252,7 +252,7 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
             >
               <div className="flex items-center justify-center gap-2">
                 <Gift className="w-4 h-4" />
-                Give Now
+                Click here to Give
               </div>
             </button>
           </div>
