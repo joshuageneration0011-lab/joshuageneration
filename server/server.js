@@ -32,6 +32,7 @@ const BOOKS_FILE = path.join(DATA_DIR, 'books.json');
 const BLOG_FILE = path.join(DATA_DIR, 'blog_posts.json');
 const RADIO_FILE = path.join(DATA_DIR, 'radio.json');
 const CREDENTIALS_FILE = path.join(DATA_DIR, 'credentials.json');
+const DONATIONS_FILE = path.join(DATA_DIR, 'donations.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 
 // In-memory sessions store
@@ -91,6 +92,10 @@ function initLocalData() {
   if (!fs.existsSync(RADIO_FILE)) {
     fs.writeFileSync(RADIO_FILE, JSON.stringify(defaults.radio, null, 2), 'utf-8');
     console.log('Initialized local radio settings.');
+  }
+  if (!fs.existsSync(DONATIONS_FILE)) {
+    fs.writeFileSync(DONATIONS_FILE, JSON.stringify([], null, 2), 'utf-8');
+    console.log('Initialized local donations database.');
   }
   if (!fs.existsSync(CREDENTIALS_FILE)) {
     const { salt, hash } = hashPassword('admin123'); // Default password: admin123
@@ -172,6 +177,19 @@ async function initDb() {
           username VARCHAR PRIMARY KEY,
           salt VARCHAR NOT NULL,
           hash VARCHAR NOT NULL
+        );
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS donations (
+          id VARCHAR PRIMARY KEY,
+          donor VARCHAR NOT NULL,
+          email VARCHAR NOT NULL,
+          amount REAL NOT NULL,
+          purpose VARCHAR NOT NULL,
+          date VARCHAR NOT NULL,
+          method VARCHAR NOT NULL,
+          frequency VARCHAR NOT NULL
         );
       `);
 
@@ -412,6 +430,47 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST Create Donation (Public)
+  if (pathname === '/api/donations' && method === 'POST') {
+    try {
+      const { donor, email, amount, purpose, method: payMethod, frequency } = await getJsonBody(req);
+      if (!donor || !email || !amount || !purpose) {
+        sendJson(res, 400, { error: 'Required fields missing: donor, email, amount, purpose' });
+        return;
+      }
+      
+      const randomNum = Math.floor(100000 + Math.random() * 900000);
+      const donation = {
+        id: `JG-TXN-${randomNum}`,
+        donor,
+        email,
+        amount: Number(amount),
+        purpose,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        method: payMethod || 'Credit Card',
+        frequency: frequency || 'one-time'
+      };
+
+      if (pool) {
+        await pool.query(
+          `INSERT INTO donations (id, donor, email, amount, purpose, date, method, frequency)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [donation.id, donation.donor, donation.email, donation.amount, donation.purpose, donation.date, donation.method, donation.frequency]
+        );
+      } else {
+        const donations = JSON.parse(fs.readFileSync(DONATIONS_FILE, 'utf-8'));
+        donations.unshift(donation);
+        fs.writeFileSync(DONATIONS_FILE, JSON.stringify(donations, null, 2), 'utf-8');
+      }
+
+      sendJson(res, 200, donation);
+    } catch (e) {
+      console.error('Failed to create donation:', e);
+      sendJson(res, 500, { error: 'Failed to create donation' });
+    }
+    return;
+  }
+
   // GET Books
   if (pathname === '/api/books' && method === 'GET') {
     try {
@@ -546,6 +605,33 @@ const server = http.createServer(async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) {
     sendJson(res, 401, { error: 'Unauthorized admin access' });
+    return;
+  }
+
+  // GET Donations (Admin only)
+  if (pathname === '/api/donations' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM donations ORDER BY id DESC');
+        const donations = result.rows.map(row => ({
+          id: row.id,
+          donor: row.donor,
+          email: row.email,
+          amount: row.amount,
+          purpose: row.purpose,
+          date: row.date,
+          method: row.method,
+          frequency: row.frequency
+        }));
+        sendJson(res, 200, donations);
+      } else {
+        const donations = JSON.parse(fs.readFileSync(DONATIONS_FILE, 'utf-8'));
+        sendJson(res, 200, donations);
+      }
+    } catch (e) {
+      console.error('Failed to retrieve donations:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve donations' });
+    }
     return;
   }
 

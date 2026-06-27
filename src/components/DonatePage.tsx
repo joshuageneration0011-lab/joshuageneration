@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Gift, Heart, CreditCard, CheckCircle2, ArrowLeft, Mail, User, ShieldCheck, Sparkles, AlertCircle, Crown, Globe } from 'lucide-react';
-
+import { api } from '../utils/api';
 interface DonatePageProps {
   onBack: () => void;
 }
@@ -148,18 +148,26 @@ export default function DonatePage({ onBack }: DonatePageProps) {
     }
   };
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateStep2()) {
       setIsProcessing(true);
-      
-      // Simulate API call
-      setTimeout(() => {
-        setIsProcessing(false);
-        const randomNum = Math.floor(100000 + Math.random() * 900000);
-        setReceiptId(`JG-TXN-${randomNum}`);
+      try {
+        const donation = await api.createDonation({
+          donor: name,
+          email,
+          amount: getFinalAmount(),
+          purpose: cause,
+          method: 'Credit Card',
+          frequency
+        });
+        setReceiptId(donation.id);
         setStep(3);
-      }, 2000);
+      } catch (err: any) {
+        setErrors(prev => ({ ...prev, payment: err.message || 'Payment failed' }));
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -245,7 +253,7 @@ export default function DonatePage({ onBack }: DonatePageProps) {
                   {/* Prophet Offering Card */}
                   <button
                     type="button"
-                    onClick={() => handleCategorySelect('Prophet Offering')}
+                    onClick={() => handleCategorySelect('Prophetic Offering')}
                     className="group relative flex flex-col items-center text-center p-8 rounded-2xl border-2 border-gold-300 bg-gradient-to-br from-gold-50 to-amber-50 hover:border-gold-500 hover:shadow-xl hover:shadow-gold-200/50 hover:scale-[1.03] transition-all duration-300 overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-gold-400/5 to-amber-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -254,7 +262,7 @@ export default function DonatePage({ onBack }: DonatePageProps) {
                         <Crown className="w-8 h-8 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">Prophet Offering</h4>
+                        <h4 className="text-lg font-bold text-gray-800 mb-1">Prophetic Offering</h4>
                         <p className="text-xs text-gray-500 leading-relaxed">
                           Honor the prophetic ministry and support the anointed work of the prophet in your life.
                         </p>
@@ -268,7 +276,7 @@ export default function DonatePage({ onBack }: DonatePageProps) {
                   {/* Mission / Outreach Card */}
                   <button
                     type="button"
-                    onClick={() => handleCategorySelect('Mission/Outreach')}
+                    onClick={() => handleCategorySelect('Mission / Outreach')}
                     className="group relative flex flex-col items-center text-center p-8 rounded-2xl border-2 border-royal-blue-200 bg-gradient-to-br from-royal-blue-50 to-blue-50 hover:border-royal-blue-500 hover:shadow-xl hover:shadow-royal-blue-200/50 hover:scale-[1.03] transition-all duration-300 overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-royal-blue-400/5 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -300,8 +308,8 @@ export default function DonatePage({ onBack }: DonatePageProps) {
               <form onSubmit={handleNextStep} className="space-y-6 animate-in">
                 {/* Selected Category Badge */}
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cause === 'Prophet Offering' ? 'bg-gold-500' : 'bg-royal-blue-600'}`}>
-                    {cause === 'Prophet Offering' ? <Crown className="w-4 h-4 text-white" /> : <Globe className="w-4 h-4 text-white" />}
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cause === 'Prophetic Offering' ? 'bg-gold-500' : 'bg-royal-blue-600'}`}>
+                    {cause === 'Prophetic Offering' ? <Crown className="w-4 h-4 text-white" /> : <Globe className="w-4 h-4 text-white" />}
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-gray-400 font-medium">Giving to</p>
@@ -498,6 +506,13 @@ export default function DonatePage({ onBack }: DonatePageProps) {
                     </div>
                   </div>
                 </div>
+
+                {errors.payment && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-medium">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errors.payment}</span>
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-2">
                   <button

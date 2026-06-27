@@ -1,4 +1,4 @@
-import type { Sermon, Book, BlogPost } from '../types';
+import type { Sermon, Book, BlogPost, Donation } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
   ? import.meta.env.VITE_API_BASE_URL
@@ -210,6 +210,25 @@ export const api = {
     if (!res.ok) throw new Error('Failed to increment views');
     const data = await res.json();
     return data.views;
+  },
+
+  async createDonation(donation: Omit<Donation, 'id' | 'date'>): Promise<Donation> {
+    const res = await fetch(`${API_BASE_URL}/api/donations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(donation)
+    });
+    return handleResponse(res, 'Failed to create donation');
+  },
+
+  async getDonations(): Promise<Donation[]> {
+    const res = await fetch(`${API_BASE_URL}/api/donations`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse(res, 'Failed to retrieve donations');
   }
 };
 

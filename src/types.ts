@@ -75,3 +75,14 @@ export interface PrayerRequest {
   prayerCount: number;
   date: string;
 }
+
+export interface Donation {
+  id: string;
+  donor: string;
+  email: string;
+  amount: number;
+  purpose: string;
+  date: string;
+  method: string;
+  frequency: string;
+}

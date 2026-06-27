@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Users, Tv, BookOpen, FileText, Calendar,
   Video, DollarSign, BarChart3, MapPin, Shield,
@@ -12,7 +12,7 @@ import {
   Type, Camera, TrendingUp, Radio, Headphones
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import type { BlogPost, Book, Sermon } from '@/types';
+import type { BlogPost, Book, Sermon, Donation } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events';
@@ -120,22 +120,40 @@ export default function AdminDashboard({
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [loadingDonations, setLoadingDonations] = useState(true);
+
+  const loadDonations = async () => {
+    try {
+      setLoadingDonations(true);
+      const data = await api.getDonations();
+      setDonations(data);
+    } catch (err) {
+      console.error('Failed to load donations:', err);
+    } finally {
+      setLoadingDonations(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDonations();
+  }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} />;
+      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} />;
       case 'users': return <UsersTab />;
       case 'sermons': return <SermonsTab sermons={sermons} onUpdateSermons={onUpdateSermons} />;
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
       case 'events': return <EventsTab />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
-      case 'donations': return <DonationsTab />;
+      case 'donations': return <DonationsTab donations={donations} loading={loadingDonations} onRefresh={loadDonations} />;
       case 'analytics': return <AnalyticsTab />;
       case 'prayer': return <PrayerTab />;
       case 'moderation': return <ModerationTab />;
       case 'settings': return <SettingsTab />;
-      default: return <DashboardTab />;
+      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} />;
     }
   };
 
@@ -304,9 +322,10 @@ export default function AdminDashboard({
 interface DashboardTabProps {
   posts: BlogPost[];
   onTabChange: (tab: AdminTab) => void;
+  donations: Donation[];
 }
 
-function DashboardTab({ posts, onTabChange }: DashboardTabProps) {
+function DashboardTab({ posts, onTabChange, donations }: DashboardTabProps) {
   const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>('donations');
 
   return (
@@ -331,7 +350,7 @@ function DashboardTab({ posts, onTabChange }: DashboardTabProps) {
         {[
           { label: 'Total Users', value: '45,234', change: '+12%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
           { label: 'Sermon Views', value: '1,234,567', change: '+8.5%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
-          { label: 'Total Donations', value: '$1.24M', change: '+23%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true },
+          { label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true },
           { label: 'Active Today', value: '3,847', change: '-2.1%', icon: Users, color: 'from-violet-500 to-violet-700', up: false },
         ].map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
@@ -406,20 +425,26 @@ function DashboardTab({ posts, onTabChange }: DashboardTabProps) {
 
             <div className="space-y-3">
               {activeListTab === 'donations' ? (
-                allDonations.slice(0, 4).map((d) => (
-                  <div key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100/80 transition-colors border border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gold-500/10 to-gold-600/10 flex items-center justify-center">
-                        <Gift className="w-4 h-4 text-gold-600" />
-                      </div>
-                      <div>
-                        <p className="text-gray-900 text-sm font-medium">{d.donor}</p>
-                        <p className="text-gray-500 text-[10px]">{d.purpose} • {d.date}</p>
-                      </div>
-                    </div>
-                    <span className="text-emerald-600 font-bold text-sm">+${d.amount.toLocaleString()}</span>
+                donations.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500 text-xs">
+                    No recent donations found.
                   </div>
-                ))
+                ) : (
+                  donations.slice(0, 4).map((d) => (
+                    <div key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100/80 transition-colors border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gold-500/10 to-gold-600/10 flex items-center justify-center">
+                          <Gift className="w-4 h-4 text-gold-600" />
+                        </div>
+                        <div>
+                          <p className="text-gray-900 text-sm font-medium">{d.donor}</p>
+                          <p className="text-gray-500 text-[10px]">{d.purpose} • {d.date}</p>
+                        </div>
+                      </div>
+                      <span className="text-emerald-600 font-bold text-sm">+${d.amount.toLocaleString()}</span>
+                    </div>
+                  ))
+                )
               ) : (
                 allUsers.slice(0, 4).map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 transition-colors border border-transparent">
@@ -2603,8 +2628,47 @@ function RadioTab({
 }
 
 // ====== DONATIONS TAB ======
-function DonationsTab() {
-  const totalDonations = allDonations.reduce((sum, d) => sum + d.amount, 0);
+interface DonationsTabProps {
+  donations: Donation[];
+  loading: boolean;
+  onRefresh?: () => void;
+}
+
+function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
+  const [activeTab, setActiveTab] = useState<'all' | 'prophetic' | 'mission'>('all');
+
+  const propheticDonations = donations.filter(d => d.purpose === 'Prophetic Offering');
+  const missionDonations = donations.filter(d => d.purpose === 'Mission / Outreach');
+
+  const filteredDonations = activeTab === 'prophetic'
+    ? propheticDonations
+    : activeTab === 'mission'
+      ? missionDonations
+      : donations;
+
+  const totalAll = donations.reduce((sum, d) => sum + d.amount, 0);
+  const totalProphetic = propheticDonations.reduce((sum, d) => sum + d.amount, 0);
+  const totalMission = missionDonations.reduce((sum, d) => sum + d.amount, 0);
+
+  const displayedTotal = activeTab === 'prophetic'
+    ? totalProphetic
+    : activeTab === 'mission'
+      ? totalMission
+      : totalAll;
+
+  const displayedCount = filteredDonations.length;
+  const displayedAvg = displayedCount > 0 ? Math.round(displayedTotal / displayedCount) : 0;
+  const uniqueGivers = new Set(filteredDonations.map(d => d.email.toLowerCase())).size;
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-royal-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-500 text-sm font-medium animate-pulse">Loading payments...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -2613,21 +2677,78 @@ function DonationsTab() {
           <p className="text-gray-500 text-sm">Track giving and financial contributions</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium">
-            <FileDown className="w-4 h-4 text-gray-500" /> Export
-          </button>
-          <button className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 transition-colors flex items-center gap-2 shadow-sm">
-            <Filter className="w-4 h-4" /> Filter
-          </button>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium text-sm cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4 text-gray-500" /> Refresh
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex border-b border-gray-200/80">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={cn(
+            'px-6 py-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer',
+            activeTab === 'all'
+              ? 'border-royal-blue-600 text-royal-blue-600'
+              : 'border-transparent text-gray-505 hover:text-gray-800'
+          )}
+        >
+          All Payments
+          <span className={cn(
+            'px-2 py-0.5 rounded-full text-xs font-semibold',
+            activeTab === 'all' ? 'bg-royal-blue-100 text-royal-blue-700' : 'bg-gray-100 text-gray-600'
+          )}>
+            {donations.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('prophetic')}
+          className={cn(
+            'px-6 py-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer',
+            activeTab === 'prophetic'
+              ? 'border-gold-500 text-gold-600'
+              : 'border-transparent text-gray-505 hover:text-gray-800'
+          )}
+        >
+          Prophetic Offerings
+          <span className={cn(
+            'px-2 py-0.5 rounded-full text-xs font-semibold',
+            activeTab === 'prophetic' ? 'bg-gold-100 text-gold-700' : 'bg-gray-100 text-gray-600'
+          )}>
+            {propheticDonations.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('mission')}
+          className={cn(
+            'px-6 py-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer',
+            activeTab === 'mission'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-505 hover:text-gray-800'
+          )}
+        >
+          Mission / Outreach
+          <span className={cn(
+            'px-2 py-0.5 rounded-full text-xs font-semibold',
+            activeTab === 'mission' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          )}>
+            {missionDonations.length}
+          </span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Raised', value: `$${totalDonations.toLocaleString()}`, icon: DollarSign, color: 'from-emerald-500 to-emerald-700' },
-          { label: 'This Month', value: '$18,500', icon: TrendingUp, color: 'from-royal-blue-500 to-royal-blue-700' },
-          { label: 'Avg. Donation', value: `$${Math.round(totalDonations / allDonations.length).toLocaleString()}`, icon: Gift, color: 'from-gold-500 to-gold-600' },
-          { label: 'Recurring Givers', value: '3', icon: RefreshCw, color: 'from-violet-500 to-violet-700' },
+          { label: `Total ${activeTab === 'prophetic' ? 'Prophetic' : activeTab === 'mission' ? 'Mission' : 'Raised'}`, value: `$${displayedTotal.toLocaleString()}`, icon: DollarSign, color: activeTab === 'prophetic' ? 'from-gold-500 to-gold-600' : activeTab === 'mission' ? 'from-blue-500 to-blue-700' : 'from-emerald-500 to-emerald-700' },
+          { label: 'Total Payments', value: `${displayedCount}`, icon: RefreshCw, color: 'from-royal-blue-500 to-royal-blue-700' },
+          { label: 'Avg. Donation', value: `$${displayedAvg.toLocaleString()}`, icon: Gift, color: 'from-violet-500 to-violet-700' },
+          { label: 'Givers', value: `${uniqueGivers}`, icon: Users, color: 'from-pink-500 to-pink-700' },
         ].map((stat) => (
           <div key={stat.label} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
             <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3', stat.color)}>
@@ -2648,25 +2769,46 @@ function DonationsTab() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Purpose</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Method</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Recurring</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Frequency</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Date</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {allDonations.map((d) => (
+              {filteredDonations.map((d) => (
                 <tr key={d.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 text-gray-900 text-sm font-medium">{d.donor}</td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <p className="text-gray-900 text-sm font-medium">{d.donor}</p>
+                      <p className="text-gray-400 text-xs">{d.email}</p>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-emerald-600 font-bold text-sm">+${d.amount.toLocaleString()}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-650 text-[10px] font-semibold">{d.purpose}</span></td>
+                  <td className="px-4 py-3">
+                    <span className={cn(
+                      'px-2 py-0.5 rounded-full text-[10px] font-semibold',
+                      d.purpose === 'Prophetic Offering' ? 'bg-gold-50 text-gold-700 border border-gold-200' : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    )}>
+                      {d.purpose}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{d.method}</td>
-                  <td className="px-4 py-3">{d.recurring ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <X className="w-4 h-4 text-gray-300" />}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs capitalize">{d.frequency}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{d.date}</td>
                   <td className="px-4 py-3 text-right">
-                    <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"><MoreHorizontal className="w-3.5 h-3.5" /></button>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                      Successful
+                    </span>
                   </td>
                 </tr>
               ))}
+              {filteredDonations.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-gray-500 text-sm font-medium">
+                    No successful payments found for this category.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
