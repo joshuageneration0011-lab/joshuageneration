@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getSavedBlogPosts, saveBlogPost, deleteBlogPost } from '@/data/blogStore';
 import { getSavedBooks, saveBook, deleteBook } from '@/data/bookStore';
 import { getSavedSermons, saveSermon, deleteSermon } from '@/data/sermonStore';
+import { getSavedEvents, saveEvent, deleteEvent } from '@/data/eventStore';
 import { api } from '@/utils/api';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
@@ -26,7 +27,7 @@ import BookReader from '@/components/BookReader';
 import BlogPage from '@/components/BlogPage';
 import BlogPostReader from '@/components/BlogPostReader';
 import DonatePage from '@/components/DonatePage';
-import type { Sermon, Book, BlogPost } from '@/types';
+import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate';
 
@@ -49,6 +50,7 @@ export default function App() {
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
 
   const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
   const [isRadioActive, setIsRadioActive] = useState(false);
@@ -76,6 +78,22 @@ export default function App() {
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('jg_unauthorized', handleUnauthorized);
+    };
+  }, []);
+
+  // Listen to events update triggers
+  useEffect(() => {
+    const handleEventsUpdated = async () => {
+      try {
+        const loadedEvents = await getSavedEvents();
+        setEvents(loadedEvents);
+      } catch (err) {
+        console.error('Failed to reload events:', err);
+      }
+    };
+    window.addEventListener('events_updated', handleEventsUpdated);
+    return () => {
+      window.removeEventListener('events_updated', handleEventsUpdated);
     };
   }, []);
 
@@ -112,6 +130,13 @@ export default function App() {
         setPosts(loadedPosts);
       } catch (err) {
         console.error('Failed to load posts:', err);
+      }
+
+      try {
+        const loadedEvents = await getSavedEvents();
+        setEvents(loadedEvents);
+      } catch (err) {
+        console.error('Failed to load events:', err);
       }
 
       try {
@@ -254,6 +279,34 @@ export default function App() {
             }
           }
           setSermons(newSermons);
+        }}
+        events={events}
+        onUpdateEvents={async (newEvents) => {
+          if (newEvents.length < events.length) {
+            const deleted = events.find(ev => !newEvents.some(x => x.id === ev.id));
+            if (deleted) {
+              try {
+                await deleteEvent(deleted.id);
+              } catch (e) {
+                console.error(e);
+                throw e;
+              }
+            }
+          } else {
+            const changed = newEvents.find(ev => {
+              const original = events.find(x => x.id === ev.id);
+              return !original || JSON.stringify(original) !== JSON.stringify(ev);
+            });
+            if (changed) {
+              try {
+                await saveEvent(changed);
+              } catch (e) {
+                console.error(e);
+                throw e;
+              }
+            }
+          }
+          setEvents(newEvents);
         }}
         mixlrUrl={mixlrUrl}
         isRadioActive={isRadioActive}
@@ -443,7 +496,7 @@ export default function App() {
           }}
           onViewAll={() => navigate('books')}
         />
-        <EventsSection />
+        <EventsSection events={events} />
         <BlogSection
           posts={posts}
           onPostSelect={(post) => {

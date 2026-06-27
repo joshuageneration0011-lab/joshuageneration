@@ -1,4 +1,4 @@
-import type { Sermon, Book, BlogPost, Donation, Settings } from '../types';
+import type { Sermon, Book, BlogPost, Donation, Settings, Event } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
   ? import.meta.env.VITE_API_BASE_URL
@@ -246,6 +246,31 @@ export const api = {
       body: JSON.stringify(settings)
     });
     await handleResponse(res, 'Failed to save settings');
+    return true;
+  },
+
+  async getEvents(): Promise<Event[]> {
+    const res = await fetch(`${API_BASE_URL}/api/events`);
+    if (!res.ok) throw new Error('Failed to fetch events');
+    return res.json();
+  },
+
+  async createEvent(event: Partial<Event>): Promise<Event> {
+    const res = await fetch(`${API_BASE_URL}/api/events`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(event)
+    });
+    await handleResponse(res, 'Failed to save event');
+    return res.json();
+  },
+
+  async deleteEvent(id: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/events/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    await handleResponse(res, 'Failed to delete event');
     return true;
   }
 };

@@ -38,6 +38,9 @@ export interface Event {
   description: string;
   imageUrl: string;
   speakers: string[];
+  registrations?: number;
+  capacity?: number;
+  status?: 'Upcoming' | 'Completed' | 'Cancelled';
 }
 
 export interface BlogPost {

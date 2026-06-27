@@ -1,7 +1,11 @@
 import { MapPin, Clock, ChevronRight, Calendar } from 'lucide-react';
-import { events } from '@/data/mockData';
+import type { Event } from '../types';
 
-export default function EventsSection() {
+interface EventsSectionProps {
+  events: Event[];
+}
+
+export default function EventsSection({ events }: EventsSectionProps) {
   return (
     <section id="events" className="relative py-24 sm:py-32 bg-[#0a0f1e] overflow-hidden">
       {/* Grid texture */}
@@ -47,9 +51,23 @@ export default function EventsSection() {
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {events.map((event) => {
-            const eventDate = new Date(event.date);
-            const day   = eventDate.getDate();
-            const month = eventDate.toLocaleString('default', { month: 'short' });
+            let day = 1;
+            let month = 'Jan';
+            try {
+              const eventDate = new Date(event.date);
+              if (!isNaN(eventDate.getTime())) {
+                day = eventDate.getDate();
+                month = eventDate.toLocaleString('default', { month: 'short' });
+              } else {
+                const parts = event.date.split(' ');
+                if (parts.length >= 2) {
+                  month = parts[0].slice(0, 3);
+                  day = parseInt(parts[1]) || 1;
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing date:', e);
+            }
 
             return (
               <div
@@ -93,7 +111,7 @@ export default function EventsSection() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-3.5 h-3.5 text-gold-400/60 flex-shrink-0" />
-                      <span>{event.speakers.length} Speaker{event.speakers.length > 1 ? 's' : ''}</span>
+                      <span>{(event.speakers || []).length} Speaker{((event.speakers || []).length) > 1 ? 's' : ''}</span>
                     </div>
                   </div>
 

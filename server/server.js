@@ -34,6 +34,7 @@ const RADIO_FILE = path.join(DATA_DIR, 'radio.json');
 const CREDENTIALS_FILE = path.join(DATA_DIR, 'credentials.json');
 const DONATIONS_FILE = path.join(DATA_DIR, 'donations.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 
 // In-memory sessions store
@@ -66,6 +67,12 @@ function verifyPassword(password, salt, hash) {
   const newHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
   return newHash === hash;
 }
+
+const defaultEvents = [
+  { id: '1', title: 'Kingdom Conference 2026', date: '2026-01-20', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Pastor John Michael', 'Apostle David Thompson', 'Pastor Sarah Williams'], description: 'A life-changing global conference.', imageUrl: '' },
+  { id: '2', title: 'Youth Revival Night', date: '2026-01-15', time: '06:00 PM', location: 'JGen Youth Auditorium', registrations: 450, capacity: 500, status: 'Upcoming', speakers: ['Minister Rachel Grace', 'Youth Pastor Mark'], description: 'Revival, praise, and fire for the youth.', imageUrl: '' },
+  { id: '3', title: 'Women of Faith Summit', date: '2026-02-08', time: '10:00 AM', location: 'Grace Cathedral', registrations: 680, capacity: 1000, status: 'Upcoming', speakers: ['Pastor Sarah Williams', 'Minister Rachel Grace'], description: 'Gathering of women of destiny.', imageUrl: '' }
+];
 
 // --- File Data Init Helpers ---
 function initLocalData() {
@@ -106,6 +113,10 @@ function initLocalData() {
   if (!fs.existsSync(SETTINGS_FILE)) {
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ flutterwave_prophetic_key: '', flutterwave_mission_key: '' }, null, 2), 'utf-8');
     console.log('Initialized local settings database.');
+  }
+  if (!fs.existsSync(EVENTS_FILE)) {
+    fs.writeFileSync(EVENTS_FILE, JSON.stringify(defaultEvents, null, 2), 'utf-8');
+    console.log('Initialized local events database.');
   }
 }
 
@@ -209,6 +220,34 @@ async function initDb() {
       const settingsCheck = await pool.query('SELECT 1 FROM settings WHERE id = 1');
       if (settingsCheck.rowCount === 0) {
         await pool.query("INSERT INTO settings (id, flutterwave_prophetic_key, flutterwave_mission_key) VALUES (1, '', '')");
+      }
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS events (
+          id VARCHAR PRIMARY KEY,
+          title VARCHAR NOT NULL,
+          date VARCHAR NOT NULL,
+          time VARCHAR NOT NULL,
+          location VARCHAR NOT NULL,
+          description TEXT,
+          image_url TEXT,
+          speakers JSONB DEFAULT '[]'::jsonb,
+          registrations INT DEFAULT 0,
+          capacity INT DEFAULT 1000,
+          status VARCHAR DEFAULT 'Upcoming'
+        );
+      `);
+
+      const eventCheck = await pool.query('SELECT 1 FROM events LIMIT 1');
+      if (eventCheck.rowCount === 0) {
+        for (const ev of defaultEvents) {
+          await pool.query(
+            `INSERT INTO events (id, title, date, time, location, description, image_url, speakers, registrations, capacity, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [ev.id, ev.title, ev.date, ev.time, ev.location, ev.description, ev.imageUrl, JSON.stringify(ev.speakers), ev.registrations, ev.capacity, ev.status]
+          );
+        }
+        console.log('Seeded events table.');
       }
 
       // Seed if empty
@@ -578,6 +617,35 @@ const server = http.createServer(async (req, res) => {
       }
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to retrieve settings' });
+    }
+    return;
+  }
+
+  // GET Events (Public)
+  if (pathname === '/api/events' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM events ORDER BY date ASC');
+        const events = result.rows.map(row => ({
+          id: row.id,
+          title: row.title,
+          date: row.date,
+          time: row.time,
+          location: row.location,
+          description: row.description,
+          imageUrl: row.image_url,
+          speakers: typeof row.speakers === 'string' ? JSON.parse(row.speakers) : (row.speakers || []),
+          registrations: row.registrations,
+          capacity: row.capacity,
+          status: row.status
+        }));
+        sendJson(res, 200, events);
+      } else {
+        const data = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8'));
+        sendJson(res, 200, data);
+      }
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to retrieve events' });
     }
     return;
   }
@@ -1052,6 +1120,80 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { success: true });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to save settings' });
+    }
+    return;
+  }
+
+  // POST /api/events (Create & Update / Edit)
+  if (pathname === '/api/events' && method === 'POST') {
+    try {
+      const event = await getJsonBody(req);
+      const { id, title, date, time, location, description, imageUrl, speakers, capacity, status, registrations } = event;
+      if (!title || !date || !time || !location) {
+        sendJson(res, 400, { error: 'Title, date, time, and location are required' });
+        return;
+      }
+      
+      const evId = id || crypto.randomUUID();
+      const evSpeakers = Array.isArray(speakers) ? speakers : [];
+      const evCapacity = capacity ? parseInt(capacity) : 1000;
+      const evStatus = status || 'Upcoming';
+      const evRegistrations = registrations ? parseInt(registrations) : 0;
+
+      if (pool) {
+        await pool.query(
+          `INSERT INTO events (id, title, date, time, location, description, image_url, speakers, registrations, capacity, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           ON CONFLICT (id) DO UPDATE SET
+             title = EXCLUDED.title,
+             date = EXCLUDED.date,
+             time = EXCLUDED.time,
+             location = EXCLUDED.location,
+             description = EXCLUDED.description,
+             image_url = EXCLUDED.image_url,
+             speakers = EXCLUDED.speakers,
+             capacity = EXCLUDED.capacity,
+             status = EXCLUDED.status,
+             registrations = EXCLUDED.registrations`,
+          [evId, title, date, time, location, description || '', imageUrl || '', JSON.stringify(evSpeakers), evRegistrations, evCapacity, evStatus]
+        );
+      } else {
+        const events = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8'));
+        const index = events.findIndex(ev => ev.id === evId);
+        if (index >= 0) {
+          events[index] = { id: evId, title, date, time, location, description: description || '', imageUrl: imageUrl || '', speakers: evSpeakers, registrations: evRegistrations, capacity: evCapacity, status: evStatus };
+        } else {
+          events.push({ id: evId, title, date, time, location, description: description || '', imageUrl: imageUrl || '', speakers: evSpeakers, registrations: evRegistrations, capacity: evCapacity, status: evStatus });
+        }
+        fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf-8');
+      }
+      sendJson(res, 200, { id: evId, title, date, time, location, description, imageUrl, speakers: evSpeakers, registrations: evRegistrations, capacity: evCapacity, status: evStatus });
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to save event' });
+    }
+    return;
+  }
+
+  // DELETE /api/events/:id
+  if (pathname.startsWith('/api/events/') && method === 'DELETE') {
+    try {
+      const parts = pathname.split('/');
+      const id = parts[parts.length - 1];
+      if (!id) {
+        sendJson(res, 400, { error: 'Event ID is required' });
+        return;
+      }
+
+      if (pool) {
+        await pool.query('DELETE FROM events WHERE id = $1', [id]);
+      } else {
+        const events = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8'));
+        const filtered = events.filter(ev => ev.id !== id);
+        fs.writeFileSync(EVENTS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to delete event' });
     }
     return;
   }
