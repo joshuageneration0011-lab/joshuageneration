@@ -220,7 +220,8 @@ export const api = {
       },
       body: JSON.stringify(donation)
     });
-    return handleResponse(res, 'Failed to create donation');
+    await handleResponse(res, 'Failed to create donation');
+    return res.json();
   },
 
   async getDonations(): Promise<Donation[]> {
@@ -228,7 +229,8 @@ export const api = {
       method: 'GET',
       headers: getHeaders()
     });
-    return handleResponse(res, 'Failed to retrieve donations');
+    await handleResponse(res, 'Failed to retrieve donations');
+    return res.json();
   }
 };
 
