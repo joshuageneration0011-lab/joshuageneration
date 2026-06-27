@@ -1,4 +1,4 @@
-import type { Sermon, Book, BlogPost, Donation } from '../types';
+import type { Sermon, Book, BlogPost, Donation, Settings } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
   ? import.meta.env.VITE_API_BASE_URL
@@ -231,6 +231,22 @@ export const api = {
     });
     await handleResponse(res, 'Failed to retrieve donations');
     return res.json();
+  },
+
+  async getSettings(): Promise<Settings> {
+    const res = await fetch(`${API_BASE_URL}/api/settings`);
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    return res.json();
+  },
+
+  async saveSettings(settings: Settings): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/settings`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(settings)
+    });
+    await handleResponse(res, 'Failed to save settings');
+    return true;
   }
 };
 

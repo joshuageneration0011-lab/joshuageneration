@@ -86,3 +86,8 @@ export interface Donation {
   method: string;
   frequency: string;
 }
+
+export interface Settings {
+  flutterwave_prophetic_key: string;
+  flutterwave_mission_key: string;
+}

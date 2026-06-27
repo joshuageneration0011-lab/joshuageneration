@@ -12,7 +12,7 @@ import {
   Type, Camera, TrendingUp, Radio, Headphones
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import type { BlogPost, Book, Sermon, Donation } from '@/types';
+import type { BlogPost, Book, Sermon, Donation, Settings as SettingsType } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events';
@@ -3306,6 +3306,44 @@ function ModerationTab() {
 // ====== SETTINGS TAB ======
 function SettingsTab() {
   const [activeSetting, setActiveSetting] = useState<'general' | 'notifications' | 'appearance' | 'security' | 'integrations'>('general');
+  
+  // Flutterwave Settings State
+  const [propheticKey, setPropheticKey] = useState('');
+  const [missionKey, setMissionKey] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await api.getSettings();
+        setPropheticKey(data.flutterwave_prophetic_key || '');
+        setMissionKey(data.flutterwave_mission_key || '');
+      } catch (err) {
+        console.error('Failed to fetch settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveStatus('idle');
+    try {
+      await api.saveSettings({
+        flutterwave_prophetic_key: propheticKey,
+        flutterwave_mission_key: missionKey
+      });
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (err) {
+      console.error(err);
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const settings = [
     { id: 'general', label: 'General', icon: Settings },
@@ -3319,7 +3357,7 @@ function SettingsTab() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900">Settings</h2>
-        <p className="text-gray-500 text-sm">Manage your platform configuration</p>
+        <p className="text-gray-505 text-sm">Manage your platform configuration</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -3358,7 +3396,7 @@ function SettingsTab() {
                   <div className="flex items-center gap-3">
                     <field.icon className="w-4 h-4 text-gray-400" />
                     <div>
-                      <p className="text-gray-500 text-xs">{field.label}</p>
+                      <p className="text-gray-550 text-xs">{field.label}</p>
                       <p className="text-gray-900 text-sm font-semibold">{field.value}</p>
                     </div>
                   </div>
@@ -3446,7 +3484,7 @@ function SettingsTab() {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <p className="text-gray-900 text-sm font-semibold">Two-Factor Authentication</p>
-                    <p className="text-gray-500 text-xs">Add an extra layer of security</p>
+                    <p className="text-gray-555 text-xs">Add an extra layer of security</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" />
@@ -3473,7 +3511,7 @@ function SettingsTab() {
                     {session.active ? (
                       <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active</span>
                     ) : (
-                      <button className="text-xs text-gray-400 hover:text-gray-655 transition-colors font-medium">Revoke</button>
+                      <button className="text-xs text-gray-405 hover:text-gray-655 transition-colors font-medium">Revoke</button>
                     )}
                   </div>
                 ))}
@@ -3493,13 +3531,90 @@ function SettingsTab() {
         )}
 
         {activeSetting === 'integrations' && (
-          <>
-            <h3 className="text-gray-900 font-bold text-lg">Integrations</h3>
-            <div className="space-y-4">
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-gray-900 font-bold text-lg">Integrations</h3>
+              <p className="text-gray-500 text-xs mt-0.5">Manage external APIs and payment gateway credentials</p>
+            </div>
+
+            {/* Flutterwave Card */}
+            <div className="p-6 rounded-2xl border border-royal-blue-100 bg-gradient-to-r from-royal-blue-50/50 via-white to-white shadow-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-royal-blue-600 flex items-center justify-center text-white shadow-md shadow-royal-blue-200/50">
+                  <DollarSign className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-gray-900 font-bold">Flutterwave API Configuration</h4>
+                  <p className="text-gray-500 text-xs">Route donations into distinct accounts using separate Public Keys</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveSettings} className="space-y-4 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-royal-blue-500" />
+                      Prophetic Offering Public Key
+                    </label>
+                    <input 
+                      type="text" 
+                      value={propheticKey}
+                      onChange={(e) => setPropheticKey(e.target.value)}
+                      placeholder="FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxxxxx-X" 
+                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Mission / Outreach Public Key
+                    </label>
+                    <input 
+                      type="text" 
+                      value={missionKey}
+                      onChange={(e) => setMissionKey(e.target.value)}
+                      placeholder="FLWPUBK_TEST-yyyyyyyyyyyyyyyyyyyyyyyy-Y" 
+                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button 
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...
+                      </>
+                    ) : (
+                      'Save API Credentials'
+                    )}
+                  </button>
+
+                  {saveStatus === 'success' && (
+                    <span className="text-emerald-600 text-xs font-semibold flex items-center gap-1">
+                      <Check className="w-4 h-4" /> Credentials saved successfully!
+                    </span>
+                  )}
+                  {saveStatus === 'error' && (
+                    <span className="text-red-605 text-xs font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> Failed to save settings.
+                    </span>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* Static Integrations List */}
+            <div className="space-y-3 pt-2">
+              <h4 className="text-gray-900 font-bold text-sm">Other Integrations</h4>
               {[
                 { name: 'YouTube', desc: 'Sync live streams and sermons', icon: Tv, connected: true },
                 { name: 'Vimeo', desc: 'Video hosting and streaming', icon: Video, connected: false },
-                { name: 'Stripe', desc: 'Payment processing for donations', icon: DollarSign, connected: true },
                 { name: 'Mailchimp', desc: 'Email newsletter and campaigns', icon: Mail, connected: true },
                 { name: 'Google Calendar', desc: 'Event synchronization', icon: Calendar, connected: false },
                 { name: 'Slack', desc: 'Team notifications and alerts', icon: MessageSquare, connected: false },
@@ -3525,7 +3640,7 @@ function SettingsTab() {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

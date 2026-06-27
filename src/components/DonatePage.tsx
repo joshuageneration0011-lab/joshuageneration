@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Gift, Heart, CreditCard, CheckCircle2, ArrowLeft, Mail, User, ShieldCheck, Sparkles, AlertCircle, Crown, Globe } from 'lucide-react';
 import { api } from '../utils/api';
 interface DonatePageProps {
@@ -24,6 +24,33 @@ export default function DonatePage({ onBack }: DonatePageProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [receiptId, setReceiptId] = useState('');
+
+  // Payment settings state
+  const [settings, setSettings] = useState({
+    flutterwave_prophetic_key: '',
+    flutterwave_mission_key: ''
+  });
+
+  useEffect(() => {
+    // 1. Fetch Flutterwave keys from API
+    const loadSettings = async () => {
+      try {
+        const data = await api.getSettings();
+        setSettings(data);
+      } catch (err) {
+        console.error('Failed to load payment settings:', err);
+      }
+    };
+    loadSettings();
+
+    // 2. Load Flutterwave script dynamically
+    if (!(window as any).FlutterwaveCheckout) {
+      const script = document.createElement('script');
+      script.src = "https://checkout.flutterwave.com/v3.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   const presetAmounts = ['10', '25', '50', '100', '250', '500'];
 
@@ -143,30 +170,109 @@ export default function DonatePage({ onBack }: DonatePageProps) {
     e.preventDefault();
     if (step === 1) {
       if (validateStep1()) {
-        setStep(2);
+        const activeKey = cause === 'Prophetic Offering'
+          ? settings.flutterwave_prophetic_key
+          : settings.flutterwave_mission_key;
+
+        if (activeKey && activeKey.trim() !== '') {
+          // Trigger Flutterwave payment directly!
+          handlePaymentSubmit(e);
+        } else {
+          // Go to simulated payment step
+          setStep(2);
+        }
       }
     }
   };
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateStep2()) {
+    
+    // Determine active key
+    const activeKey = cause === 'Prophetic Offering'
+      ? settings.flutterwave_prophetic_key
+      : settings.flutterwave_mission_key;
+
+    if (activeKey && activeKey.trim() !== '') {
+      // Use real Flutterwave Checkout
+      if (!validateStep1()) return;
+      
+      if (!(window as any).FlutterwaveCheckout) {
+        alert('Payment gateway is loading. Please try again in a moment.');
+        return;
+      }
+
       setIsProcessing(true);
       try {
-        const donation = await api.createDonation({
-          donor: name,
-          email,
-          amount: getFinalAmount(),
-          purpose: cause,
-          method: 'Credit Card',
-          frequency
+        const finalAmount = getFinalAmount();
+        const txRef = 'JG-TXN-' + Math.floor(Math.random() * 900000 + 100000);
+        
+        (window as any).FlutterwaveCheckout({
+          public_key: activeKey,
+          tx_ref: txRef,
+          amount: finalAmount,
+          currency: "NGN", // currency
+          payment_options: "card, banktransfer, ussd",
+          customer: {
+            email: email,
+            name: name,
+          },
+          customizations: {
+            title: "Joshua Generation",
+            description: `Donation: ${cause} (${frequency})`,
+            logo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80",
+          },
+          callback: async (response: any) => {
+            console.log('Payment response:', response);
+            if (response.status === "successful") {
+              try {
+                // Post donation details to database
+                const donation = await api.createDonation({
+                  donor: name,
+                  email,
+                  amount: finalAmount,
+                  purpose: cause,
+                  method: 'Flutterwave (' + (response.payment_type || 'card') + ')',
+                  frequency
+                });
+                setReceiptId(donation.id);
+                setStep(3);
+              } catch (err: any) {
+                alert('Payment succeeded but failed to log transaction: ' + err.message);
+              }
+            } else {
+              setErrors(prev => ({ ...prev, payment: 'Payment was not successful.' }));
+            }
+            setIsProcessing(false);
+          },
+          onclose: () => {
+            setIsProcessing(false);
+          }
         });
-        setReceiptId(donation.id);
-        setStep(3);
       } catch (err: any) {
-        setErrors(prev => ({ ...prev, payment: err.message || 'Payment failed' }));
-      } finally {
+        setErrors(prev => ({ ...prev, payment: err.message || 'Payment initiation failed' }));
         setIsProcessing(false);
+      }
+    } else {
+      // Fallback to simulated credit card payment
+      if (validateStep2()) {
+        setIsProcessing(true);
+        try {
+          const donation = await api.createDonation({
+            donor: name,
+            email,
+            amount: getFinalAmount(),
+            purpose: cause,
+            method: 'Credit Card (Simulated)',
+            frequency
+          });
+          setReceiptId(donation.id);
+          setStep(3);
+        } catch (err: any) {
+          setErrors(prev => ({ ...prev, payment: err.message || 'Payment failed' }));
+        } finally {
+          setIsProcessing(false);
+        }
       }
     }
   };

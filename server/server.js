@@ -33,6 +33,7 @@ const BLOG_FILE = path.join(DATA_DIR, 'blog_posts.json');
 const RADIO_FILE = path.join(DATA_DIR, 'radio.json');
 const CREDENTIALS_FILE = path.join(DATA_DIR, 'credentials.json');
 const DONATIONS_FILE = path.join(DATA_DIR, 'donations.json');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 
 // In-memory sessions store
@@ -101,6 +102,10 @@ function initLocalData() {
     const { salt, hash } = hashPassword('admin123'); // Default password: admin123
     fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify({ username: 'admin@joshuagen.org', salt, hash }), 'utf-8');
     console.log('Initialized local admin credentials.');
+  }
+  if (!fs.existsSync(SETTINGS_FILE)) {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ flutterwave_prophetic_key: '', flutterwave_mission_key: '' }, null, 2), 'utf-8');
+    console.log('Initialized local settings database.');
   }
 }
 
@@ -192,6 +197,19 @@ async function initDb() {
           frequency VARCHAR NOT NULL
         );
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS settings (
+          id INT PRIMARY KEY,
+          flutterwave_prophetic_key TEXT,
+          flutterwave_mission_key TEXT
+        );
+      `);
+
+      const settingsCheck = await pool.query('SELECT 1 FROM settings WHERE id = 1');
+      if (settingsCheck.rowCount === 0) {
+        await pool.query("INSERT INTO settings (id, flutterwave_prophetic_key, flutterwave_mission_key) VALUES (1, '', '')");
+      }
 
       // Seed if empty
       let defaults = { sermons: [], books: [], blogPosts: [], radio: { url: 'https://mixlr.com/users/8375836/embed', active: false } };
@@ -544,6 +562,22 @@ const server = http.createServer(async (req, res) => {
       }
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to retrieve radio settings' });
+    }
+    return;
+  }
+
+  // GET Platform Settings (Public keys for payment checkout)
+  if (pathname === '/api/settings' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT flutterwave_prophetic_key, flutterwave_mission_key FROM settings WHERE id = 1');
+        sendJson(res, 200, result.rows[0] || { flutterwave_prophetic_key: '', flutterwave_mission_key: '' });
+      } else {
+        const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        sendJson(res, 200, data);
+      }
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to retrieve settings' });
     }
     return;
   }
@@ -997,6 +1031,27 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { success: true });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to save radio settings' });
+    }
+    return;
+  }
+
+  // POST Settings (Admin only)
+  if (pathname === '/api/settings' && method === 'POST') {
+    try {
+      const { flutterwave_prophetic_key, flutterwave_mission_key } = await getJsonBody(req);
+      if (flutterwave_prophetic_key === undefined || flutterwave_mission_key === undefined) {
+        sendJson(res, 400, { error: 'Flutterwave keys are required' });
+        return;
+      }
+
+      if (pool) {
+        await pool.query('UPDATE settings SET flutterwave_prophetic_key = $1, flutterwave_mission_key = $2 WHERE id = 1', [flutterwave_prophetic_key, flutterwave_mission_key]);
+      } else {
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ flutterwave_prophetic_key, flutterwave_mission_key }, null, 2), 'utf-8');
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to save settings' });
     }
     return;
   }
