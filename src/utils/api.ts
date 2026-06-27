@@ -201,6 +201,15 @@ export const api = {
       
       xhr.send(file);
     });
+  },
+
+  async incrementSermonViews(id: string): Promise<number> {
+    const res = await fetch(`${API_BASE_URL}/api/sermons/${id}/view`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to increment views');
+    const data = await res.json();
+    return data.views;
   }
 };
 

@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
-import { resolveApiUrl } from '@/utils/api';
+import { api, resolveApiUrl } from '@/utils/api';
 
 interface SermonPlayerProps {
   sermons: Sermon[];
@@ -21,6 +21,8 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   const [isMuted, setIsMuted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [notes, setNotes] = useState('');
+  const [localViews, setLocalViews] = useState(sermon.views);
+  const [hasIncrementedView, setHasIncrementedView] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -38,7 +40,11 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
-  }, [sermon.id]);
+    
+    // Sync views
+    setLocalViews(sermon.views);
+    setHasIncrementedView(false);
+  }, [sermon.id, sermon.views]);
 
   // Handle note change and persist
   const handleNotesChange = (val: string) => {
@@ -55,6 +61,15 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
       media.pause();
     } else {
       media.play().catch((err) => console.log('Playback failed:', err));
+      // Increment views on first play
+      if (!hasIncrementedView) {
+        setHasIncrementedView(true);
+        api.incrementSermonViews(sermon.id)
+          .then((newViews) => {
+            setLocalViews(newViews);
+          })
+          .catch((err) => console.error('Failed to increment views:', err));
+      }
     }
     setIsPlaying((prev) => !prev);
   };
@@ -279,7 +294,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Eye className="w-3.5 h-3.5" />
-                  {sermon.views.toLocaleString()} views
+                  {localViews.toLocaleString()} views
                 </span>
               </div>
 

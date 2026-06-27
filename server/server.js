@@ -385,6 +385,33 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST Increment Sermon Views (Public)
+  if (pathname.startsWith('/api/sermons/') && pathname.endsWith('/view') && method === 'POST') {
+    try {
+      const id = pathname.substring('/api/sermons/'.length, pathname.length - '/view'.length);
+      let updatedViews = 0;
+      if (pool) {
+        const result = await pool.query('UPDATE sermons SET views = COALESCE(views, 0) + 1 WHERE id = $1 RETURNING views', [id]);
+        if (result.rowCount > 0) {
+          updatedViews = result.rows[0].views;
+        }
+      } else {
+        const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+        const index = data.findIndex(x => x.id === id);
+        if (index !== -1) {
+          data[index].views = (data[index].views || 0) + 1;
+          updatedViews = data[index].views;
+          fs.writeFileSync(SERMONS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        }
+      }
+      sendJson(res, 200, { success: true, views: updatedViews });
+    } catch (e) {
+      console.error('Failed to increment views:', e);
+      sendJson(res, 500, { error: 'Failed to increment views' });
+    }
+    return;
+  }
+
   // GET Books
   if (pathname === '/api/books' && method === 'GET') {
     try {

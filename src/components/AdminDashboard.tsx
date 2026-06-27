@@ -745,7 +745,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         thumbnail: finalThumbnail.trim() || 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
         audioUrl: finalAudioUrl.trim(),
         videoUrl: videoUrl.trim(),
-        views: editingSermon ? editingSermon.views : Math.floor(Math.random() * 200) + 50
+        views: editingSermon ? editingSermon.views : 0
       };
 
       let updatedSermons: Sermon[];
