@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar } from 'lucide-react';
+import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
+import { resolveApiUrl } from '@/utils/api';
 
 interface SermonsPageProps {
   sermons: Sermon[];
@@ -187,14 +188,28 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                     {sermon.description}
                   </p>
 
-                  <div className="flex items-center gap-2.5 pt-4 border-t border-gray-100 mt-auto">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-xs">
-                      {sermon.speaker.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-xs">
+                        {sermon.speaker.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800 leading-none">{sermon.speaker}</p>
+                        <p className="text-[10px] text-gray-400 mt-1">Ministering Pastor</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800 leading-none">{sermon.speaker}</p>
-                      <p className="text-[10px] text-gray-400 mt-1">Ministering Pastor</p>
-                    </div>
+
+                    {sermon.audioUrl && (
+                      <a
+                        href={resolveApiUrl(sermon.audioUrl)}
+                        download={`${sermon.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-xl bg-gray-50 hover:bg-royal-blue-50 text-gray-400 hover:text-royal-blue-600 border border-gray-200 hover:border-royal-blue-100 transition-all flex items-center justify-center"
+                        title="Download Sermon Audio"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
