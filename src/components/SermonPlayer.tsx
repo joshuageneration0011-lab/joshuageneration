@@ -198,11 +198,21 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 {/* Album art / headphones orb */}
                 <div
                   className={cn(
-                    'w-32 h-32 rounded-full bg-gradient-to-br from-royal-blue-500 via-royal-blue-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-royal-blue-500/30 mb-6 transition-all duration-700 relative z-10',
+                    'w-32 h-32 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center shadow-2xl transition-all duration-700 relative z-10',
                     isPlaying ? 'scale-110 ring-4 ring-royal-blue-500/30 ring-offset-4 ring-offset-gray-950' : 'scale-100'
                   )}
                 >
-                  <Headphones className="w-12 h-12 text-white" />
+                  {sermon.thumbnail ? (
+                    <img
+                      src={resolveApiUrl(sermon.thumbnail)}
+                      alt={sermon.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-royal-blue-500 via-royal-blue-600 to-indigo-700 flex items-center justify-center">
+                      <Headphones className="w-12 h-12 text-white" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Sermon title & speaker */}

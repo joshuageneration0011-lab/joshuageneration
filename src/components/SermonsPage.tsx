@@ -118,7 +118,21 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 {/* Audio Card Visual */}
-                <div className="relative aspect-[16/10] bg-gradient-to-br from-gray-900 via-royal-blue-950/60 to-gray-900 overflow-hidden">
+                <div className="relative aspect-[16/10] bg-gray-900 overflow-hidden">
+                  {sermon.thumbnail ? (
+                    <img
+                      src={resolveApiUrl(sermon.thumbnail)}
+                      alt={sermon.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-royal-blue-950/60 to-gray-900" />
+                  )}
+
+                  {sermon.thumbnail && (
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/35 transition-colors duration-300" />
+                  )}
+
                   {/* Subtle waveform bars */}
                   <div className="absolute inset-0 flex items-end justify-around px-4 pb-4 opacity-20 pointer-events-none">
                     {Array.from({ length: 18 }).map((_, i) => (
@@ -141,15 +155,17 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                     {sermon.duration}
                   </div>
 
-                  {/* Headphones icon centered */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className={cn(
-                      'w-16 h-16 rounded-full bg-gradient-to-br from-royal-blue-500 to-indigo-700 flex items-center justify-center shadow-xl shadow-royal-blue-500/30 transition-all duration-300',
-                      'group-hover:scale-110 group-hover:shadow-royal-blue-500/50'
-                    )}>
-                      <Headphones className="w-7 h-7 text-white" />
+                  {/* Headphones icon centered (fallback only) */}
+                  {!sermon.thumbnail && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className={cn(
+                        'w-16 h-16 rounded-full bg-gradient-to-br from-royal-blue-500 to-indigo-700 flex items-center justify-center shadow-xl shadow-royal-blue-500/30 transition-all duration-300',
+                        'group-hover:scale-110 group-hover:shadow-royal-blue-500/50'
+                      )}>
+                        <Headphones className="w-7 h-7 text-white" />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Play hover overlay */}
                   <div className="absolute inset-0 bg-royal-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

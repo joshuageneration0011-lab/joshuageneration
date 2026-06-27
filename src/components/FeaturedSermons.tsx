@@ -1,5 +1,6 @@
 import { Headphones, Clock, Eye, ChevronRight } from 'lucide-react';
 import type { Sermon } from '@/types';
+import { resolveApiUrl } from '@/utils/api';
 
 interface FeaturedSermonsProps {
   sermons: Sermon[];
@@ -55,12 +56,26 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll }: 
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Audio card visual */}
-              <div
-                className="relative h-44 flex flex-col items-center justify-center overflow-hidden"
-                style={{
-                  background: `linear-gradient(135deg, #0c1a56 0%, #0f2060 ${40 + index * 8}%, #1a37a0 100%)`,
-                }}
-              >
+              <div className="relative h-44 flex flex-col items-center justify-center overflow-hidden bg-gray-900">
+                {sermon.thumbnail ? (
+                  <img
+                    src={resolveApiUrl(sermon.thumbnail)}
+                    alt={sermon.title}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: `linear-gradient(135deg, #0c1a56 0%, #0f2060 ${40 + index * 8}%, #1a37a0 100%)`,
+                    }}
+                  />
+                )}
+
+                {sermon.thumbnail && (
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/35 transition-colors duration-300" />
+                )}
+
                 {/* Waveform deco */}
                 <div className="absolute inset-0 flex items-end justify-around px-3 pb-3 opacity-15 pointer-events-none">
                   {Array.from({ length: 20 }).map((_, i) => (
@@ -83,16 +98,18 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll }: 
                   {sermon.duration}
                 </div>
 
-                {/* Headphones icon */}
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(212,175,55,0.9) 0%, rgba(184,148,47,0.9) 100%)',
-                    boxShadow: '0 8px 30px rgba(212,175,55,0.3)',
-                  }}
-                >
-                  <Headphones className="w-6 h-6 text-white" />
-                </div>
+                {/* Headphones icon (fallback only) */}
+                {!sermon.thumbnail && (
+                  <div
+                    className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(212,175,55,0.9) 0%, rgba(184,148,47,0.9) 100%)',
+                      boxShadow: '0 8px 30px rgba(212,175,55,0.3)',
+                    }}
+                  >
+                    <Headphones className="w-6 h-6 text-white" />
+                  </div>
+                )}
 
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-gold-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
