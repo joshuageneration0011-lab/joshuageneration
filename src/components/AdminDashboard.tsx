@@ -106,6 +106,7 @@ interface AdminDashboardProps {
   onUpdateRadio: (url: string, active: boolean) => void;
   events: Event[];
   onUpdateEvents: (events: Event[]) => void;
+  onLogout?: () => void;
 }
 
 export default function AdminDashboard({ 
@@ -119,7 +120,8 @@ export default function AdminDashboard({
   isRadioActive,
   onUpdateRadio,
   events,
-  onUpdateEvents
+  onUpdateEvents,
+  onLogout
 }: AdminDashboardProps) {
   const userRole = api.getRole();
   const visibleSidebarItems = sidebarItems.filter(item => {
@@ -136,6 +138,14 @@ export default function AdminDashboard({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loadingDonations, setLoadingDonations] = useState(true);
+
+  const handleLogout = () => {
+    api.logout();
+    if (onLogout) {
+      onLogout();
+    }
+    window.location.hash = 'admin-login';
+  };
 
   const loadDonations = async () => {
     if (userRole !== 'superadmin') {
@@ -241,7 +251,10 @@ export default function AdminDashboard({
         </nav>
 
         <div className="p-3 border-t border-gray-200">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-sm font-medium">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-sm font-medium cursor-pointer"
+          >
             <LogOut className="w-4 h-4" />
             {isSidebarOpen && <span>Sign Out</span>}
           </button>
@@ -291,6 +304,15 @@ export default function AdminDashboard({
                 );
               })}
             </nav>
+            <div className="p-3 border-t border-gray-200 mt-auto">
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-sm font-medium cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

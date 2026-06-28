@@ -196,6 +196,7 @@ export default function App() {
     }
     return (
       <AdminDashboard
+        onLogout={() => setIsAdminAuthenticated(false)}
         posts={posts}
         onUpdatePosts={async (newPosts) => {
           if (newPosts.length < posts.length) {
