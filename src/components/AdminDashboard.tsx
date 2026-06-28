@@ -121,6 +121,16 @@ export default function AdminDashboard({
   events,
   onUpdateEvents
 }: AdminDashboardProps) {
+  const userRole = api.getRole();
+  const visibleSidebarItems = sidebarItems.filter(item => {
+    if (userRole !== 'superadmin') {
+      if (item.id === 'donations' || item.id === 'settings') {
+        return false;
+      }
+    }
+    return true;
+  });
+
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -128,6 +138,10 @@ export default function AdminDashboard({
   const [loadingDonations, setLoadingDonations] = useState(true);
 
   const loadDonations = async () => {
+    if (userRole !== 'superadmin') {
+      setLoadingDonations(false);
+      return;
+    }
     try {
       setLoadingDonations(true);
       const data = await api.getDonations();
@@ -140,7 +154,9 @@ export default function AdminDashboard({
   };
 
   useEffect(() => {
-    loadDonations();
+    if (userRole === 'superadmin') {
+      loadDonations();
+    }
   }, []);
 
   const renderTabContent = () => {
@@ -152,11 +168,15 @@ export default function AdminDashboard({
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
-      case 'donations': return <DonationsTab donations={donations} loading={loadingDonations} onRefresh={loadDonations} />;
+      case 'donations': 
+        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} />;
+        return <DonationsTab donations={donations} loading={loadingDonations} onRefresh={loadDonations} />;
       case 'analytics': return <AnalyticsTab />;
       case 'prayer': return <PrayerTab />;
       case 'moderation': return <ModerationTab />;
-      case 'settings': return <SettingsTab />;
+      case 'settings': 
+        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} />;
+        return <SettingsTab />;
       default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} />;
     }
   };
@@ -189,7 +209,7 @@ export default function AdminDashboard({
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-1 scrollbar-thin">
-          {sidebarItems.map((item) => {
+          {visibleSidebarItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -245,7 +265,7 @@ export default function AdminDashboard({
               </button>
             </div>
             <nav className="space-y-1">
-              {sidebarItems.map((item) => {
+              {visibleSidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
@@ -303,11 +323,11 @@ export default function AdminDashboard({
               </button>
               <div className="flex items-center gap-2.5 pl-3 border-l border-gray-200">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-royal-blue-500 to-royal-blue-700 flex items-center justify-center shadow-md shadow-royal-blue-500/10">
-                  <span className="text-white text-xs font-bold">JM</span>
+                  <span className="text-white text-xs font-bold">{userRole === 'superadmin' ? 'JM' : 'MA'}</span>
                 </div>
                 <div className="hidden sm:block">
-                  <p className="text-gray-900 text-sm font-medium">John Michael</p>
-                  <p className="text-gray-400 text-[10px]">Super Admin</p>
+                  <p className="text-gray-900 text-sm font-medium">{userRole === 'superadmin' ? 'Pastor John Michael' : 'Ministry Assistant'}</p>
+                  <p className="text-gray-400 text-[10px]">{userRole === 'superadmin' ? 'Super Admin' : 'Admin'}</p>
                 </div>
               </div>
             </div>
@@ -331,7 +351,8 @@ interface DashboardTabProps {
 }
 
 function DashboardTab({ posts, onTabChange, donations, events }: DashboardTabProps) {
-  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>('donations');
+  const userRole = api.getRole();
+  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
 
   return (
     <div className="space-y-6">
@@ -350,12 +371,11 @@ function DashboardTab({ posts, onTabChange, donations, events }: DashboardTabPro
         </div>
       </div>
 
-      {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Users', value: '45,234', change: '+12%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
           { label: 'Sermon Views', value: '1,234,567', change: '+8.5%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
-          { label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true },
+          ...(userRole === 'superadmin' ? [{ label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true }] : []),
           { label: 'Active Today', value: '3,847', change: '-2.1%', icon: Users, color: 'from-violet-500 to-violet-700', up: false },
         ].map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
@@ -379,37 +399,41 @@ function DashboardTab({ posts, onTabChange, donations, events }: DashboardTabPro
         {/* Left Column (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart */}
-          <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
-              <button className="text-gray-400 hover:text-gray-600 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+          {userRole === 'superadmin' && (
+            <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
+                <button className="text-gray-400 hover:text-gray-600 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+              </div>
+              <div className="relative h-48 flex items-end gap-2">
+                {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((month, i) => {
+                  const height = 25 + Math.sin(i * 0.7) * 25 + Math.random() * 15;
+                  return (
+                    <div key={month} className="flex-1 flex flex-col items-center gap-1 group">
+                      <div className="w-full rounded-lg bg-gradient-to-t from-royal-blue-600 to-royal-blue-500 hover:from-gold-500 hover:to-gold-400 transition-all cursor-pointer" style={{ height: `${height}%` }} />
+                      <span className="text-[9px] text-gray-400">{month}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="relative h-48 flex items-end gap-2">
-              {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((month, i) => {
-                const height = 25 + Math.sin(i * 0.7) * 25 + Math.random() * 15;
-                return (
-                  <div key={month} className="flex-1 flex flex-col items-center gap-1 group">
-                    <div className="w-full rounded-lg bg-gradient-to-t from-royal-blue-600 to-royal-blue-500 hover:from-gold-500 hover:to-gold-400 transition-all cursor-pointer" style={{ height: `${height}%` }} />
-                    <span className="text-[9px] text-gray-400">{month}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* Activity Hub (Tabbed Donations and Members) */}
           <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
               <div className="flex gap-4">
-                <button
-                  onClick={() => setActiveListTab('donations')}
-                  className={cn(
-                    'text-sm font-semibold pb-3 border-b-2 -mb-3.5 transition-all duration-200 cursor-pointer',
-                    activeListTab === 'donations' ? 'border-royal-blue-600 text-royal-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  Recent Donations
-                </button>
+                {userRole === 'superadmin' && (
+                  <button
+                    onClick={() => setActiveListTab('donations')}
+                    className={cn(
+                      'text-sm font-semibold pb-3 border-b-2 -mb-3.5 transition-all duration-200 cursor-pointer',
+                      activeListTab === 'donations' ? 'border-royal-blue-600 text-royal-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    )}
+                  >
+                    Recent Donations
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveListTab('members')}
                   className={cn(
@@ -555,7 +579,7 @@ function UsersTab() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Joined</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sermons</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Donations</th>
+                {userRole === 'superadmin' && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Donations</th>}
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -593,7 +617,7 @@ function UsersTab() {
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{user.joined}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{user.sermons}</td>
-                  <td className="px-4 py-3 text-emerald-600 text-xs font-semibold">${user.donations.toLocaleString()}</td>
+                  {userRole === 'superadmin' && <td className="px-4 py-3 text-emerald-600 text-xs font-semibold">${user.donations.toLocaleString()}</td>}
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"><Eye className="w-3.5 h-3.5" /></button>

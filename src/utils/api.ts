@@ -18,6 +18,7 @@ function getHeaders() {
 async function handleResponse(res: Response, defaultError: string) {
   if (res.status === 401) {
     localStorage.removeItem('jg_admin_token');
+    localStorage.removeItem('jg_admin_role');
     window.dispatchEvent(new Event('jg_unauthorized'));
     throw new Error('Session expired. Please log in again.');
   }
@@ -40,6 +41,7 @@ export const api = {
       const data = await res.json();
       if (res.ok && data.success) {
         localStorage.setItem('jg_admin_token', data.token);
+        localStorage.setItem('jg_admin_role', data.role || 'admin');
         return { success: true, token: data.token };
       }
       return { success: false, error: data.error || 'Login failed' };
@@ -50,10 +52,15 @@ export const api = {
 
   logout() {
     localStorage.removeItem('jg_admin_token');
+    localStorage.removeItem('jg_admin_role');
   },
 
   isAuthenticated(): boolean {
     return !!localStorage.getItem('jg_admin_token');
+  },
+
+  getRole(): 'superadmin' | 'admin' | null {
+    return localStorage.getItem('jg_admin_role') as any;
   },
 
   // Sermons
@@ -179,6 +186,7 @@ export const api = {
       xhr.onload = () => {
         if (xhr.status === 401) {
           localStorage.removeItem('jg_admin_token');
+          localStorage.removeItem('jg_admin_role');
           window.dispatchEvent(new Event('jg_unauthorized'));
           reject(new Error('Session expired. Please log in again.'));
           return;

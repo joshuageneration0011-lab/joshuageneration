@@ -106,9 +106,31 @@ function initLocalData() {
     console.log('Initialized local donations database.');
   }
   if (!fs.existsSync(CREDENTIALS_FILE)) {
-    const { salt, hash } = hashPassword('admin123'); // Default password: admin123
-    fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify({ username: 'admin@joshuagen.org', salt, hash }), 'utf-8');
-    console.log('Initialized local admin credentials.');
+    const superAdminHash = hashPassword('admin123');
+    const adminHash = hashPassword('admin123');
+    const defaultCredentials = [
+      { username: 'admin@joshuagen.org', salt: superAdminHash.salt, hash: superAdminHash.hash, role: 'superadmin' },
+      { username: 'assistant@joshuagen.org', salt: adminHash.salt, hash: adminHash.hash, role: 'admin' }
+    ];
+    fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(defaultCredentials, null, 2), 'utf-8');
+    console.log('Initialized local credentials array with superadmin and admin.');
+  } else {
+    try {
+      const fileData = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
+      if (!Array.isArray(fileData)) {
+        const superAdminHash = fileData;
+        superAdminHash.role = superAdminHash.role || 'superadmin';
+        const adminHash = hashPassword('admin123');
+        const defaultCredentials = [
+          superAdminHash,
+          { username: 'assistant@joshuagen.org', salt: adminHash.salt, hash: adminHash.hash, role: 'admin' }
+        ];
+        fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(defaultCredentials, null, 2), 'utf-8');
+        console.log('Migrated single credentials to credentials array and added assistant@joshuagen.org.');
+      }
+    } catch (e) {
+      console.error('Failed to parse or migrate credentials file:', e);
+    }
   }
   if (!fs.existsSync(SETTINGS_FILE)) {
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ flutterwave_prophetic_key: '', flutterwave_mission_key: '' }, null, 2), 'utf-8');
@@ -192,9 +214,17 @@ async function initDb() {
         CREATE TABLE IF NOT EXISTS credentials (
           username VARCHAR PRIMARY KEY,
           salt VARCHAR NOT NULL,
-          hash VARCHAR NOT NULL
+          hash VARCHAR NOT NULL,
+          role VARCHAR DEFAULT 'admin'
         );
       `);
+      try {
+        await pool.query("ALTER TABLE credentials ADD COLUMN IF NOT EXISTS role VARCHAR DEFAULT 'admin'");
+        // Automatically make sure main admin is superadmin
+        await pool.query("UPDATE credentials SET role = 'superadmin' WHERE LOWER(username) = 'admin@joshuagen.org'");
+      } catch (err) {
+        console.warn("Failed to check/add role column to credentials:", err.message);
+      }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS donations (
@@ -307,12 +337,27 @@ async function initDb() {
 
       const credentialsCheck = await pool.query('SELECT 1 FROM credentials LIMIT 1');
       if (credentialsCheck.rowCount === 0) {
-        const { salt, hash } = hashPassword('admin123'); // Default password: admin123
+        const superAdminHash = hashPassword('admin123');
         await pool.query(
-          `INSERT INTO credentials (username, salt, hash) VALUES ($1, $2, $3)`,
-          ['admin@joshuagen.org', salt, hash]
+          `INSERT INTO credentials (username, salt, hash, role) VALUES ($1, $2, $3, $4)`,
+          ['admin@joshuagen.org', superAdminHash.salt, superAdminHash.hash, 'superadmin']
         );
-        console.log('Seeded admin credentials.');
+        const adminHash = hashPassword('admin123');
+        await pool.query(
+          `INSERT INTO credentials (username, salt, hash, role) VALUES ($1, $2, $3, $4)`,
+          ['assistant@joshuagen.org', adminHash.salt, adminHash.hash, 'admin']
+        );
+        console.log('Seeded admin and assistant credentials.');
+      } else {
+        const assistantCheck = await pool.query("SELECT 1 FROM credentials WHERE LOWER(username) = 'assistant@joshuagen.org'");
+        if (assistantCheck.rowCount === 0) {
+          const adminHash = hashPassword('admin123');
+          await pool.query(
+            `INSERT INTO credentials (username, salt, hash, role) VALUES ($1, $2, $3, $4)`,
+            ['assistant@joshuagen.org', adminHash.salt, adminHash.hash, 'admin']
+          );
+          console.log('Seeded assistant credentials to existing database.');
+        }
       }
 
       console.log('Database tables successfully verified and initialized.');
@@ -368,7 +413,7 @@ function getAuthenticatedUser(req) {
     sessions.delete(token);
     return null;
   }
-  return session.username;
+  return { username: session.username, role: session.role || 'admin' };
 }
 
 // --- Router ---
@@ -403,24 +448,28 @@ const server = http.createServer(async (req, res) => {
 
       let creds = null;
       if (pool) {
-        const result = await pool.query('SELECT username, salt, hash FROM credentials WHERE LOWER(username) = LOWER($1)', [email]);
+        const result = await pool.query('SELECT username, salt, hash, role FROM credentials WHERE LOWER(username) = LOWER($1)', [email]);
         if (result.rowCount > 0) {
           creds = result.rows[0];
         }
       } else {
         const fileData = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
-        if (fileData.username.toLowerCase() === email.toLowerCase()) {
-          creds = fileData;
+        if (Array.isArray(fileData)) {
+          creds = fileData.find(c => c.username.toLowerCase() === email.toLowerCase());
+        } else if (fileData.username.toLowerCase() === email.toLowerCase()) {
+          creds = { ...fileData, role: fileData.role || 'superadmin' };
         }
       }
 
       if (creds && verifyPassword(password, creds.salt, creds.hash)) {
         const token = crypto.randomBytes(32).toString('hex');
+        const role = creds.role || 'admin';
         sessions.set(token, {
           username: creds.username,
+          role: role,
           expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 Hours Session
         });
-        sendJson(res, 200, { success: true, token });
+        sendJson(res, 200, { success: true, token, role });
       } else {
         sendJson(res, 401, { error: 'Invalid email or password' });
       }
@@ -712,6 +761,10 @@ const server = http.createServer(async (req, res) => {
 
   // GET Donations (Admin only)
   if (pathname === '/api/donations' && method === 'GET') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Forbidden: Super Admin access required' });
+      return;
+    }
     try {
       if (pool) {
         const result = await pool.query('SELECT * FROM donations ORDER BY id DESC');
@@ -1105,6 +1158,10 @@ const server = http.createServer(async (req, res) => {
 
   // POST Settings (Admin only)
   if (pathname === '/api/settings' && method === 'POST') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Forbidden: Super Admin access required' });
+      return;
+    }
     try {
       const { flutterwave_prophetic_key, flutterwave_mission_key } = await getJsonBody(req);
       if (flutterwave_prophetic_key === undefined || flutterwave_mission_key === undefined) {
