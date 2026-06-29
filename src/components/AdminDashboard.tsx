@@ -575,6 +575,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons }: Dashbo
 
 // ====== USERS TAB ======
 function UsersTab() {
+  const userRole = api.getRole();
   const [searchTerm, setSearchTerm] = useState('');
   const filtered = allUsers.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
