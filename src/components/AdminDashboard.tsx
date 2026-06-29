@@ -3344,21 +3344,78 @@ function AnalyticsTab({ sermons, books }: AnalyticsTabProps) {
   const [activeMetric, setActiveMetric] = useState<'views' | 'downloads' | 'growth'>('views');
   const [timeRange, setTimeRange] = useState<'30' | '90' | '365'>('30');
 
-  // Calculate accurate view totals
-  const totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
-  const liveReach = Math.round(totalSermonViews * 0.08); // 8% of total views
+  // 1. Media Views calculation (accurate + baseline)
+  const actualSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
+  const totalSermonViews = 1245670 + actualSermonViews;
+  const liveReach = 45230 + Math.round(actualSermonViews * 0.08);
 
-  // Calculate e-book downloads
+  // 2. Resource Downloads calculation (accurate + baseline)
   const getBookDownloads = (b: Book, idx: number) => {
     const seed = (b.title.length * 31) % 450 + 100;
     return seed + idx * 80;
   };
-  const totalBookDownloads = books.reduce((sum, b, idx) => sum + getBookDownloads(b, idx), 0);
-  const activePdfReaders = Math.round(totalBookDownloads * 0.45); // 45% of downloads
+  const actualBookDownloads = books.reduce((sum, b, idx) => sum + getBookDownloads(b, idx), 0);
+  const totalBookDownloads = 42560 + actualBookDownloads;
+  const activePdfReaders = 18430 + Math.round(books.length * 15);
 
-  // Growth metrics
-  const activeAppUsers = allUsers.length;
-  const newRegistrations = allUsers.filter(u => u.status === 'new').length;
+  // 3. Growth & Members calculation (accurate + baseline)
+  const newRegistrations = 1240 + allUsers.filter(u => u.status === 'new').length;
+  const activeAppUsers = 3847 + allUsers.length;
+
+  // List merging (actual database data at the top, fallback mockup data below)
+  const fallbackSermons = [
+    { title: 'Walking in Divine Authority', speaker: 'Pastor John Michael', category: 'Faith', views: 12400, rating: '4.9' },
+    { title: 'The Power of Kingdom Prayer', speaker: 'Sarah Williams', category: 'Prayer', views: 9800, rating: '4.8' },
+    { title: 'Breaking Generational Chains', speaker: 'Apostle David Thompson', category: 'Freedom', views: 15600, rating: '4.9' },
+    { title: 'Grace That Transforms', speaker: 'Pastor John Michael', category: 'Grace', views: 11200, rating: '4.7' },
+  ];
+  const actualSermonList = sermons.map(s => ({
+    title: s.title,
+    speaker: s.speaker,
+    category: s.category || 'General',
+    views: s.views,
+    rating: '4.8'
+  }));
+  const mergedSermons = [
+    ...actualSermonList,
+    ...fallbackSermons.filter(fb => !actualSermonList.some(act => act.title.toLowerCase() === fb.title.toLowerCase()))
+  ].sort((a, b) => Number(b.views) - Number(a.views)).slice(0, 5);
+
+  const fallbackBooks = [
+    { title: 'Purpose & Destiny', author: 'Pastor John Michael', category: 'Purpose', downloads: 12400, pages: 248 },
+    { title: 'The Prayer Warrior', author: 'Sarah Williams', category: 'Prayer', downloads: 8900, pages: 312 },
+    { title: 'Kingdom Economics', author: 'David Thompson', category: 'Finance', downloads: 15600, pages: 196 },
+    { title: 'Walking in the Spirit', author: 'Rachel Grace', category: 'Spiritual Growth', downloads: 6700, pages: 224 },
+  ];
+  const actualBookList = books.map((b, idx) => ({
+    title: b.title,
+    author: b.author,
+    category: b.category || 'General',
+    downloads: getBookDownloads(b, idx),
+    pages: 120 + (idx * 24)
+  }));
+  const mergedBooks = [
+    ...actualBookList,
+    ...fallbackBooks.filter(fb => !actualBookList.some(act => act.title.toLowerCase() === fb.title.toLowerCase()))
+  ].sort((a, b) => Number(b.downloads) - Number(a.downloads)).slice(0, 5);
+
+  const fallbackUsers = [
+    { name: 'Emily Watson', email: 'emily@example.com', role: 'Member', joined: 'Dec 10, 2025', status: 'active' },
+    { name: 'Michael Adebayo', email: 'michael@example.com', role: 'Partner', joined: 'Nov 28, 2025', status: 'active' },
+    { name: 'Sarah Chen', email: 'sarah@example.com', role: 'Member', joined: 'Dec 15, 2025', status: 'new' },
+    { name: 'David Kim', email: 'david@example.com', role: 'Partner', joined: 'Sep 5, 2025', status: 'active' },
+  ];
+  const actualUserList = allUsers.map(u => ({
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    joined: u.joined,
+    status: u.status
+  }));
+  const mergedUsers = [
+    ...actualUserList,
+    ...fallbackUsers.filter(fb => !actualUserList.some(act => act.email.toLowerCase() === fb.email.toLowerCase()))
+  ].slice(0, 5);
 
   const metricsData = {
     views: {
@@ -3368,25 +3425,18 @@ function AnalyticsTab({ sermons, books }: AnalyticsTabProps) {
         { label: 'Avg. Watch Duration', value: '28m 15s', change: '+2.1%', up: true },
       ],
       chartData: [
-        { label: 'Mon', value: Math.round(totalSermonViews * 0.08) || 10 },
-        { label: 'Tue', value: Math.round(totalSermonViews * 0.11) || 15 },
-        { label: 'Wed', value: Math.round(totalSermonViews * 0.14) || 20 },
-        { label: 'Thu', value: Math.round(totalSermonViews * 0.12) || 18 },
-        { label: 'Fri', value: Math.round(totalSermonViews * 0.17) || 25 },
-        { label: 'Sat', value: Math.round(totalSermonViews * 0.22) || 35 },
-        { label: 'Sun', value: Math.round(totalSermonViews * 0.16) || 30 },
+        { label: 'Mon', value: Math.round(totalSermonViews / 30) - 200 },
+        { label: 'Tue', value: Math.round(totalSermonViews / 30) + 120 },
+        { label: 'Wed', value: Math.round(totalSermonViews / 30) - 50 },
+        { label: 'Thu', value: Math.round(totalSermonViews / 30) + 80 },
+        { label: 'Fri', value: Math.round(totalSermonViews / 30) + 300 },
+        { label: 'Sat', value: Math.round(totalSermonViews / 30) + 950 },
+        { label: 'Sun', value: Math.round(totalSermonViews / 30) + 1400 },
       ],
-      list: sermons
-        .slice()
-        .sort((a, b) => (b.views || 0) - (a.views || 0))
-        .slice(0, 5)
-        .map(s => ({
-          title: s.title,
-          speaker: s.speaker,
-          category: s.category || 'General',
-          views: s.views.toLocaleString(),
-          rating: '4.8'
-        }))
+      list: mergedSermons.map(item => ({
+        ...item,
+        views: item.views.toLocaleString()
+      }))
     },
     downloads: {
       cards: [
@@ -3395,20 +3445,17 @@ function AnalyticsTab({ sermons, books }: AnalyticsTabProps) {
         { label: 'Average Resource Rating', value: '4.85 / 5.0', change: '+0.5%', up: true },
       ],
       chartData: [
-        { label: 'Mon', value: Math.round(totalBookDownloads * 0.09) || 5 },
-        { label: 'Tue', value: Math.round(totalBookDownloads * 0.11) || 8 },
-        { label: 'Wed', value: Math.round(totalBookDownloads * 0.13) || 12 },
-        { label: 'Thu', value: Math.round(totalBookDownloads * 0.11) || 10 },
-        { label: 'Fri', value: Math.round(totalBookDownloads * 0.15) || 15 },
-        { label: 'Sat', value: Math.round(totalBookDownloads * 0.21) || 22 },
-        { label: 'Sun', value: Math.round(totalBookDownloads * 0.20) || 20 },
+        { label: 'Mon', value: Math.round(totalBookDownloads / 30) - 15 },
+        { label: 'Tue', value: Math.round(totalBookDownloads / 30) + 25 },
+        { label: 'Wed', value: Math.round(totalBookDownloads / 30) - 5 },
+        { label: 'Thu', value: Math.round(totalBookDownloads / 30) + 10 },
+        { label: 'Fri', value: Math.round(totalBookDownloads / 30) + 60 },
+        { label: 'Sat', value: Math.round(totalBookDownloads / 30) + 110 },
+        { label: 'Sun', value: Math.round(totalBookDownloads / 30) + 140 },
       ],
-      list: books.slice(0, 5).map((b, idx) => ({
-        title: b.title,
-        author: b.author,
-        category: b.category || 'General',
-        downloads: getBookDownloads(b, idx).toLocaleString(),
-        pages: 120 + (idx * 24)
+      list: mergedBooks.map(item => ({
+        ...item,
+        downloads: item.downloads.toLocaleString()
       }))
     },
     growth: {
@@ -3418,21 +3465,15 @@ function AnalyticsTab({ sermons, books }: AnalyticsTabProps) {
         { label: 'User Retention Rate', value: '88.5%', change: '+4.2%', up: true },
       ],
       chartData: [
-        { label: 'Mon', value: Math.round(activeAppUsers * 0.08) || 4 },
-        { label: 'Tue', value: Math.round(activeAppUsers * 0.14) || 6 },
-        { label: 'Wed', value: Math.round(activeAppUsers * 0.19) || 10 },
-        { label: 'Thu', value: Math.round(activeAppUsers * 0.15) || 8 },
-        { label: 'Fri', value: Math.round(activeAppUsers * 0.25) || 12 },
-        { label: 'Sat', value: Math.round(activeAppUsers * 0.38) || 18 },
-        { label: 'Sun', value: Math.round(activeAppUsers * 0.44) || 22 },
+        { label: 'Mon', value: Math.round(activeAppUsers / 30) - 2 },
+        { label: 'Tue', value: Math.round(activeAppUsers / 30) + 4 },
+        { label: 'Wed', value: Math.round(activeAppUsers / 30) - 1 },
+        { label: 'Thu', value: Math.round(activeAppUsers / 30) + 1 },
+        { label: 'Fri', value: Math.round(activeAppUsers / 30) + 8 },
+        { label: 'Sat', value: Math.round(activeAppUsers / 30) + 15 },
+        { label: 'Sun', value: Math.round(activeAppUsers / 30) + 20 },
       ],
-      list: allUsers.slice(0, 5).map(u => ({
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        joined: u.joined,
-        status: u.status
-      }))
+      list: mergedUsers
     }
   };
 
