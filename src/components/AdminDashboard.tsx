@@ -112,10 +112,24 @@ export default function AdminDashboard({
 }: AdminDashboardProps) {
   const userRole = api.getRole();
 
+  const [users, setUsers] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('jg_admin_users');
+      return saved ? JSON.parse(saved) : allUsers;
+    } catch (e) {
+      return allUsers;
+    }
+  });
+
+  const handleUpdateUsers = (newUsers: any[]) => {
+    setUsers(newUsers);
+    localStorage.setItem('jg_admin_users', JSON.stringify(newUsers));
+  };
+
   const sidebarItems: { id: AdminTab; label: string; icon: any; badge?: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'users', label: 'Users', icon: Users, badge: `+${allUsers.length}` },
+    { id: 'users', label: 'Users', icon: Users, badge: `+${users.length}` },
     { id: 'sermons', label: 'Sermons', icon: Tv, badge: sermons.length.toString() },
     { id: 'books', label: 'Books', icon: BookOpen, badge: books.length.toString() },
     { id: 'blog', label: 'Blog', icon: FileText, badge: posts.length.toString() },
@@ -174,23 +188,23 @@ export default function AdminDashboard({
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
-      case 'users': return <UsersTab />;
+      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
+      case 'users': return <UsersTab users={users} onUpdateUsers={handleUpdateUsers} />;
       case 'sermons': return <SermonsTab sermons={sermons} onUpdateSermons={onUpdateSermons} />;
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
-        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
+        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
         return <DonationsTab donations={donations} loading={loadingDonations} onRefresh={loadDonations} />;
-      case 'analytics': return <AnalyticsTab sermons={sermons} books={books} />;
+      case 'analytics': return <AnalyticsTab sermons={sermons} books={books} users={users} />;
       case 'prayer': return <PrayerTab />;
       case 'moderation': return <ModerationTab />;
       case 'settings': 
-        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
+        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
         return <SettingsTab />;
-      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
+      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
     }
   };
 
@@ -374,17 +388,18 @@ interface DashboardTabProps {
   donations: Donation[];
   events: Event[];
   sermons: Sermon[];
+  users: any[];
 }
 
-function DashboardTab({ posts, onTabChange, donations, events, sermons }: DashboardTabProps) {
+function DashboardTab({ posts, onTabChange, donations, events, sermons, users }: DashboardTabProps) {
   const userRole = api.getRole();
   const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
 
   // Exact data from state / database
   const totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
-  const totalUsersCount = allUsers.length;
-  const activeTodayCount = allUsers.filter(u => u.status === 'active').length;
-  const newMembersCount = allUsers.filter(u => u.status === 'new').length;
+  const totalUsersCount = users.length;
+  const activeTodayCount = users.filter(u => u.status === 'active').length;
+  const newMembersCount = users.filter(u => u.status === 'new').length;
 
   const displayName = userRole === 'superadmin' ? 'Pastor John!' : 'Ministry Assistant!';
 
@@ -509,7 +524,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons }: Dashbo
                   ))
                 )
               ) : (
-                allUsers.slice(0, 4).map((user) => (
+                users.slice(0, 4).map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 transition-colors border border-transparent">
                     <div className="flex items-center gap-3">
                       <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover shadow-sm" />
@@ -574,10 +589,109 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons }: Dashbo
 }
 
 // ====== USERS TAB ======
-function UsersTab() {
+interface UsersTabProps {
+  users: any[];
+  onUpdateUsers: (newUsers: any[]) => void;
+}
+
+function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
   const userRole = api.getRole();
   const [searchTerm, setSearchTerm] = useState('');
-  const filtered = allUsers.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase()));
+  
+  // Modals & form states
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [viewingUser, setViewingUser] = useState<any | null>(null);
+  const [userToDelete, setUserToDelete] = useState<any | null>(null);
+
+  // Form fields
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'Member' | 'Partner' | 'Minister' | 'Admin'>('Member');
+  const [status, setStatus] = useState<'active' | 'new' | 'inactive'>('new');
+  const [joined, setJoined] = useState('');
+  const [sermons, setSermons] = useState<number>(0);
+  const [donations, setDonations] = useState<number>(0);
+  const [avatar, setAvatar] = useState('');
+
+  const filtered = users.filter(u => 
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleAddClick = () => {
+    setEditingUser(null);
+    setName('');
+    setEmail('');
+    setRole('Member');
+    setStatus('new');
+    setJoined(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+    setSermons(0);
+    setDonations(0);
+    setAvatar('');
+    setIsFormOpen(true);
+  };
+
+  const handleEditClick = (user: any) => {
+    setEditingUser(user);
+    setName(user.name);
+    setEmail(user.email);
+    setRole(user.role);
+    setStatus(user.status);
+    setJoined(user.joined);
+    setSermons(user.sermons);
+    setDonations(user.donations);
+    setAvatar(user.avatar || '');
+    setIsFormOpen(true);
+  };
+
+  const handleViewClick = (user: any) => {
+    setViewingUser(user);
+    setIsViewOpen(true);
+  };
+
+  const handleDeleteClick = (user: any) => {
+    setUserToDelete(user);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      const updated = users.filter(u => u.id !== userToDelete.id);
+      onUpdateUsers(updated);
+      setUserToDelete(null);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) {
+      alert('Name and Email are required.');
+      return;
+    }
+
+    const userData = {
+      id: editingUser ? editingUser.id : Date.now(),
+      name: name.trim(),
+      email: email.trim(),
+      role,
+      status,
+      joined: joined || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      sermons: Number(sermons) || 0,
+      donations: Number(donations) || 0,
+      avatar: avatar.trim() || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000)}?w=200&q=80`
+    };
+
+    let updatedUsers: any[];
+    if (editingUser) {
+      updatedUsers = users.map(u => u.id === editingUser.id ? userData : u);
+    } else {
+      updatedUsers = [...users, userData];
+    }
+
+    onUpdateUsers(updatedUsers);
+    setIsFormOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -597,7 +711,10 @@ function UsersTab() {
               className="pl-9 pr-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 w-48 sm:w-56 transition-all"
             />
           </div>
-          <button className="px-4 py-2 rounded-xl bg-royal-blue-600 text-white text-sm font-medium hover:bg-royal-blue-700 transition-colors flex items-center gap-2 shadow-sm">
+          <button 
+            onClick={handleAddClick}
+            className="px-4 py-2 rounded-xl bg-royal-blue-600 text-white text-sm font-medium hover:bg-royal-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+          >
             <UserPlus className="w-4 h-4" />
             Add User
           </button>
@@ -619,60 +736,306 @@ function UsersTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover shadow-sm" />
-                      <div>
-                        <p className="text-gray-900 text-sm font-medium">{user.name}</p>
-                        <p className="text-gray-500 text-[10px]">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold border',
-                      user.role === 'Admin' ? 'bg-gold-50 text-gold-700 border-gold-100/50' :
-                      user.role === 'Partner' ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50' :
-                      user.role === 'Minister' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100/50' :
-                      'bg-gray-50 text-gray-600 border-gray-100/50'
-                    )}>{user.role}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn('flex items-center gap-1 text-xs font-medium',
-                      user.status === 'active' ? 'text-emerald-700' :
-                      user.status === 'new' ? 'text-royal-blue-600' : 'text-gray-400'
-                    )}>
-                      <span className={cn('w-1.5 h-1.5 rounded-full',
-                        user.status === 'active' ? 'bg-emerald-500' :
-                        user.status === 'new' ? 'bg-royal-blue-500' : 'bg-gray-300'
-                      )} />
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{user.joined}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{user.sermons}</td>
-                  {userRole === 'superadmin' && <td className="px-4 py-3 text-emerald-600 text-xs font-semibold">${user.donations.toLocaleString()}</td>}
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"><Eye className="w-3.5 h-3.5" /></button>
-                      <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
-                      <button className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={userRole === 'superadmin' ? 7 : 6} className="text-center py-8 text-gray-500 text-sm">
+                    No members found matching your search.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover shadow-sm" />
+                        <div>
+                          <p className="text-gray-900 text-sm font-medium">{user.name}</p>
+                          <p className="text-gray-500 text-[10px]">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                        user.role === 'Admin' ? 'bg-gold-50 text-gold-700 border-gold-100/50' :
+                        user.role === 'Partner' ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50' :
+                        user.role === 'Minister' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100/50' :
+                        'bg-gray-50 text-gray-605 border-gray-100/50'
+                      )}>{user.role}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn('flex items-center gap-1 text-xs font-medium',
+                        user.status === 'active' ? 'text-emerald-700' :
+                        user.status === 'new' ? 'text-royal-blue-600' : 'text-gray-450'
+                      )}>
+                        <span className={cn('w-1.5 h-1.5 rounded-full',
+                          user.status === 'active' ? 'bg-emerald-500' :
+                          user.status === 'new' ? 'bg-royal-blue-500' : 'bg-gray-300'
+                        )} />
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{user.joined}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{user.sermons}</td>
+                    {userRole === 'superadmin' && <td className="px-4 py-3 text-emerald-600 text-xs font-semibold">${user.donations.toLocaleString()}</td>}
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button 
+                          onClick={() => handleViewClick(user)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleEditClick(user)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteClick(user)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-650 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
-          <p className="text-gray-500 text-xs">Showing {filtered.length} of {allUsers.length} users</p>
+          <p className="text-gray-500 text-xs">Showing {filtered.length} of {users.length} users</p>
           <div className="flex items-center gap-2">
             <button className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors">Previous</button>
             <button className="px-3 py-1.5 rounded-lg bg-royal-blue-600 text-white text-xs hover:bg-royal-blue-700 transition-colors">Next</button>
           </div>
         </div>
       </div>
+
+      {/* Create / Edit User Modal */}
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="relative bg-white rounded-3xl border border-gray-100 shadow-2xl w-full max-w-lg my-8 overflow-hidden max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-lg font-bold text-gray-900">{editingUser ? 'Edit User Details' : 'Add New User'}</h3>
+              <button 
+                onClick={() => setIsFormOpen(false)}
+                className="text-gray-450 hover:text-gray-650 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Full Name *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                  placeholder="Emily Watson"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email Address *</label>
+                <input 
+                  type="email" 
+                  required
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  placeholder="emily@example.com"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Role</label>
+                  <select 
+                    value={role} 
+                    onChange={(e) => setRole(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-semibold cursor-pointer"
+                  >
+                    <option value="Member">Member</option>
+                    <option value="Partner">Partner</option>
+                    <option value="Minister">Minister</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
+                  <select 
+                    value={status} 
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-semibold cursor-pointer"
+                  >
+                    <option value="active">Active</option>
+                    <option value="new">New</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sermons Watched</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    value={sermons} 
+                    onChange={(e) => setSermons(Number(e.target.value))} 
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Donations ($)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    value={donations} 
+                    onChange={(e) => setDonations(Number(e.target.value))} 
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-550 uppercase tracking-wider mb-1.5">Avatar Image URL</label>
+                <input 
+                  type="text" 
+                  value={avatar} 
+                  onChange={(e) => setAvatar(e.target.value)} 
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                />
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3 flex-shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => setIsFormOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-sm font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm"
+                >
+                  {editingUser ? 'Save Changes' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View User Modal */}
+      {isViewOpen && viewingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="relative bg-white rounded-3xl border border-gray-100 shadow-2xl w-full max-w-md my-8 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">User Profile Details</h3>
+              <button 
+                onClick={() => setIsViewOpen(false)}
+                className="text-gray-450 hover:text-gray-650 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 text-center">
+              <div className="flex flex-col items-center">
+                <img src={viewingUser.avatar} alt={viewingUser.name} className="w-24 h-24 rounded-full object-cover shadow-md border-4 border-white ring-4 ring-royal-blue-100" />
+                <h4 className="text-xl font-bold text-gray-900 mt-4">{viewingUser.name}</h4>
+                <p className="text-gray-500 text-sm">{viewingUser.email}</p>
+                <div className="flex gap-2 mt-3">
+                  <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                    viewingUser.role === 'Admin' ? 'bg-gold-50 text-gold-700 border-gold-100/50' :
+                    viewingUser.role === 'Partner' ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50' :
+                    viewingUser.role === 'Minister' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100/50' :
+                    'bg-gray-50 text-gray-600 border-gray-100/50'
+                  )}>{viewingUser.role}</span>
+                  <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                    viewingUser.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50' :
+                    viewingUser.status === 'new' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100/50' :
+                    'bg-gray-50 text-gray-500 border-gray-100/50'
+                  )}>{viewingUser.status}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-6 text-left">
+                <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Sermons Watched</span>
+                  <p className="text-lg font-bold text-gray-900 mt-1">{viewingUser.sermons}</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Total Donations</span>
+                  <p className="text-lg font-bold text-emerald-600 mt-1">${viewingUser.donations.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="text-left bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 text-xs text-gray-500 space-y-1.5">
+                <p>Joined Date: <span className="font-semibold text-gray-700">{viewingUser.joined}</span></p>
+                <p>User Registry ID: <span className="font-mono text-gray-650">{viewingUser.id}</span></p>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <button 
+                  onClick={() => setIsViewOpen(false)}
+                  className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="relative bg-white rounded-3xl border border-gray-100 shadow-2xl w-full max-w-sm my-8 overflow-hidden">
+            <div className="p-6 space-y-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-50 text-red-650 flex items-center justify-center mx-auto border border-red-100">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete User Account</h3>
+                <p className="text-gray-500 text-xs mt-1.5 leading-relaxed">
+                  Are you sure you want to delete <span className="font-semibold text-gray-700">{userToDelete.name}</span>? This action is permanent and cannot be undone.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <button 
+                  onClick={() => setUserToDelete(null)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm"
+                >
+                  Delete User
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3348,9 +3711,10 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
 interface AnalyticsTabProps {
   sermons: Sermon[];
   books: Book[];
+  users: any[];
 }
 
-function AnalyticsTab({ sermons, books }: AnalyticsTabProps) {
+function AnalyticsTab({ sermons, books, users }: AnalyticsTabProps) {
   const [activeMetric, setActiveMetric] = useState<'views' | 'downloads' | 'growth'>('views');
   const [timeRange, setTimeRange] = useState<'30' | '90' | '365'>('30');
 
@@ -3367,8 +3731,8 @@ function AnalyticsTab({ sermons, books }: AnalyticsTabProps) {
   const activePdfReaders = Math.round(totalBookDownloads * 0.45);
 
   // 3. Growth & Members calculation (exact database figures)
-  const newRegistrations = allUsers.filter(u => u.status === 'new').length;
-  const activeAppUsers = allUsers.filter(u => u.status === 'active').length;
+  const newRegistrations = users.filter(u => u.status === 'new').length;
+  const activeAppUsers = users.filter(u => u.status === 'active').length;
 
   // Exact data from database (no mockup fallback fillers)
   const mergedSermons = sermons
@@ -3393,7 +3757,7 @@ function AnalyticsTab({ sermons, books }: AnalyticsTabProps) {
       pages: 150
     }));
 
-  const mergedUsers = allUsers.map(u => ({
+  const mergedUsers = users.map(u => ({
     name: u.name,
     email: u.email,
     role: u.role,
