@@ -174,7 +174,7 @@ export default function AdminDashboard({
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} />;
+      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
       case 'users': return <UsersTab />;
       case 'sermons': return <SermonsTab sermons={sermons} onUpdateSermons={onUpdateSermons} />;
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
@@ -182,15 +182,15 @@ export default function AdminDashboard({
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
-        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} />;
+        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
         return <DonationsTab donations={donations} loading={loadingDonations} onRefresh={loadDonations} />;
       case 'analytics': return <AnalyticsTab sermons={sermons} books={books} />;
       case 'prayer': return <PrayerTab />;
       case 'moderation': return <ModerationTab />;
       case 'settings': 
-        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} />;
+        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
         return <SettingsTab />;
-      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} />;
+      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} />;
     }
   };
 
@@ -373,11 +373,20 @@ interface DashboardTabProps {
   onTabChange: (tab: AdminTab) => void;
   donations: Donation[];
   events: Event[];
+  sermons: Sermon[];
 }
 
-function DashboardTab({ posts, onTabChange, donations, events }: DashboardTabProps) {
+function DashboardTab({ posts, onTabChange, donations, events, sermons }: DashboardTabProps) {
   const userRole = api.getRole();
   const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
+
+  // Exact data from state / database
+  const totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
+  const totalUsersCount = allUsers.length;
+  const activeTodayCount = allUsers.filter(u => u.status === 'active').length;
+  const newMembersCount = allUsers.filter(u => u.status === 'new').length;
+
+  const displayName = userRole === 'superadmin' ? 'Pastor John!' : 'Ministry Assistant!';
 
   return (
     <div className="space-y-6">
@@ -386,22 +395,22 @@ function DashboardTab({ posts, onTabChange, donations, events }: DashboardTabPro
         <div className="absolute inset-0 bg-grid opacity-10" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-500/10 rounded-full blur-[80px]" />
         <div className="relative">
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome back, Pastor John! 👋</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome back, {displayName} 👋</h1>
           <p className="text-white/80 text-sm mt-1 max-w-lg">The Lord is doing great things. Here's your ministry overview for today.</p>
           <div className="flex flex-wrap gap-2 mt-4">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">📈 12% growth this week</span>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">🕊️ 45 new members</span>
-            <span className="px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 text-xs font-medium">🔥 234 prayer requests</span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">🕊️ {newMembersCount} new members</span>
+            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">🔥 {sermons.length} sermons uploaded</span>
+            <span className="px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 text-xs font-medium">📖 {posts.length} blog posts</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Users', value: '45,234', change: '+12%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
-          { label: 'Sermon Views', value: '1,234,567', change: '+8.5%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
-          ...(userRole === 'superadmin' ? [{ label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+23%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true }] : []),
-          { label: 'Active Today', value: '3,847', change: '-2.1%', icon: Users, color: 'from-violet-500 to-violet-700', up: false },
+          { label: 'Total Users', value: totalUsersCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
+          { label: 'Sermon Views', value: totalSermonViews.toLocaleString(), change: '+0.0%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
+          ...(userRole === 'superadmin' ? [{ label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true }] : []),
+          { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
         ].map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-4">
