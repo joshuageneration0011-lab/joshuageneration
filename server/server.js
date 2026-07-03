@@ -752,10 +752,16 @@ const server = http.createServer(async (req, res) => {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: tokenParams.toString()
       });
-      const tokenData = await tokenRes.json();
+      const tokenRaw = await tokenRes.text();
+      let tokenData;
+      try { tokenData = JSON.parse(tokenRaw); } catch(e) {
+        console.error('Flutterwave IdP non-JSON response:', tokenRaw.substring(0, 500));
+        sendJson(res, 502, { error: 'Payment provider returned an unexpected response. Check your Client ID and Client Secret in Settings.' });
+        return;
+      }
       if (!tokenData.access_token) {
         console.error('Flutterwave token error:', tokenData);
-        sendJson(res, 502, { error: 'Failed to authenticate with payment provider.' });
+        sendJson(res, 502, { error: 'Payment provider rejected credentials: ' + (tokenData.error_description || tokenData.error || 'Invalid client credentials') });
         return;
       }
 
@@ -782,14 +788,20 @@ const server = http.createServer(async (req, res) => {
           }
         })
       });
-      const paymentData = await paymentRes.json();
+      const paymentRaw = await paymentRes.text();
+      let paymentData;
+      try { paymentData = JSON.parse(paymentRaw); } catch(e) {
+        console.error('Flutterwave payment non-JSON response:', paymentRaw.substring(0, 500));
+        sendJson(res, 502, { error: 'Payment provider returned unexpected response.' });
+        return;
+      }
       console.log('Flutterwave V4 payment response:', JSON.stringify(paymentData));
 
       // V4 returns payment_link in data or meta
       const paymentLink = paymentData?.data?.link || paymentData?.meta?.authorization?.redirect || paymentData?.link;
       if (!paymentLink) {
         console.error('No payment link in response:', paymentData);
-        sendJson(res, 502, { error: 'Failed to create payment link: ' + (paymentData?.message || 'Unknown error') });
+        sendJson(res, 502, { error: 'Failed to create payment link: ' + (paymentData?.message || JSON.stringify(paymentData)) });
         return;
       }
 
