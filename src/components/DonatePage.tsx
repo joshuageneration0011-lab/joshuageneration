@@ -3,11 +3,12 @@ import { Gift, Heart, CreditCard, CheckCircle2, ArrowLeft, Mail, User, ShieldChe
 import { api } from '../utils/api';
 interface DonatePageProps {
   onBack: () => void;
+  initialCause?: string;
 }
 
-export default function DonatePage({ onBack }: DonatePageProps) {
-  const [step, setStep] = useState(0);
-  const [cause, setCause] = useState('');
+export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
+  const [step, setStep] = useState(initialCause ? 1 : 0);
+  const [cause, setCause] = useState(initialCause || '');
   const [frequency, setFrequency] = useState('one-time');
   const [amount, setAmount] = useState('50');
   const [customAmount, setCustomAmount] = useState('');

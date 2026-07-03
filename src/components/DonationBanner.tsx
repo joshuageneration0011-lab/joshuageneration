@@ -1,14 +1,13 @@
-import { Gift, Heart, Building2, Users, ArrowRight } from 'lucide-react';
+import { Gift, Heart, Building2, Users, ArrowRight, Crown, Globe } from 'lucide-react';
 import { stats } from '@/data/mockData';
 
 interface DonationBannerProps {
-  onGiveClick?: () => void;
+  onGiveClick?: (cause?: string) => void;
 }
 
 const GIVE_OPTIONS = [
-  { icon: Heart,     label: 'General Ministry', desc: 'Support daily gospel operations' },
-  { icon: Building2, label: 'Building Fund',    desc: 'Help build our worship center' },
-  { icon: Users,     label: 'Conference',        desc: 'Sponsor the next conference'   },
+  { icon: Crown,     label: 'Prophetic Offering', desc: 'Honor the prophetic ministry and support the anointed work' },
+  { icon: Globe,     label: 'Mission / Outreach', desc: 'Fuel global missions, evangelism, and community outreach' },
 ];
 
 export default function DonationBanner({ onGiveClick }: DonationBannerProps) {
@@ -111,7 +110,7 @@ export default function DonationBanner({ onGiveClick }: DonationBannerProps) {
             {GIVE_OPTIONS.map(({ icon: Icon, label, desc }) => (
               <button
                 key={label}
-                onClick={onGiveClick}
+                onClick={() => onGiveClick?.(label)}
                 className="group flex items-center gap-5 p-5 rounded-2xl border border-white/[0.07] hover:border-gold-500/30 bg-white/[0.03] hover:bg-white/[0.06] transition-all duration-300 text-left"
               >
                 {/* Icon */}

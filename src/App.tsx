@@ -62,6 +62,7 @@ export default function App() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [donateCause, setDonateCause] = useState<string | undefined>(undefined);
 
   const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
   const [isRadioActive, setIsRadioActive] = useState(false);
@@ -176,6 +177,11 @@ export default function App() {
     window.location.hash = page;
     setCurrentPage(page);
     window.scrollTo(0, 0);
+  };
+
+  const navigateToDonate = (cause?: string) => {
+    setDonateCause(cause);
+    navigate('donate');
   };
 
   const handleAdminLogin = () => {
@@ -501,7 +507,7 @@ export default function App() {
           currentPage={currentPage}
         />
         <Suspense fallback={<PageLoader />}>
-          <DonatePage onBack={() => navigate('home')} />
+          <DonatePage onBack={() => navigate('home')} initialCause={donateCause} />
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
@@ -552,7 +558,7 @@ export default function App() {
         <TestimonialsSection />
 
         <PrayerRequestSection />
-        <DonationBanner onGiveClick={() => navigate('donate')} />
+        <DonationBanner onGiveClick={navigateToDonate} />
       </main>
       <Footer onNavigate={navigate} />
       <RadioPlayer mixlrUrl={mixlrUrl} isActive={isRadioActive} />
