@@ -171,17 +171,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
     e.preventDefault();
     if (step === 1) {
       if (validateStep1()) {
-        const activeKey = cause === 'Prophetic Offering'
-          ? settings.flutterwave_prophetic_key
-          : settings.flutterwave_mission_key;
-
-        if (activeKey && activeKey.trim() !== '') {
-          // Trigger Flutterwave payment directly!
-          handlePaymentSubmit(e);
-        } else {
-          // Go to simulated payment step
-          setStep(2);
-        }
+        handlePaymentSubmit(e);
       }
     }
   };
@@ -194,87 +184,68 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
       ? settings.flutterwave_prophetic_key
       : settings.flutterwave_mission_key;
 
-    if (activeKey && activeKey.trim() !== '') {
-      // Use real Flutterwave Checkout
-      if (!validateStep1()) return;
-      
-      if (!(window as any).FlutterwaveCheckout) {
-        alert('Payment gateway is loading. Please try again in a moment.');
-        return;
-      }
+    if (!validateStep1()) return;
+    
+    if (!activeKey || activeKey.trim() === '') {
+      alert('Flutterwave public key is not configured in Admin Settings. Please log in to the Admin Dashboard and save the public key under Settings first.');
+      return;
+    }
+    
+    if (!(window as any).FlutterwaveCheckout) {
+      alert('Payment gateway is loading. Please try again in a moment.');
+      return;
+    }
 
-      setIsProcessing(true);
-      try {
-        const finalAmount = getFinalAmount();
-        const txRef = 'JG-TXN-' + Math.floor(Math.random() * 900000 + 100000);
-        
-        (window as any).FlutterwaveCheckout({
-          public_key: activeKey,
-          tx_ref: txRef,
-          amount: finalAmount,
-          currency: "NGN", // currency
-          payment_options: "card, banktransfer, ussd",
-          customer: {
-            email: email,
-            name: name,
-          },
-          customizations: {
-            title: "Joshua Generation",
-            description: `Donation: ${cause} (${frequency})`,
-            logo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80",
-          },
-          callback: async (response: any) => {
-            console.log('Payment response:', response);
-            if (response.status === "successful") {
-              try {
-                // Post donation details to database
-                const donation = await api.createDonation({
-                  donor: name,
-                  email,
-                  amount: finalAmount,
-                  purpose: cause,
-                  method: 'Flutterwave (' + (response.payment_type || 'card') + ')',
-                  frequency
-                });
-                setReceiptId(donation.id);
-                setStep(3);
-              } catch (err: any) {
-                alert('Payment succeeded but failed to log transaction: ' + err.message);
-              }
-            } else {
-              setErrors(prev => ({ ...prev, payment: 'Payment was not successful.' }));
+    setIsProcessing(true);
+    try {
+      const finalAmount = getFinalAmount();
+      const txRef = 'JG-TXN-' + Math.floor(Math.random() * 900000 + 100000);
+      
+      (window as any).FlutterwaveCheckout({
+        public_key: activeKey,
+        tx_ref: txRef,
+        amount: finalAmount,
+        currency: "NGN", // currency
+        payment_options: "card, banktransfer, ussd",
+        customer: {
+          email: email,
+          name: name,
+        },
+        customizations: {
+          title: "Joshua Generation",
+          description: `Donation: ${cause} (${frequency})`,
+          logo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80",
+        },
+        callback: async (response: any) => {
+          console.log('Payment response:', response);
+          if (response.status === "successful") {
+            try {
+              // Post donation details to database
+              const donation = await api.createDonation({
+                donor: name,
+                email,
+                amount: finalAmount,
+                purpose: cause,
+                method: 'Flutterwave (' + (response.payment_type || 'card') + ')',
+                frequency
+              });
+              setReceiptId(donation.id);
+              setStep(3);
+            } catch (err: any) {
+              alert('Payment succeeded but failed to log transaction: ' + err.message);
             }
-            setIsProcessing(false);
-          },
-          onclose: () => {
-            setIsProcessing(false);
+          } else {
+            alert('Payment was not successful: ' + (response.message || 'declined'));
           }
-        });
-      } catch (err: any) {
-        setErrors(prev => ({ ...prev, payment: err.message || 'Payment initiation failed' }));
-        setIsProcessing(false);
-      }
-    } else {
-      // Fallback to simulated credit card payment
-      if (validateStep2()) {
-        setIsProcessing(true);
-        try {
-          const donation = await api.createDonation({
-            donor: name,
-            email,
-            amount: getFinalAmount(),
-            purpose: cause,
-            method: 'Credit Card (Simulated)',
-            frequency
-          });
-          setReceiptId(donation.id);
-          setStep(3);
-        } catch (err: any) {
-          setErrors(prev => ({ ...prev, payment: err.message || 'Payment failed' }));
-        } finally {
+          setIsProcessing(false);
+        },
+        onclose: () => {
           setIsProcessing(false);
         }
-      }
+      });
+    } catch (err: any) {
+      alert('Payment initiation failed: ' + err.message);
+      setIsProcessing(false);
     }
   };
 
