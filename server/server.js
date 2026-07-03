@@ -741,13 +741,13 @@ const server = http.createServer(async (req, res) => {
       }
 
       // Step 1: Get OAuth2 Access Token from Flutterwave IdP
-      const { default: nodeFetch } = await import('node-fetch');
+      // Use built-in fetch (Node.js 18+)
       const tokenParams = new URLSearchParams();
       tokenParams.append('client_id', clientId);
       tokenParams.append('client_secret', clientSecret);
       tokenParams.append('grant_type', 'client_credentials');
 
-      const tokenRes = await nodeFetch('https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token', {
+      const tokenRes = await fetch('https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: tokenParams.toString()
@@ -763,7 +763,7 @@ const server = http.createServer(async (req, res) => {
       const txRef = 'JG-TXN-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
       const callbackUrl = 'https://joshuasgeneration.com/#payment-callback';
 
-      const paymentRes = await nodeFetch('https://api.flutterwave.com/v4/payments', {
+      const paymentRes = await fetch('https://api.flutterwave.com/v4/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
