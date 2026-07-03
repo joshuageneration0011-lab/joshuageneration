@@ -15,41 +15,24 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   
-  // Card Details
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardName, setCardName] = useState('');
-  
   // Errors and Loading
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({}); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [receiptId, setReceiptId] = useState('');
 
-  // Payment settings state
-  const [settings, setSettings] = useState({
-    flutterwave_prophetic_key: '',
-    flutterwave_mission_key: ''
-  });
-
+  // Check for payment callback from Flutterwave redirect
   useEffect(() => {
-    // 1. Fetch Flutterwave keys from API
-    const loadSettings = async () => {
-      try {
-        const data = await api.getSettings();
-        setSettings(data);
-      } catch (err) {
-        console.error('Failed to load payment settings:', err);
-      }
-    };
-    loadSettings();
-
-    // 2. Load Flutterwave script dynamically
-    if (!(window as any).FlutterwaveCheckout) {
-      const script = document.createElement('script');
-      script.src = "https://checkout.flutterwave.com/v3.js";
-      script.async = true;
-      document.body.appendChild(script);
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    const txRef = params.get('tx_ref');
+    if (status === 'successful' && txRef) {
+      // Payment came back successful — log and show receipt
+      setReceiptId(txRef);
+      setStep(3);
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+    } else if (status && status !== 'successful' && txRef) {
+      setErrors({ payment: 'Payment was not completed. Please try again.' });
     }
   }, []);
 
@@ -178,73 +161,27 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Determine active key
-    const activeKey = cause === 'Prophetic Offering'
-      ? settings.flutterwave_prophetic_key
-      : settings.flutterwave_mission_key;
-
     if (!validateStep1()) return;
-    
-    if (!activeKey || activeKey.trim() === '') {
-      alert('Flutterwave public key is not configured in Admin Settings. Please log in to the Admin Dashboard and save the public key under Settings first.');
-      return;
-    }
-    
-    if (!(window as any).FlutterwaveCheckout) {
-      alert('Payment gateway is loading. Please try again in a moment.');
-      return;
-    }
 
     setIsProcessing(true);
+    setErrors({});
     try {
       const finalAmount = getFinalAmount();
-      const txRef = 'JG-TXN-' + Math.floor(Math.random() * 900000 + 100000);
-      
-      (window as any).FlutterwaveCheckout({
-        public_key: activeKey,
-        tx_ref: txRef,
-        amount: finalAmount,
-        currency: "NGN", // currency
-        payment_options: "card, banktransfer, ussd",
-        customer: {
-          email: email,
-          name: name,
-        },
-        customizations: {
-          title: "Joshua Generation",
-          description: `Donation: ${cause} (${frequency})`,
-          logo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80",
-        },
-        callback: async (response: any) => {
-          console.log('Payment response:', response);
-          if (response.status === "successful") {
-            try {
-              // Post donation details to database
-              const donation = await api.createDonation({
-                donor: name,
-                email,
-                amount: finalAmount,
-                purpose: cause,
-                method: 'Flutterwave (' + (response.payment_type || 'card') + ')',
-                frequency
-              });
-              setReceiptId(donation.id);
-              setStep(3);
-            } catch (err: any) {
-              alert('Payment succeeded but failed to log transaction: ' + err.message);
-            }
-          } else {
-            alert('Payment was not successful: ' + (response.message || 'declined'));
-          }
-          setIsProcessing(false);
-        },
-        onclose: () => {
-          setIsProcessing(false);
-        }
+      const res = await fetch('/api/initiate-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cause, amount: finalAmount, name, email, frequency })
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrors({ payment: data.error || 'Payment initiation failed.' });
+        setIsProcessing(false);
+        return;
+      }
+      // Redirect to Flutterwave hosted payment page
+      window.location.href = data.payment_link;
     } catch (err: any) {
-      alert('Payment initiation failed: ' + err.message);
+      setErrors({ payment: err.message || 'Network error. Please try again.' });
       setIsProcessing(false);
     }
   };

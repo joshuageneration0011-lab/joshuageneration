@@ -4505,9 +4505,11 @@ function ModerationTab() {
 function SettingsTab() {
   const [activeSetting, setActiveSetting] = useState<'general' | 'notifications' | 'appearance' | 'security' | 'integrations'>('general');
   
-  // Flutterwave Settings State
-  const [propheticKey, setPropheticKey] = useState('');
-  const [missionKey, setMissionKey] = useState('');
+  // Flutterwave V4 Settings State
+  const [propheticClientId, setPropheticClientId] = useState('');
+  const [propheticClientSecret, setPropheticClientSecret] = useState('');
+  const [missionClientId, setMissionClientId] = useState('');
+  const [missionClientSecret, setMissionClientSecret] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -4515,8 +4517,10 @@ function SettingsTab() {
     const fetchSettings = async () => {
       try {
         const data = await api.getSettings();
-        setPropheticKey(data.flutterwave_prophetic_key || '');
-        setMissionKey(data.flutterwave_mission_key || '');
+        setPropheticClientId(data.flutterwave_prophetic_client_id || '');
+        setPropheticClientSecret(data.flutterwave_prophetic_client_secret || '');
+        setMissionClientId(data.flutterwave_mission_client_id || '');
+        setMissionClientSecret(data.flutterwave_mission_client_secret || '');
       } catch (err) {
         console.error('Failed to fetch settings:', err);
       }
@@ -4530,8 +4534,10 @@ function SettingsTab() {
     setSaveStatus('idle');
     try {
       await api.saveSettings({
-        flutterwave_prophetic_key: propheticKey,
-        flutterwave_mission_key: missionKey
+        flutterwave_prophetic_client_id: propheticClientId,
+        flutterwave_prophetic_client_secret: propheticClientSecret,
+        flutterwave_mission_client_id: missionClientId,
+        flutterwave_mission_client_secret: missionClientSecret,
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -4603,46 +4609,74 @@ function SettingsTab() {
               ))}
             </div>
 
-            {/* Flutterwave Card */}
+            {/* Flutterwave V4 Card */}
             <div className="p-6 rounded-2xl border border-royal-blue-100 bg-gradient-to-r from-royal-blue-50/50 via-white to-white shadow-sm space-y-4 mt-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-royal-blue-600 flex items-center justify-center text-white shadow-md shadow-royal-blue-200/50">
                   <DollarSign className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-gray-900 font-bold">Flutterwave API Configuration</h4>
-                  <p className="text-gray-500 text-xs">Route donations into distinct accounts using separate Public Keys</p>
+                  <h4 className="text-gray-900 font-bold">Flutterwave V4 API Configuration</h4>
+                  <p className="text-gray-500 text-xs">Enter your Flutterwave V4 Client ID and Client Secret for each donation cause</p>
                 </div>
               </div>
 
-              <form onSubmit={handleSaveSettings} className="space-y-4 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-royal-blue-500" />
-                      Prophetic Offering Public Key
-                    </label>
-                    <input 
-                      type="text" 
-                      value={propheticKey}
-                      onChange={(e) => setPropheticKey(e.target.value)}
-                      placeholder="FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxxxxx-X" 
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
-                    />
+              <form onSubmit={handleSaveSettings} className="space-y-5 pt-2">
+                {/* Prophetic Offering */}
+                <div className="space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-royal-blue-600 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-royal-blue-500" /> Prophetic Offering Account
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client ID</label>
+                      <input
+                        type="text"
+                        value={propheticClientId}
+                        onChange={(e) => setPropheticClientId(e.target.value)}
+                        placeholder="e.g. e716438a-3685-4c2a-..."
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client Secret</label>
+                      <input
+                        type="password"
+                        value={propheticClientSecret}
+                        onChange={(e) => setPropheticClientSecret(e.target.value)}
+                        placeholder="Client Secret (kept secure)"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      Mission / Outreach Public Key
-                    </label>
-                    <input 
-                      type="text" 
-                      value={missionKey}
-                      onChange={(e) => setMissionKey(e.target.value)}
-                      placeholder="FLWPUBK_TEST-yyyyyyyyyyyyyyyyyyyyyyyy-Y" 
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
-                    />
+                {/* Mission / Outreach */}
+                <div className="space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Mission / Outreach Account
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client ID</label>
+                      <input
+                        type="text"
+                        value={missionClientId}
+                        onChange={(e) => setMissionClientId(e.target.value)}
+                        placeholder="e.g. e716438a-3685-4c2a-..."
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client Secret</label>
+                      <input
+                        type="password"
+                        value={missionClientSecret}
+                        onChange={(e) => setMissionClientSecret(e.target.value)}
+                        placeholder="Client Secret (kept secure)"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -4667,7 +4701,7 @@ function SettingsTab() {
                     </span>
                   )}
                   {saveStatus === 'error' && (
-                    <span className="text-red-605 text-xs font-semibold flex items-center gap-1">
+                    <span className="text-red-500 text-xs font-semibold flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" /> Failed to save settings.
                     </span>
                   )}
@@ -4807,51 +4841,79 @@ function SettingsTab() {
               <p className="text-gray-500 text-xs mt-0.5">Manage external APIs and payment gateway credentials</p>
             </div>
 
-            {/* Flutterwave Card */}
+            {/* Flutterwave V4 Card */}
             <div className="p-6 rounded-2xl border border-royal-blue-100 bg-gradient-to-r from-royal-blue-50/50 via-white to-white shadow-sm space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-royal-blue-600 flex items-center justify-center text-white shadow-md shadow-royal-blue-200/50">
                   <DollarSign className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-gray-900 font-bold">Flutterwave API Configuration</h4>
-                  <p className="text-gray-500 text-xs">Route donations into distinct accounts using separate Public Keys</p>
+                  <h4 className="text-gray-900 font-bold">Flutterwave V4 API Configuration</h4>
+                  <p className="text-gray-500 text-xs">Enter your Flutterwave V4 Client ID and Client Secret for each donation cause</p>
                 </div>
               </div>
 
-              <form onSubmit={handleSaveSettings} className="space-y-4 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-royal-blue-500" />
-                      Prophetic Offering Public Key
-                    </label>
-                    <input 
-                      type="text" 
-                      value={propheticKey}
-                      onChange={(e) => setPropheticKey(e.target.value)}
-                      placeholder="FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxxxxx-X" 
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
-                    />
+              <form onSubmit={handleSaveSettings} className="space-y-5 pt-2">
+                {/* Prophetic Offering */}
+                <div className="space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-royal-blue-600 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-royal-blue-500" /> Prophetic Offering Account
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client ID</label>
+                      <input
+                        type="text"
+                        value={propheticClientId}
+                        onChange={(e) => setPropheticClientId(e.target.value)}
+                        placeholder="e.g. e716438a-3685-4c2a-..."
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client Secret</label>
+                      <input
+                        type="password"
+                        value={propheticClientSecret}
+                        onChange={(e) => setPropheticClientSecret(e.target.value)}
+                        placeholder="Client Secret (kept secure)"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      Mission / Outreach Public Key
-                    </label>
-                    <input 
-                      type="text" 
-                      value={missionKey}
-                      onChange={(e) => setMissionKey(e.target.value)}
-                      placeholder="FLWPUBK_TEST-yyyyyyyyyyyyyyyyyyyyyyyy-Y" 
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
-                    />
+                {/* Mission / Outreach */}
+                <div className="space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Mission / Outreach Account
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client ID</label>
+                      <input
+                        type="text"
+                        value={missionClientId}
+                        onChange={(e) => setMissionClientId(e.target.value)}
+                        placeholder="e.g. e716438a-3685-4c2a-..."
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Client Secret</label>
+                      <input
+                        type="password"
+                        value={missionClientSecret}
+                        onChange={(e) => setMissionClientSecret(e.target.value)}
+                        placeholder="Client Secret (kept secure)"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-2">
-                  <button 
+                  <button
                     type="submit"
                     disabled={isSaving}
                     className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
@@ -4871,7 +4933,7 @@ function SettingsTab() {
                     </span>
                   )}
                   {saveStatus === 'error' && (
-                    <span className="text-red-605 text-xs font-semibold flex items-center gap-1">
+                    <span className="text-red-500 text-xs font-semibold flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" /> Failed to save settings.
                     </span>
                   )}

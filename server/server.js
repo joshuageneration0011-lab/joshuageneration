@@ -133,8 +133,30 @@ function initLocalData() {
     }
   }
   if (!fs.existsSync(SETTINGS_FILE)) {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ flutterwave_prophetic_key: '', flutterwave_mission_key: '' }, null, 2), 'utf-8');
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
+      flutterwave_prophetic_client_id: '',
+      flutterwave_prophetic_client_secret: '',
+      flutterwave_mission_client_id: '',
+      flutterwave_mission_client_secret: ''
+    }, null, 2), 'utf-8');
     console.log('Initialized local settings database.');
+  } else {
+    // Migrate old key-based settings to V4 fields if needed
+    try {
+      const existing = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+      if (!('flutterwave_prophetic_client_id' in existing)) {
+        const migrated = {
+          flutterwave_prophetic_client_id: existing.flutterwave_prophetic_key || '',
+          flutterwave_prophetic_client_secret: '',
+          flutterwave_mission_client_id: existing.flutterwave_mission_key || '',
+          flutterwave_mission_client_secret: ''
+        };
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(migrated, null, 2), 'utf-8');
+        console.log('Migrated settings to V4 format.');
+      }
+    } catch (e) {
+      console.warn('Failed to migrate settings:', e.message);
+    }
   }
   if (!fs.existsSync(EVENTS_FILE)) {
     fs.writeFileSync(EVENTS_FILE, JSON.stringify(defaultEvents, null, 2), 'utf-8');
@@ -248,14 +270,24 @@ async function initDb() {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS settings (
           id INT PRIMARY KEY,
-          flutterwave_prophetic_key TEXT,
-          flutterwave_mission_key TEXT
+          flutterwave_prophetic_client_id TEXT DEFAULT '',
+          flutterwave_prophetic_client_secret TEXT DEFAULT '',
+          flutterwave_mission_client_id TEXT DEFAULT '',
+          flutterwave_mission_client_secret TEXT DEFAULT ''
         );
       `);
+      // Migrate old column names if they exist
+      for (const col of ['flutterwave_prophetic_key', 'flutterwave_mission_key']) {
+        try { await pool.query(`ALTER TABLE settings DROP COLUMN IF EXISTS ${col}`); } catch (e) {}
+      }
+      // Add new columns if missing (idempotent)
+      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret']) {
+        try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS ${col} TEXT DEFAULT ''`); } catch (e) {}
+      }
 
       const settingsCheck = await pool.query('SELECT 1 FROM settings WHERE id = 1');
       if (settingsCheck.rowCount === 0) {
-        await pool.query("INSERT INTO settings (id, flutterwave_prophetic_key, flutterwave_mission_key) VALUES (1, '', '')");
+        await pool.query(`INSERT INTO settings (id, flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret) VALUES (1, '', '', '', '')`);
       }
 
       await pool.query(`
@@ -661,18 +693,110 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET Platform Settings (Public keys for payment checkout)
+  // GET Platform Settings (Public - returns client IDs only, not secrets)
   if (pathname === '/api/settings' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_key, flutterwave_mission_key FROM settings WHERE id = 1');
-        sendJson(res, 200, result.rows[0] || { flutterwave_prophetic_key: '', flutterwave_mission_key: '' });
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_mission_client_id FROM settings WHERE id = 1');
+        sendJson(res, 200, result.rows[0] || { flutterwave_prophetic_client_id: '', flutterwave_mission_client_id: '' });
       } else {
         const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
-        sendJson(res, 200, data);
+        // Return only client IDs, strip secrets from public response
+        sendJson(res, 200, {
+          flutterwave_prophetic_client_id: data.flutterwave_prophetic_client_id || '',
+          flutterwave_mission_client_id: data.flutterwave_mission_client_id || ''
+        });
       }
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to retrieve settings' });
+    }
+    return;
+  }
+
+  // POST /api/initiate-payment — Flutterwave V4 payment initiation (public)
+  if (pathname === '/api/initiate-payment' && method === 'POST') {
+    try {
+      const { cause, amount, name, email, frequency } = await getJsonBody(req);
+      if (!cause || !amount || !name || !email) {
+        sendJson(res, 400, { error: 'cause, amount, name and email are required' });
+        return;
+      }
+
+      // Load full settings (including secrets) server-side
+      let clientId, clientSecret;
+      if (pool) {
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret FROM settings WHERE id = 1');
+        const row = result.rows[0] || {};
+        clientId = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_id : row.flutterwave_mission_client_id;
+        clientSecret = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_secret : row.flutterwave_mission_client_secret;
+      } else {
+        const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        clientId = cause === 'Prophetic Offering' ? data.flutterwave_prophetic_client_id : data.flutterwave_mission_client_id;
+        clientSecret = cause === 'Prophetic Offering' ? data.flutterwave_prophetic_client_secret : data.flutterwave_mission_client_secret;
+      }
+
+      if (!clientId || !clientSecret) {
+        sendJson(res, 503, { error: 'Payment gateway not configured. Please contact the administrator.' });
+        return;
+      }
+
+      // Step 1: Get OAuth2 Access Token from Flutterwave IdP
+      const { default: nodeFetch } = await import('node-fetch');
+      const tokenParams = new URLSearchParams();
+      tokenParams.append('client_id', clientId);
+      tokenParams.append('client_secret', clientSecret);
+      tokenParams.append('grant_type', 'client_credentials');
+
+      const tokenRes = await nodeFetch('https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: tokenParams.toString()
+      });
+      const tokenData = await tokenRes.json();
+      if (!tokenData.access_token) {
+        console.error('Flutterwave token error:', tokenData);
+        sendJson(res, 502, { error: 'Failed to authenticate with payment provider.' });
+        return;
+      }
+
+      // Step 2: Create payment link via Flutterwave V4
+      const txRef = 'JG-TXN-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+      const callbackUrl = 'https://joshuasgeneration.com/#payment-callback';
+
+      const paymentRes = await nodeFetch('https://api.flutterwave.com/v4/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenData.access_token}`
+        },
+        body: JSON.stringify({
+          amount: Number(amount),
+          currency: 'NGN',
+          reference: txRef,
+          redirect_url: callbackUrl,
+          customer: { email, name },
+          customizations: {
+            title: 'Joshua Generation',
+            description: `Donation: ${cause} (${frequency || 'one-time'})`,
+            logo: 'https://joshuasgeneration.com/api/uploads/logo.png'
+          }
+        })
+      });
+      const paymentData = await paymentRes.json();
+      console.log('Flutterwave V4 payment response:', JSON.stringify(paymentData));
+
+      // V4 returns payment_link in data or meta
+      const paymentLink = paymentData?.data?.link || paymentData?.meta?.authorization?.redirect || paymentData?.link;
+      if (!paymentLink) {
+        console.error('No payment link in response:', paymentData);
+        sendJson(res, 502, { error: 'Failed to create payment link: ' + (paymentData?.message || 'Unknown error') });
+        return;
+      }
+
+      sendJson(res, 200, { payment_link: paymentLink, tx_ref: txRef });
+    } catch (e) {
+      console.error('Payment initiation error:', e);
+      sendJson(res, 500, { error: 'Payment initiation failed: ' + e.message });
     }
     return;
   }
@@ -1196,19 +1320,35 @@ const server = http.createServer(async (req, res) => {
   // POST Settings (Admin only)
   if (pathname === '/api/settings' && method === 'POST') {
     try {
-      const { flutterwave_prophetic_key, flutterwave_mission_key } = await getJsonBody(req);
-      if (flutterwave_prophetic_key === undefined || flutterwave_mission_key === undefined) {
-        sendJson(res, 400, { error: 'Flutterwave keys are required' });
-        return;
-      }
+      const body = await getJsonBody(req);
+      const {
+        flutterwave_prophetic_client_id = '',
+        flutterwave_prophetic_client_secret = '',
+        flutterwave_mission_client_id = '',
+        flutterwave_mission_client_secret = ''
+      } = body;
 
       if (pool) {
-        await pool.query('UPDATE settings SET flutterwave_prophetic_key = $1, flutterwave_mission_key = $2 WHERE id = 1', [flutterwave_prophetic_key, flutterwave_mission_key]);
+        await pool.query(
+          `UPDATE settings SET
+            flutterwave_prophetic_client_id = $1,
+            flutterwave_prophetic_client_secret = $2,
+            flutterwave_mission_client_id = $3,
+            flutterwave_mission_client_secret = $4
+           WHERE id = 1`,
+          [flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret]
+        );
       } else {
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ flutterwave_prophetic_key, flutterwave_mission_key }, null, 2), 'utf-8');
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
+          flutterwave_prophetic_client_id,
+          flutterwave_prophetic_client_secret,
+          flutterwave_mission_client_id,
+          flutterwave_mission_client_secret
+        }, null, 2), 'utf-8');
       }
       sendJson(res, 200, { success: true });
     } catch (e) {
+      console.error('Failed to save settings:', e);
       sendJson(res, 500, { error: 'Failed to save settings' });
     }
     return;
