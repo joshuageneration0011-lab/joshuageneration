@@ -716,7 +716,7 @@ const server = http.createServer(async (req, res) => {
   // POST /api/initiate-payment — Flutterwave V4 payment initiation (public)
   if (pathname === '/api/initiate-payment' && method === 'POST') {
     try {
-      const { cause, amount, name, email, frequency } = await getJsonBody(req);
+      const { cause, amount, name, email, frequency, currency = 'NGN' } = await getJsonBody(req);
       if (!cause || !amount || !name || !email) {
         sendJson(res, 400, { error: 'cause, amount, name and email are required' });
         return;
@@ -747,7 +747,7 @@ const server = http.createServer(async (req, res) => {
       const isV3Key = clientSecret.startsWith('FLWSECK-') || clientSecret.startsWith('FLWSECK_TEST-');
 
       if (isV3Key) {
-        console.log('Detected V3 Secret Key. Initiating Standard Checkout payment link via V3 API...');
+        console.log(`Detected V3 Secret Key. Initiating Standard Checkout payment link via V3 API with currency ${currency}...`);
         // Standard V3 Payment Link Initiation
         const paymentRes = await fetch('https://api.flutterwave.com/v3/payments', {
           method: 'POST',
@@ -757,7 +757,7 @@ const server = http.createServer(async (req, res) => {
           },
           body: JSON.stringify({
             amount: Number(amount),
-            currency: 'NGN',
+            currency: currency,
             tx_ref: txRef,
             redirect_url: callbackUrl,
             customer: { email, name },

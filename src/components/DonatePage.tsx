@@ -14,6 +14,16 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
   const [customAmount, setCustomAmount] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [currency, setCurrency] = useState('NGN');
+
+  const currencySymbols: Record<string, string> = {
+    NGN: '₦',
+    USD: '$',
+    GBP: '£',
+    EUR: '€',
+    CAD: 'C$',
+    ZAR: 'R'
+  };
   
   // Errors and Loading
   const [errors, setErrors] = useState<Record<string, string>>({}); 
@@ -170,7 +180,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
       const res = await fetch('/api/initiate-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cause, amount: finalAmount, name, email, frequency })
+        body: JSON.stringify({ cause, amount: finalAmount, name, email, frequency, currency })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -360,9 +370,23 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
 
                 {/* Preset / Custom Amount */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-                    Donation Amount ($)
-                  </label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Donation Amount
+                    </label>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-royal-blue-500/20 cursor-pointer outline-none transition-all"
+                    >
+                      <option value="NGN">NGN (₦)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="CAD">CAD (C$)</option>
+                      <option value="ZAR">ZAR (R)</option>
+                    </select>
+                  </div>
                   <div className="grid grid-cols-3 gap-2.5 mb-3">
                     {presetAmounts.map((val) => (
                       <button
@@ -371,20 +395,23 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                         onClick={() => handlePresetSelect(val)}
                         className={`py-3 rounded-xl border font-bold transition-all duration-200 ${amount === val ? 'border-gold-500 bg-gold-50 text-gold-800' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
                       >
-                        ${val}
+                        {currencySymbols[currency] || '$'}{val}
                       </button>
                     ))}
                   </div>
                   
                   {/* Custom Amount Input */}
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 font-bold">$</span>
+                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 font-bold">
+                      {currencySymbols[currency] || '$'}
+                    </span>
                     <input
                       type="text"
-                      placeholder="Enter custom amount"
+                      placeholder={`Enter custom amount in ${currency}`}
                       value={customAmount}
                       onChange={handleCustomAmountChange}
-                      className={`w-full pl-8 pr-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-sm font-semibold ${amount === 'custom' ? 'border-gold-500 bg-gold-50/20' : 'border-gray-200'}`}
+                      className={`w-full pr-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-sm font-semibold ${amount === 'custom' ? 'border-gold-500 bg-gold-50/20' : 'border-gray-200'}`}
+                      style={{ paddingLeft: `${(currencySymbols[currency] || '$').length * 8 + 24}px` }}
                     />
                   </div>
                   {errors.amount && (
@@ -462,7 +489,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   ) : (
                     <>
                       <Gift className="w-5 h-5" />
-                      Proceed to Payment (${getFinalAmount() || 0})
+                      Proceed to Payment ({currencySymbols[currency] || '$'}{getFinalAmount() || 0})
                     </>
                   )}
                 </button>
@@ -473,7 +500,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
               <form onSubmit={handlePaymentSubmit} className="space-y-6 animate-in">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-gray-800">Simulate Payment</h3>
-                  <span className="text-lg font-bold text-royal-blue-700">${getFinalAmount()}</span>
+                  <span className="text-lg font-bold text-royal-blue-700">{currencySymbols[currency] || '$'}{getFinalAmount()}</span>
                 </div>
 
                 {/* Card input controls */}
@@ -566,7 +593,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                         Processing...
                       </>
                     ) : (
-                      `Donate $${getFinalAmount()}`
+                      `Donate ${currencySymbols[currency] || '$'}${getFinalAmount()}`
                     )}
                   </button>
                 </div>
@@ -581,7 +608,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                 <div>
                   <h3 className="text-2xl font-bold text-gray-800 mb-2">Thank you, {name}!</h3>
                   <p className="text-gray-500 text-sm max-w-sm mx-auto">
-                    Your gift of <strong className="text-gray-800">${getFinalAmount()}</strong> to the <strong>{cause}</strong> has been successfully simulated and completed.
+                    Your gift of <strong className="text-gray-800">{currencySymbols[currency] || '$'}{getFinalAmount()}</strong> to the <strong>{cause}</strong> has been successfully simulated and completed.
                   </p>
                 </div>
 
@@ -609,7 +636,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   </div>
                   <div className="flex justify-between border-t border-gray-200/60 pt-2.5 font-bold text-base text-royal-blue-700">
                     <span>Total Given</span>
-                    <span>${getFinalAmount()}</span>
+                    <span>{currencySymbols[currency] || '$'}{getFinalAmount()}</span>
                   </div>
                 </div>
 
