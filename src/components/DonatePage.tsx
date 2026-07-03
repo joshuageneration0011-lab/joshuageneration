@@ -441,13 +441,30 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   </div>
                 </div>
 
+                {errors.payment && (
+                  <div className="flex items-center gap-2 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-medium">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errors.payment}</span>
+                  </div>
+                )}
+
                 {/* Action button */}
                 <button
                   type="submit"
+                  disabled={isProcessing}
                   className="w-full py-4 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white rounded-2xl font-semibold text-base shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40 hover:scale-[1.01] transition-all duration-300 flex items-center justify-center gap-2"
                 >
-                  <Gift className="w-5 h-5" />
-                  Proceed to Payment (${getFinalAmount() || 0})
+                  {isProcessing ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="w-5 h-5" />
+                      Proceed to Payment (${getFinalAmount() || 0})
+                    </>
+                  )}
                 </button>
               </form>
             )}

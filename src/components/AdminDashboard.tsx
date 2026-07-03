@@ -4609,15 +4609,15 @@ function SettingsTab() {
               ))}
             </div>
 
-            {/* Flutterwave V4 Card */}
+            {/* Flutterwave API Configuration Card */}
             <div className="p-6 rounded-2xl border border-royal-blue-100 bg-gradient-to-r from-royal-blue-50/50 via-white to-white shadow-sm space-y-4 mt-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-royal-blue-600 flex items-center justify-center text-white shadow-md shadow-royal-blue-200/50">
                   <DollarSign className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-gray-900 font-bold">Flutterwave V4 API Configuration</h4>
-                  <p className="text-gray-500 text-xs">Enter your Flutterwave V4 Client ID and Client Secret for each donation cause</p>
+                  <h4 className="text-gray-900 font-bold">Flutterwave API Configuration</h4>
+                  <p className="text-gray-500 text-xs">Enter your Flutterwave V3 Public Key and Secret Key for each donation cause</p>
                 </div>
               </div>
 
@@ -4629,22 +4629,22 @@ function SettingsTab() {
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Client ID</label>
+                      <label className="text-gray-700 text-xs font-semibold">Public Key</label>
                       <input
                         type="text"
                         value={propheticClientId}
                         onChange={(e) => setPropheticClientId(e.target.value)}
-                        placeholder="e.g. e716438a-3685-4c2a-..."
+                        placeholder="e.g. FLWPUBK-xxxxxxxxxxxx-X"
                         className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Client Secret</label>
+                      <label className="text-gray-700 text-xs font-semibold">Secret Key</label>
                       <input
                         type="password"
                         value={propheticClientSecret}
                         onChange={(e) => setPropheticClientSecret(e.target.value)}
-                        placeholder="Client Secret (kept secure)"
+                        placeholder="e.g. FLWSECK-xxxxxxxxxxxx-X"
                         className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
                       />
                     </div>
@@ -4658,22 +4658,22 @@ function SettingsTab() {
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Client ID</label>
+                      <label className="text-gray-700 text-xs font-semibold">Public Key</label>
                       <input
                         type="text"
                         value={missionClientId}
                         onChange={(e) => setMissionClientId(e.target.value)}
-                        placeholder="e.g. e716438a-3685-4c2a-..."
+                        placeholder="e.g. FLWPUBK-xxxxxxxxxxxx-X"
                         className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Client Secret</label>
+                      <label className="text-gray-700 text-xs font-semibold">Secret Key</label>
                       <input
                         type="password"
                         value={missionClientSecret}
                         onChange={(e) => setMissionClientSecret(e.target.value)}
-                        placeholder="Client Secret (kept secure)"
+                        placeholder="e.g. FLWSECK-xxxxxxxxxxxx-X"
                         className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
                       />
                     </div>

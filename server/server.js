@@ -740,72 +740,84 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      // Step 1: Get OAuth2 Access Token from Flutterwave IdP
-      // Use built-in fetch (Node.js 18+)
-      const tokenParams = new URLSearchParams();
-      tokenParams.append('client_id', clientId);
-      tokenParams.append('client_secret', clientSecret);
-      tokenParams.append('grant_type', 'client_credentials');
-
-      const tokenRes = await fetch('https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: tokenParams.toString()
-      });
-      const tokenRaw = await tokenRes.text();
-      let tokenData;
-      try { tokenData = JSON.parse(tokenRaw); } catch(e) {
-        console.error('Flutterwave IdP non-JSON response:', tokenRaw.substring(0, 500));
-        sendJson(res, 502, { error: 'Payment provider returned an unexpected response. Check your Client ID and Client Secret in Settings.' });
-        return;
-      }
-      if (!tokenData.access_token) {
-        console.error('Flutterwave token error:', tokenData);
-        sendJson(res, 502, { error: 'Payment provider rejected credentials: ' + (tokenData.error_description || tokenData.error || 'Invalid client credentials') });
-        return;
-      }
-
-      // Step 2: Create payment link via Flutterwave V4
       const txRef = 'JG-TXN-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
       const callbackUrl = 'https://joshuasgeneration.com/#payment-callback';
 
-      const paymentRes = await fetch('https://api.flutterwave.com/v4/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tokenData.access_token}`
-        },
-        body: JSON.stringify({
-          amount: Number(amount),
-          currency: 'NGN',
-          reference: txRef,
-          redirect_url: callbackUrl,
-          customer: { email, name },
-          customizations: {
-            title: 'Joshua Generation',
-            description: `Donation: ${cause} (${frequency || 'one-time'})`,
-            logo: 'https://joshuasgeneration.com/api/uploads/logo.png'
-          }
-        })
-      });
-      const paymentRaw = await paymentRes.text();
-      let paymentData;
-      try { paymentData = JSON.parse(paymentRaw); } catch(e) {
-        console.error('Flutterwave payment non-JSON response:', paymentRaw.substring(0, 500));
-        sendJson(res, 502, { error: 'Payment provider returned unexpected response.' });
-        return;
-      }
-      console.log('Flutterwave V4 payment response:', JSON.stringify(paymentData));
+      // Detect if user configured a V3 Secret Key (starts with FLWSECK- or FLWSECK_TEST-)
+      const isV3Key = clientSecret.startsWith('FLWSECK-') || clientSecret.startsWith('FLWSECK_TEST-');
 
-      // V4 returns payment_link in data or meta
-      const paymentLink = paymentData?.data?.link || paymentData?.meta?.authorization?.redirect || paymentData?.link;
-      if (!paymentLink) {
-        console.error('No payment link in response:', paymentData);
-        sendJson(res, 502, { error: 'Failed to create payment link: ' + (paymentData?.message || JSON.stringify(paymentData)) });
-        return;
-      }
+      if (isV3Key) {
+        console.log('Detected V3 Secret Key. Initiating Standard Checkout payment link via V3 API...');
+        // Standard V3 Payment Link Initiation
+        const paymentRes = await fetch('https://api.flutterwave.com/v3/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${clientSecret}`
+          },
+          body: JSON.stringify({
+            amount: Number(amount),
+            currency: 'NGN',
+            tx_ref: txRef,
+            redirect_url: callbackUrl,
+            customer: { email, name },
+            customizations: {
+              title: 'Joshua Generation',
+              description: `Donation: ${cause} (${frequency || 'one-time'})`,
+              logo: 'https://joshuasgeneration.com/api/uploads/logo.png'
+            }
+          })
+        });
 
-      sendJson(res, 200, { payment_link: paymentLink, tx_ref: txRef });
+        const paymentRaw = await paymentRes.text();
+        let paymentData;
+        try { paymentData = JSON.parse(paymentRaw); } catch(e) {
+          console.error('Flutterwave payment non-JSON response:', paymentRaw.substring(0, 500));
+          sendJson(res, 502, { error: 'Payment provider returned unexpected response.' });
+          return;
+        }
+
+        console.log('Flutterwave V3 payment response:', JSON.stringify(paymentData));
+
+        const paymentLink = paymentData?.data?.link;
+        if (!paymentLink) {
+          console.error('No payment link in response:', paymentData);
+          sendJson(res, 502, { error: 'Failed to create payment link: ' + (paymentData?.message || JSON.stringify(paymentData)) });
+          return;
+        }
+
+        sendJson(res, 200, { payment_link: paymentLink, tx_ref: txRef });
+      } else {
+        // V4 OAuth2 authentication flow
+        console.log('Detected V4 credentials. Fetching access token...');
+        const tokenParams = new URLSearchParams();
+        tokenParams.append('client_id', clientId);
+        tokenParams.append('client_secret', clientSecret);
+        tokenParams.append('grant_type', 'client_credentials');
+
+        const tokenRes = await fetch('https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: tokenParams.toString()
+        });
+        const tokenRaw = await tokenRes.text();
+        let tokenData;
+        try { tokenData = JSON.parse(tokenRaw); } catch(e) {
+          console.error('Flutterwave IdP non-JSON response:', tokenRaw.substring(0, 500));
+          sendJson(res, 502, { error: 'Payment provider returned an unexpected response. Check your Client ID and Client Secret in Settings.' });
+          return;
+        }
+        if (!tokenData.access_token) {
+          console.error('Flutterwave token error:', tokenData);
+          sendJson(res, 502, { error: 'Payment provider rejected credentials: ' + (tokenData.error_description || tokenData.error || 'Invalid client credentials') });
+          return;
+        }
+
+        console.error('Flutterwave V4 does not support standard hosted payment checkout links. Guiding user to use V3 Secret Keys.');
+        sendJson(res, 400, {
+          error: 'Flutterwave V4 API does not support hosted redirect payment checkout links. Please input your V3 Secret Key (starts with "FLWSECK-") in the Client Secret field in your Settings.'
+        });
+      }
     } catch (e) {
       console.error('Payment initiation error:', e);
       sendJson(res, 500, { error: 'Payment initiation failed: ' + e.message });
