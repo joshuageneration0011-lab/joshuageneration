@@ -1053,6 +1053,17 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
   const [thumbnailSourceMode, setThumbnailSourceMode] = useState<'upload' | 'url'>('upload');
   const [audioSourceMode, setAudioSourceMode] = useState<'upload' | 'url'>('upload');
 
+  // Series additions
+  const [sermonType, setSermonType] = useState<'single' | 'series'>('single');
+  const [seriesAudios, setSeriesAudios] = useState<{
+    id: string;
+    title: string;
+    duration: string;
+    audioUrl: string;
+    file?: File;
+    sourceMode: 'upload' | 'url';
+  }[]>([]);
+
   // Form Fields
   const [title, setTitle] = useState('');
   const [speaker, setSpeaker] = useState('Pastor John Michael');
@@ -1072,6 +1083,37 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  const addSeriesTrack = () => {
+    setSeriesAudios([
+      ...seriesAudios,
+      {
+        id: 't_' + Date.now() + Math.random().toString(36).substring(2, 6),
+        title: `Part ${seriesAudios.length + 1}: `,
+        duration: '45:00',
+        audioUrl: '',
+        sourceMode: 'upload'
+      }
+    ]);
+  };
+
+  const removeSeriesTrack = (id: string) => {
+    setSeriesAudios(seriesAudios.filter(a => a.id !== id));
+  };
+
+  const updateSeriesTrack = (id: string, fields: Partial<typeof seriesAudios[0]>) => {
+    setSeriesAudios(seriesAudios.map(a => a.id === id ? { ...a, ...fields } : a));
+  };
+
+  const moveSeriesTrack = (index: number, direction: 'up' | 'down') => {
+    const nextIndex = direction === 'up' ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= seriesAudios.length) return;
+    const updated = [...seriesAudios];
+    const temp = updated[index];
+    updated[index] = updated[nextIndex];
+    updated[nextIndex] = temp;
+    setSeriesAudios(updated);
+  };
+
   const openNewForm = () => {
     setEditingSermon(null);
     setTitle('');
@@ -1085,6 +1127,8 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     setVideoUrl('');
     setThumbnailSourceMode('upload');
     setAudioSourceMode('upload');
+    setSermonType('single');
+    setSeriesAudios([]);
     setAudioUploadWarning('');
     setThumbnailFile(null);
     setAudioFile(null);
@@ -1106,6 +1150,23 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     setVideoUrl(sermon.videoUrl || '');
     setThumbnailSourceMode(sermon.thumbnail && sermon.thumbnail.startsWith('/api/uploads/') ? 'upload' : 'url');
     setAudioSourceMode(sermon.audioUrl && sermon.audioUrl.startsWith('/api/uploads/') ? 'upload' : 'url');
+    
+    const hasSeries = sermon.audios && sermon.audios.length > 0;
+    setSermonType(hasSeries ? 'series' : 'single');
+    if (hasSeries) {
+      setSeriesAudios(
+        sermon.audios!.map(a => ({
+          id: a.id,
+          title: a.title,
+          duration: a.duration,
+          audioUrl: a.audioUrl,
+          sourceMode: a.audioUrl && a.audioUrl.startsWith('/api/uploads/') ? 'upload' : 'url'
+        }))
+      );
+    } else {
+      setSeriesAudios([]);
+    }
+
     setAudioUploadWarning('');
     setThumbnailFile(null);
     setAudioFile(null);
@@ -1162,26 +1223,69 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
       return;
     }
 
+    if (sermonType === 'series' && seriesAudios.length === 0) {
+      alert('Please add at least one track/part to your sermon series.');
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
       let finalThumbnail = thumbnail;
       let finalAudioUrl = audioUrl;
+      const finalAudiosList: SermonAudio[] = [];
 
-      // 1. Upload Thumbnail if a new file is pending
-      if (thumbnailFile) {
-        setUploadProgress(5);
-        finalThumbnail = await api.uploadFile(thumbnailFile);
-      }
+      if (sermonType === 'series') {
+        const uploadableTracks = seriesAudios.filter(t => t.sourceMode === 'upload' && t.file);
+        const totalUploads = uploadableTracks.length + (thumbnailFile ? 1 : 0);
+        let uploadsDone = 0;
 
-      // 2. Upload Audio if a new file is pending
-      if (audioFile) {
-        setUploadProgress(15);
-        finalAudioUrl = await api.uploadFile(audioFile, (pct) => {
-          const overallProgress = 15 + Math.round((pct * 80) / 100);
-          setUploadProgress(overallProgress);
-        });
+        // 1. Upload Thumbnail if a new file is pending
+        if (thumbnailFile) {
+          finalThumbnail = await api.uploadFile(thumbnailFile);
+          uploadsDone++;
+          setUploadProgress(Math.round((uploadsDone / totalUploads) * 95));
+        }
+
+        // 2. Upload each track file
+        for (let i = 0; i < seriesAudios.length; i++) {
+          const track = seriesAudios[i];
+          let trackUrl = track.audioUrl;
+          if (track.sourceMode === 'upload' && track.file) {
+            const startPct = Math.round((uploadsDone / totalUploads) * 95);
+            const nextPct = Math.round(((uploadsDone + 1) / totalUploads) * 95);
+
+            trackUrl = await api.uploadFile(track.file, (pct) => {
+              const currentProgress = startPct + Math.round((pct * (nextPct - startPct)) / 100);
+              setUploadProgress(currentProgress);
+            });
+            uploadsDone++;
+          }
+          finalAudiosList.push({
+            id: track.id,
+            title: track.title.trim() || `Part ${i + 1}`,
+            duration: track.duration.trim() || '45:00',
+            audioUrl: trackUrl.trim()
+          });
+        }
+
+        finalAudioUrl = finalAudiosList[0]?.audioUrl || '';
+      } else {
+        // 1. Upload Thumbnail if a new file is pending
+        if (thumbnailFile) {
+          setUploadProgress(5);
+          finalThumbnail = await api.uploadFile(thumbnailFile);
+        }
+
+        // 2. Upload Audio if a new file is pending
+        if (audioFile) {
+          setUploadProgress(15);
+          finalAudioUrl = await api.uploadFile(audioFile, (pct) => {
+            const overallProgress = 15 + Math.round((pct * 80) / 100);
+            setUploadProgress(overallProgress);
+          });
+        }
       }
 
       setUploadProgress(98);
@@ -1197,7 +1301,8 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         thumbnail: finalThumbnail.trim() || 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
         audioUrl: finalAudioUrl.trim(),
         videoUrl: videoUrl.trim(),
-        views: editingSermon ? editingSermon.views : 0
+        views: editingSermon ? editingSermon.views : 0,
+        audios: sermonType === 'series' ? finalAudiosList : []
       };
 
       let updatedSermons: Sermon[];
@@ -1313,17 +1418,21 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                   <td className="px-4 py-3 text-gray-500 text-xs">{s.date}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {s.audioUrl && (
+                      {s.audios && s.audios.length > 0 ? (
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[9px] font-bold border border-purple-100">
+                          <Headphones className="w-2.5 h-2.5" /> Series ({s.audios.length} Parts)
+                        </span>
+                      ) : s.audioUrl ? (
                         <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[9px] font-bold border border-amber-100">
                           <Headphones className="w-2.5 h-2.5" /> Audio
                         </span>
-                      )}
+                      ) : null}
                       {s.videoUrl && (
                         <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-700 text-[9px] font-bold border border-sky-100">
                           <Tv className="w-2.5 h-2.5" /> Video
                         </span>
                       )}
-                      {!s.audioUrl && !s.videoUrl && (
+                      {!s.audioUrl && !s.videoUrl && (!s.audios || s.audios.length === 0) && (
                         <span className="text-gray-400 text-[9px]">None</span>
                       )}
                     </div>
@@ -1451,6 +1560,37 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                 />
               </div>
 
+              {/* Sermon Type Selection */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-550 uppercase tracking-wider">Message Audio Type</label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setSermonType('single')}
+                    className={cn(
+                      'py-2 rounded-lg text-xs font-bold transition-all',
+                      sermonType === 'single'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    )}
+                  >
+                    Single Audio Message
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSermonType('series')}
+                    className={cn(
+                      'py-2 rounded-lg text-xs font-bold transition-all',
+                      sermonType === 'series'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    )}
+                  >
+                    Sermon Series / Playlist
+                  </button>
+                </div>
+              </div>
+
               {/* Cover Image Segment */}
               <div className="p-4 rounded-2xl border border-gray-150 bg-gray-50/30 space-y-4">
                 <div className="flex items-center justify-between">
@@ -1501,72 +1641,208 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
               </div>
 
               {/* Audio Message File Upload */}
-              <div className="p-4 rounded-2xl border border-gray-150 bg-gray-50/30 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Audio Message Track</span>
-                    <span className="text-[10px] text-gray-400 font-medium mt-0.5 block">Required for Podcasts</span>
-                  </div>
-                  <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-semibold border">
-                    <button 
-                      type="button" 
-                      onClick={() => setAudioSourceMode('upload')}
-                      className={cn('px-2.5 py-1 rounded-md transition-colors', audioSourceMode === 'upload' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
-                    >Upload Audio</button>
-                    <button 
-                      type="button" 
-                      onClick={() => setAudioSourceMode('url')}
-                      className={cn('px-2.5 py-1 rounded-md transition-colors', audioSourceMode === 'url' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
-                    >Web URL</button>
-                  </div>
-                </div>
-
-                {audioUploadWarning && (
-                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium leading-relaxed">
-                    ⚠️ {audioUploadWarning}
-                  </div>
-                )}
-
-                {audioSourceMode === 'upload' ? (
-                  <div className="flex items-center gap-4">
-                    <input 
-                      type="file" 
-                      accept="audio/*" 
-                      onChange={handleAudioUpload} 
-                      className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer"
-                    />
-                  </div>
-                ) : (
-                  <input 
-                    type="url" 
-                    value={audioUrl} 
-                    onChange={(e) => setAudioUrl(e.target.value)} 
-                    placeholder="https://example.com/audio.mp3"
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
-                  />
-                )}
-
-                {audioUrl && (
-                  <div className="p-3.5 rounded-xl border border-gray-100 bg-white shadow-sm flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-lg bg-royal-blue-50 flex items-center justify-center text-royal-blue-600 flex-shrink-0 border">
-                        <Headphones className="w-4 h-4" />
-                      </div>
-                      <span className="text-xs text-gray-500 font-semibold truncate max-w-[280px]">
-                        {audioUrl.startsWith('data:') ? 'Base64 Audio File Linked' : audioUrl}
-                      </span>
+              {sermonType === 'single' ? (
+                <div className="p-4 rounded-2xl border border-gray-150 bg-gray-50/30 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Audio Message Track</span>
+                      <span className="text-[10px] text-gray-400 font-medium mt-0.5 block">Required for Podcasts</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <audio src={resolveApiUrl(audioUrl)} controls className="h-8 max-w-[160px] sm:max-w-none accent-royal-blue-600" />
+                    <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-semibold border">
                       <button 
                         type="button" 
-                        onClick={() => setAudioUrl('')}
-                        className="text-xs text-red-500 hover:text-red-750 font-bold ml-1"
-                      >Remove</button>
+                        onClick={() => setAudioSourceMode('upload')}
+                        className={cn('px-2.5 py-1 rounded-md transition-colors', audioSourceMode === 'upload' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
+                      >Upload Audio</button>
+                      <button 
+                        type="button" 
+                        onClick={() => setAudioSourceMode('url')}
+                        className={cn('px-2.5 py-1 rounded-md transition-colors', audioSourceMode === 'url' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
+                      >Web URL</button>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {audioUploadWarning && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium leading-relaxed">
+                      ⚠️ {audioUploadWarning}
+                    </div>
+                  )}
+
+                  {audioSourceMode === 'upload' ? (
+                    <div className="flex items-center gap-4">
+                      <input 
+                        type="file" 
+                        accept="audio/*" 
+                        onChange={handleAudioUpload} 
+                        className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer"
+                      />
+                    </div>
+                  ) : (
+                    <input 
+                      type="url" 
+                      value={audioUrl} 
+                      onChange={(e) => setAudioUrl(e.target.value)} 
+                      placeholder="https://example.com/audio.mp3"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                    />
+                  )}
+
+                  {audioUrl && (
+                    <div className="p-3.5 rounded-xl border border-gray-100 bg-white shadow-sm flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-8 h-8 rounded-lg bg-royal-blue-50 flex items-center justify-center text-royal-blue-600 flex-shrink-0 border">
+                          <Headphones className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs text-gray-500 font-semibold truncate max-w-[280px]">
+                          {audioUrl.startsWith('data:') ? 'Base64 Audio File Linked' : audioUrl}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <audio src={resolveApiUrl(audioUrl)} controls className="h-8 max-w-[160px] sm:max-w-none accent-royal-blue-600" />
+                        <button 
+                          type="button" 
+                          onClick={() => setAudioUrl('')}
+                          className="text-xs text-red-500 hover:text-red-750 font-bold ml-1"
+                        >Remove</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl border border-gray-150 bg-gray-50/30 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Series Audio Tracks</span>
+                      <span className="text-[10px] text-gray-400 font-medium mt-0.5 block">Add and order tracks for this series</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addSeriesTrack}
+                      className="px-3 py-1.5 rounded-lg bg-royal-blue-50 text-royal-blue-600 text-xs font-bold hover:bg-royal-blue-100 transition-colors flex items-center gap-1 border border-royal-blue-200"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Track
+                    </button>
+                  </div>
+
+                  {seriesAudios.length === 0 ? (
+                    <div className="text-center py-6 border border-dashed border-gray-250 rounded-xl text-gray-400 text-xs bg-white">
+                      No audio tracks added yet. Click "Add Track" above to start building the series.
+                    </div>
+                  ) : (
+                    <div className="space-y-3 overflow-y-auto max-h-[360px] pr-1">
+                      {seriesAudios.map((track, index) => (
+                        <div key={track.id} className="p-4 rounded-xl border border-gray-200 bg-white shadow-sm space-y-3 relative">
+                          <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                            <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full">Track #{index + 1}</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => moveSeriesTrack(index, 'up')}
+                                className="p-1 rounded hover:bg-gray-100 text-gray-400 disabled:opacity-30"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === seriesAudios.length - 1}
+                                onClick={() => moveSeriesTrack(index, 'down')}
+                                className="p-1 rounded hover:bg-gray-100 text-gray-400 disabled:opacity-30"
+                              >
+                                ▼
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeSeriesTrack(track.id)}
+                                className="p-1 rounded hover:bg-red-50 text-red-500 font-bold ml-1 text-xs"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-450 uppercase mb-1">Track Title *</label>
+                              <input
+                                type="text"
+                                required
+                                value={track.title}
+                                onChange={(e) => updateSeriesTrack(track.id, { title: e.target.value })}
+                                placeholder="Part 1: The Foundation"
+                                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 text-gray-900 font-medium"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-450 uppercase mb-1">Duration *</label>
+                              <input
+                                type="text"
+                                required
+                                value={track.duration}
+                                onChange={(e) => updateSeriesTrack(track.id, { duration: e.target.value })}
+                                placeholder="45:00"
+                                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 text-gray-900 font-medium"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-gray-450 uppercase">Audio Source</span>
+                              <div className="flex bg-gray-100 rounded-md p-0.5 text-[10px] font-semibold border">
+                                <button
+                                  type="button"
+                                  onClick={() => updateSeriesTrack(track.id, { sourceMode: 'upload' })}
+                                  className={cn('px-2 py-0.5 rounded transition-colors', track.sourceMode === 'upload' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
+                                >Upload</button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateSeriesTrack(track.id, { sourceMode: 'url' })}
+                                  className={cn('px-2 py-0.5 rounded transition-colors', track.sourceMode === 'url' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
+                                >URL</button>
+                              </div>
+                            </div>
+
+                            {track.sourceMode === 'upload' ? (
+                              <input
+                                type="file"
+                                accept="audio/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    updateSeriesTrack(track.id, {
+                                      file,
+                                      audioUrl: URL.createObjectURL(file)
+                                    });
+                                  }
+                                }}
+                                className="text-xs text-gray-500 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-750 hover:file:bg-royal-blue-100 cursor-pointer"
+                              />
+                            ) : (
+                              <input
+                                type="url"
+                                value={track.audioUrl.startsWith('blob:') ? '' : track.audioUrl}
+                                onChange={(e) => updateSeriesTrack(track.id, { audioUrl: e.target.value })}
+                                placeholder="https://example.com/part-audio.mp3"
+                                className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 text-gray-905 font-medium"
+                              />
+                            )}
+
+                            {track.audioUrl && (
+                              <div className="flex items-center justify-between gap-2 p-1.5 bg-gray-50 rounded-lg border border-gray-100">
+                                <span className="text-[10px] text-gray-500 font-medium truncate max-w-[180px]">
+                                  {track.audioUrl.startsWith('blob:') ? 'Selected local file' : track.audioUrl}
+                                </span>
+                                <audio src={resolveApiUrl(track.audioUrl)} controls className="h-6 max-w-[120px] accent-royal-blue-600" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Video URL Link */}
               <div>

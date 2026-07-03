@@ -163,9 +163,15 @@ async function initDb() {
           description TEXT,
           category VARCHAR,
           video_url TEXT,
-          audio_url TEXT
+          audio_url TEXT,
+          audios JSONB DEFAULT '[]'::jsonb
         );
       `);
+      try {
+        await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS audios JSONB DEFAULT '[]'::jsonb");
+      } catch (err) {
+        console.warn("Failed to check/add audios column to sermons table:", err.message);
+      }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS books (
@@ -496,7 +502,8 @@ const server = http.createServer(async (req, res) => {
           description: row.description,
           category: row.category,
           videoUrl: row.video_url,
-          audioUrl: row.audio_url
+          audioUrl: row.audio_url,
+          audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || [])
         }));
         sendJson(res, 200, sermons);
       } else {
@@ -836,14 +843,31 @@ const server = http.createServer(async (req, res) => {
       // Get existing sermon if any to clean up replaced uploads
       let existingSermon = null;
       if (pool) {
-        const result = await pool.query('SELECT audio_url, thumbnail FROM sermons WHERE id = $1', [item.id]);
+        const result = await pool.query('SELECT audio_url, thumbnail, audios FROM sermons WHERE id = $1', [item.id]);
         if (result.rowCount > 0) {
           existingSermon = result.rows[0];
+          if (existingSermon) {
+            existingSermon.audios = typeof existingSermon.audios === 'string' ? JSON.parse(existingSermon.audios) : (existingSermon.audios || []);
+          }
         }
       } else {
         if (fs.existsSync(SERMONS_FILE)) {
           const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
           existingSermon = data.find(x => x.id === item.id);
+        }
+      }
+
+      // Clean up deleted series audio files
+      if (existingSermon && Array.isArray(existingSermon.audios)) {
+        const currentUrls = new Set((item.audios || []).map(a => a.audioUrl));
+        for (const aud of existingSermon.audios) {
+          const url = aud.audioUrl;
+          if (url && url.startsWith('/api/uploads/') && !currentUrls.has(url)) {
+            const oldPath = path.join(DATA_DIR, 'uploads', path.basename(url));
+            if (fs.existsSync(oldPath)) {
+              try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to delete removed audio track:', e); }
+            }
+          }
         }
       }
 
@@ -930,8 +954,8 @@ const server = http.createServer(async (req, res) => {
 
       if (pool) {
         await pool.query(
-          `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, date, description, category, video_url, audio_url)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, date, description, category, video_url, audio_url, audios)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
            ON CONFLICT (id) DO UPDATE SET
              title = EXCLUDED.title,
              speaker = EXCLUDED.speaker,
@@ -942,8 +966,9 @@ const server = http.createServer(async (req, res) => {
              description = EXCLUDED.description,
              category = EXCLUDED.category,
              video_url = EXCLUDED.video_url,
-             audio_url = EXCLUDED.audio_url`,
-          [item.id, item.title, item.speaker, item.duration, item.thumbnail, item.views || 0, item.date, item.description, item.category, item.videoUrl, item.audioUrl]
+             audio_url = EXCLUDED.audio_url,
+             audios = EXCLUDED.audios`,
+          [item.id, item.title, item.speaker, item.duration, item.thumbnail, item.views || 0, item.date, item.description, item.category, item.videoUrl, item.audioUrl, JSON.stringify(item.audios || [])]
         );
       } else {
         const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
@@ -970,9 +995,12 @@ const server = http.createServer(async (req, res) => {
       // Check if we need to clean up local uploads
       let sermon = null;
       if (pool) {
-        const result = await pool.query('SELECT audio_url, thumbnail FROM sermons WHERE id = $1', [id]);
+        const result = await pool.query('SELECT audio_url, thumbnail, audios FROM sermons WHERE id = $1', [id]);
         if (result.rowCount > 0) {
           sermon = result.rows[0];
+          if (sermon) {
+            sermon.audios = typeof sermon.audios === 'string' ? JSON.parse(sermon.audios) : (sermon.audios || []);
+          }
         }
       } else {
         const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
@@ -982,6 +1010,8 @@ const server = http.createServer(async (req, res) => {
       if (sermon) {
         const audioUrl = sermon.audioUrl || sermon.audio_url;
         const thumbnailUrl = sermon.thumbnail || sermon.thumbnail_url;
+        const audiosList = sermon.audios || [];
+
         if (audioUrl && audioUrl.startsWith('/api/uploads/')) {
           const filepath = path.join(DATA_DIR, 'uploads', path.basename(audioUrl));
           if (fs.existsSync(filepath)) {
@@ -992,6 +1022,17 @@ const server = http.createServer(async (req, res) => {
           const filepath = path.join(DATA_DIR, 'uploads', path.basename(thumbnailUrl));
           if (fs.existsSync(filepath)) {
             try { fs.unlinkSync(filepath); } catch (e) { console.error('Failed to delete thumbnail file', e); }
+          }
+        }
+        if (Array.isArray(audiosList)) {
+          for (const aud of audiosList) {
+            const url = aud.audioUrl;
+            if (url && url.startsWith('/api/uploads/')) {
+              const filepath = path.join(DATA_DIR, 'uploads', path.basename(url));
+              if (fs.existsSync(filepath)) {
+                try { fs.unlinkSync(filepath); } catch (e) { console.error('Failed to delete series audio file', e); }
+              }
+            }
           }
         }
       }

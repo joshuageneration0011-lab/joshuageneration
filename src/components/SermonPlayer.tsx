@@ -24,6 +24,14 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   const [localViews, setLocalViews] = useState(sermon.views);
   const [hasIncrementedView, setHasIncrementedView] = useState(false);
 
+  // Series additions
+  const tracks = (sermon.audios && sermon.audios.length > 0)
+    ? sermon.audios
+    : [{ id: sermon.id, title: sermon.title, duration: sermon.duration, audioUrl: sermon.audioUrl }];
+
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const activeTrack = tracks[currentTrackIndex] || tracks[0];
+
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const activeMediaRef = audioRef;
@@ -40,11 +48,40 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    setCurrentTrackIndex(0);
     
     // Sync views
     setLocalViews(sermon.views);
     setHasIncrementedView(false);
   }, [sermon.id, sermon.views]);
+
+  // Trigger audio reload/play when track changes
+  useEffect(() => {
+    const media = audioRef.current;
+    if (media) {
+      media.load();
+      if (isPlaying) {
+        media.play().catch((err) => console.log('Playback failed:', err));
+      }
+    }
+  }, [currentTrackIndex]);
+
+  // Bulk download helper
+  const downloadAllTracks = () => {
+    if (!sermon.audios || sermon.audios.length === 0) return;
+    sermon.audios.forEach((track, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = resolveApiUrl(track.audioUrl);
+        link.setAttribute('download', `${track.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`);
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, index * 1000);
+    });
+  };
 
   // Handle note change and persist
   const handleNotesChange = (val: string) => {
@@ -90,8 +127,12 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   };
 
   const handleMediaEnd = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
+    if (sermon.audios && sermon.audios.length > 0 && currentTrackIndex < sermon.audios.length - 1) {
+      setCurrentTrackIndex((prev) => prev + 1);
+    } else {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,7 +210,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
               {/* Audio Element (hidden) */}
               <audio
                 ref={audioRef}
-                src={resolveApiUrl(sermon.audioUrl)}
+                src={resolveApiUrl(activeTrack.audioUrl)}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={handleMediaEnd}
@@ -217,12 +258,17 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
                 {/* Sermon title & speaker */}
                 <p className="text-white text-base font-bold text-center z-10 max-w-xs leading-snug">{sermon.title}</p>
+                {sermon.audios && sermon.audios.length > 0 && (
+                  <p className="text-amber-400 text-xs font-bold mt-1 z-10">
+                    Playing: {activeTrack.title}
+                  </p>
+                )}
                 <p className="text-royal-blue-300 text-xs mt-1.5 z-10">{sermon.speaker}</p>
 
                 {/* Audio badge */}
                 <span className="mt-4 z-10 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-gray-400 text-[10px] uppercase font-bold tracking-widest flex items-center gap-1.5">
                   <Headphones className="w-3 h-3" />
-                  Audio Sermon
+                  {sermon.audios && sermon.audios.length > 0 ? 'Sermon Series' : 'Audio Sermon'}
                 </span>
               </div>
 
@@ -280,14 +326,14 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
                   <div className="flex items-center gap-4">
                     {/* Download Audio */}
-                    {sermon.audioUrl && (
+                    {activeTrack.audioUrl && (
                       <a
-                        href={resolveApiUrl(sermon.audioUrl)}
-                        download={`${sermon.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                        href={resolveApiUrl(activeTrack.audioUrl)}
+                        download={`${activeTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/90 hover:text-white transition-all text-xs font-semibold"
-                        title="Download Audio Message"
+                        title={`Download ${activeTrack.title}`}
                       >
                         <Download className="w-3.5 h-3.5" />
                         Download
@@ -297,12 +343,97 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                     {/* Duration info */}
                     <div className="flex items-center gap-1.5 text-white/40 text-xs">
                       <Clock className="w-3.5 h-3.5" />
-                      {sermon.duration}
+                      {activeTrack.duration}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Playlist Container (Only for Series) */}
+            {sermon.audios && sermon.audios.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Sermon Series Tracks</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">{sermon.audios.length} parts in this message series</p>
+                  </div>
+                  <button
+                    onClick={downloadAllTracks}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white transition-all text-xs font-bold shadow-md shadow-royal-blue-600/15"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Series (All Parts)
+                  </button>
+                </div>
+
+                <div className="divide-y divide-gray-100">
+                  {sermon.audios.map((track, idx) => {
+                    const isActive = idx === currentTrackIndex;
+                    return (
+                      <div
+                        key={track.id}
+                        className={cn(
+                          'flex items-center justify-between py-3.5 px-4 -mx-4 rounded-xl transition-all',
+                          isActive 
+                            ? 'bg-royal-blue-50/70 border border-royal-blue-100' 
+                            : 'hover:bg-gray-50/50'
+                        )}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <button
+                            onClick={() => {
+                              setCurrentTrackIndex(idx);
+                              setIsPlaying(true);
+                              setTimeout(() => {
+                                const media = audioRef.current;
+                                if (media) {
+                                  media.play().catch((err) => console.log('Playback failed:', err));
+                                }
+                              }, 100);
+                            }}
+                            className={cn(
+                              'w-8 h-8 rounded-full flex items-center justify-center transition-all',
+                              isActive 
+                                ? 'bg-royal-blue-600 text-white' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            )}
+                          >
+                            {isActive && isPlaying ? (
+                              <span className="w-2.5 h-2.5 flex items-center justify-center gap-0.5">
+                                <span className="w-0.5 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                                <span className="w-0.5 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                                <span className="w-0.5 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.5s' }} />
+                              </span>
+                            ) : (
+                              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                            )}
+                          </button>
+                          
+                          <div className="min-w-0">
+                            <p className={cn('text-sm font-bold truncate max-w-[280px]', isActive ? 'text-royal-blue-700' : 'text-gray-900')}>
+                              {track.title}
+                            </p>
+                            <span className="text-[10px] text-gray-400 font-semibold">{track.duration}</span>
+                          </div>
+                        </div>
+
+                        <a
+                          href={resolveApiUrl(track.audioUrl)}
+                          download={`${track.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-lg hover:bg-gray-100 text-gray-450 hover:text-gray-700 transition-colors"
+                          title={`Download ${track.title}`}
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Sermon Metadata Info */}
             <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
@@ -341,16 +472,16 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                   </div>
                 </div>
 
-                {sermon.audioUrl && (
+                {activeTrack.audioUrl && (
                   <a
-                    href={resolveApiUrl(sermon.audioUrl)}
-                    download={`${sermon.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                    href={resolveApiUrl(activeTrack.audioUrl)}
+                    download={`${activeTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-500 text-white hover:text-white transition-all text-xs font-bold shadow-md shadow-royal-blue-600/15"
                   >
                     <Download className="w-4 h-4" />
-                    Download Audio Message
+                    Download {sermon.audios && sermon.audios.length > 0 ? 'Current Part' : 'Audio Message'}
                   </a>
                 )}
               </div>

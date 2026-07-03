@@ -1,3 +1,10 @@
+export interface SermonAudio {
+  id: string;
+  title: string;
+  audioUrl: string;
+  duration: string;
+}
+
 export interface Sermon {
   id: string;
   title: string;
@@ -10,6 +17,7 @@ export interface Sermon {
   date: string;
   description: string;
   category: string;
+  audios?: SermonAudio[];
 }
 
 export interface Book {
