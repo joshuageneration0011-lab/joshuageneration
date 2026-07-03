@@ -141,14 +141,7 @@ export default function AdminDashboard({
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const visibleSidebarItems = sidebarItems.filter(item => {
-    if (userRole !== 'superadmin') {
-      if (item.id === 'donations' || item.id === 'settings') {
-        return false;
-      }
-    }
-    return true;
-  });
+  const visibleSidebarItems = sidebarItems;
 
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -165,10 +158,6 @@ export default function AdminDashboard({
   };
 
   const loadDonations = async () => {
-    if (userRole !== 'superadmin') {
-      setLoadingDonations(false);
-      return;
-    }
     try {
       setLoadingDonations(true);
       const data = await api.getDonations();
@@ -181,9 +170,7 @@ export default function AdminDashboard({
   };
 
   useEffect(() => {
-    if (userRole === 'superadmin') {
-      loadDonations();
-    }
+    loadDonations();
   }, []);
 
   const renderTabContent = () => {
@@ -196,13 +183,11 @@ export default function AdminDashboard({
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
-        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
         return <DonationsTab donations={donations} loading={loadingDonations} onRefresh={loadDonations} />;
       case 'analytics': return <AnalyticsTab sermons={sermons} books={books} users={users} />;
       case 'prayer': return <PrayerTab />;
       case 'moderation': return <ModerationTab />;
       case 'settings': 
-        if (userRole !== 'superadmin') return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
         return <SettingsTab />;
       default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
     }
@@ -393,7 +378,7 @@ interface DashboardTabProps {
 
 function DashboardTab({ posts, onTabChange, donations, events, sermons, users }: DashboardTabProps) {
   const userRole = api.getRole();
-  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
+  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>('donations');
 
   // Exact data from state / database
   const totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
@@ -424,7 +409,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
         {[
           { label: 'Total Users', value: totalUsersCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
           { label: 'Sermon Views', value: totalSermonViews.toLocaleString(), change: '+0.0%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
-          ...(userRole === 'superadmin' ? [{ label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true }] : []),
+          { label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true },
           { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
         ].map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
@@ -448,7 +433,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
         {/* Left Column (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart */}
-          {userRole === 'superadmin' && (
+          {(userRole === 'superadmin' || userRole === 'admin') && (
             <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
@@ -472,7 +457,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
           <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
               <div className="flex gap-4">
-                {userRole === 'superadmin' && (
+                {(userRole === 'superadmin' || userRole === 'admin') && (
                   <button
                     onClick={() => setActiveListTab('donations')}
                     className={cn(

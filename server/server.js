@@ -768,10 +768,6 @@ const server = http.createServer(async (req, res) => {
 
   // GET Donations (Admin only)
   if (pathname === '/api/donations' && method === 'GET') {
-    if (user.role !== 'superadmin') {
-      sendJson(res, 403, { error: 'Forbidden: Super Admin access required' });
-      return;
-    }
     try {
       if (pool) {
         const result = await pool.query('SELECT * FROM donations ORDER BY id DESC');
@@ -1199,10 +1195,6 @@ const server = http.createServer(async (req, res) => {
 
   // POST Settings (Admin only)
   if (pathname === '/api/settings' && method === 'POST') {
-    if (user.role !== 'superadmin') {
-      sendJson(res, 403, { error: 'Forbidden: Super Admin access required' });
-      return;
-    }
     try {
       const { flutterwave_prophetic_key, flutterwave_mission_key } = await getJsonBody(req);
       if (flutterwave_prophetic_key === undefined || flutterwave_mission_key === undefined) {
