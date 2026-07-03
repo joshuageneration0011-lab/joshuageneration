@@ -1238,11 +1238,11 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
 
       if (sermonType === 'series') {
         const uploadableTracks = seriesAudios.filter(t => t.sourceMode === 'upload' && t.file);
-        const totalUploads = uploadableTracks.length + (thumbnailFile ? 1 : 0);
+        const totalUploads = uploadableTracks.length + (thumbnailSourceMode === 'upload' && thumbnailFile ? 1 : 0);
         let uploadsDone = 0;
 
         // 1. Upload Thumbnail if a new file is pending
-        if (thumbnailFile) {
+        if (thumbnailSourceMode === 'upload' && thumbnailFile) {
           finalThumbnail = await api.uploadFile(thumbnailFile);
           uploadsDone++;
           setUploadProgress(Math.round((uploadsDone / totalUploads) * 95));
@@ -1273,13 +1273,13 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         finalAudioUrl = finalAudiosList[0]?.audioUrl || '';
       } else {
         // 1. Upload Thumbnail if a new file is pending
-        if (thumbnailFile) {
+        if (thumbnailSourceMode === 'upload' && thumbnailFile) {
           setUploadProgress(5);
           finalThumbnail = await api.uploadFile(thumbnailFile);
         }
 
         // 2. Upload Audio if a new file is pending
-        if (audioFile) {
+        if (audioSourceMode === 'upload' && audioFile) {
           setUploadProgress(15);
           finalAudioUrl = await api.uploadFile(audioFile, (pct) => {
             const overallProgress = 15 + Math.round((pct * 80) / 100);
@@ -1612,6 +1612,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                 {thumbnailSourceMode === 'upload' ? (
                   <div className="flex items-center gap-4">
                     <input 
+                      key={thumbnail ? 'has-image' : 'no-image'}
                       type="file" 
                       accept="image/*" 
                       onChange={handleThumbnailUpload} 
@@ -1633,7 +1634,10 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                     <img src={resolveApiUrl(thumbnail)} alt="Thumbnail preview" className="w-16 aspect-[16/10] object-cover rounded-lg shadow-sm" />
                     <button 
                       type="button" 
-                      onClick={() => setThumbnail('')}
+                      onClick={() => {
+                        setThumbnail('');
+                        setThumbnailFile(null);
+                      }}
                       className="text-xs text-red-500 hover:text-red-750 font-bold"
                     >Remove image</button>
                   </div>
