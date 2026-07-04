@@ -39,6 +39,36 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
       // Payment came back successful — log and show receipt
       setReceiptId(txRef);
       setStep(3);
+
+      // Load pending donation from localStorage and post to backend database
+      const pending = localStorage.getItem('jg_pending_donation');
+      if (pending) {
+        try {
+          const donationData = JSON.parse(pending);
+          fetch('/api/donations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              donor: donationData.donor,
+              email: donationData.email,
+              amount: donationData.amount,
+              purpose: donationData.purpose,
+              frequency: donationData.frequency,
+              method: 'Flutterwave'
+            })
+          }).then(res => {
+            if (res.ok) {
+              console.log('Donation successfully recorded in database');
+              localStorage.removeItem('jg_pending_donation');
+            }
+          }).catch(err => {
+            console.error('Failed to record donation in database:', err);
+          });
+        } catch (e) {
+          console.error('Error parsing pending donation:', e);
+        }
+      }
+
       // Clean URL
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
     } else if (status && status !== 'successful' && txRef) {
@@ -236,6 +266,16 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
         setIsProcessing(false);
         return;
       }
+      // Save pending donation in localStorage to recover after redirect
+      localStorage.setItem('jg_pending_donation', JSON.stringify({
+        donor: name,
+        email: email,
+        amount: finalAmount,
+        purpose: cause,
+        frequency: frequency,
+        currency: currency
+      }));
+
       // Redirect to Flutterwave hosted payment page
       window.location.href = data.payment_link;
     } catch (err: any) {
