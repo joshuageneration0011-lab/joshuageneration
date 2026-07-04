@@ -46,6 +46,54 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
     }
   }, []);
 
+  // Auto-detect currency based on IP address and Timezone
+  useEffect(() => {
+    const detectCurrency = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500); // 2.5s timeout
+        
+        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.currency && ['NGN', 'USD', 'GBP', 'EUR', 'CAD', 'ZAR'].includes(data.currency)) {
+            setCurrency(data.currency);
+            return;
+          }
+        }
+      } catch (e) {
+        // Silent catch — fall back to timezone method
+      }
+
+      // Timezone-based fallback detection
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz) {
+          const lowerTz = tz.toLowerCase();
+          if (lowerTz.includes('lagos') || lowerTz.includes('nairobi') || lowerTz.includes('accra')) {
+            setCurrency('NGN');
+          } else if (lowerTz.includes('johannesburg')) {
+            setCurrency('ZAR');
+          } else if (lowerTz.includes('london')) {
+            setCurrency('GBP');
+          } else if (lowerTz.includes('europe')) {
+            setCurrency('EUR');
+          } else if (lowerTz.includes('toronto') || lowerTz.includes('vancouver') || lowerTz.includes('canada')) {
+            setCurrency('CAD');
+          } else {
+            setCurrency('USD');
+          }
+        }
+      } catch (err) {
+        setCurrency('NGN');
+      }
+    };
+
+    detectCurrency();
+  }, []);
+
   const presetAmounts = ['10', '25', '50', '100', '250', '500'];
 
   const handlePresetSelect = (val: string) => {
@@ -368,25 +416,31 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   </div>
                 </div>
 
+                {/* Currency Selection Grid */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Select Currency
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {['NGN', 'USD', 'GBP', 'EUR', 'CAD', 'ZAR'].map((cur) => (
+                      <button
+                        key={cur}
+                        type="button"
+                        onClick={() => setCurrency(cur)}
+                        className={`py-2 rounded-xl border text-xs font-bold transition-all duration-200 flex flex-col items-center justify-center gap-0.5 ${currency === cur ? 'border-gold-500 bg-gold-50 text-gold-800 ring-2 ring-gold-500/20' : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'}`}
+                      >
+                        <span className="text-[9px] uppercase font-semibold text-gray-400">{cur}</span>
+                        <span className="text-sm">{currencySymbols[cur]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Preset / Custom Amount */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Donation Amount
-                    </label>
-                    <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-royal-blue-500/20 cursor-pointer outline-none transition-all"
-                    >
-                      <option value="NGN">NGN (₦)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="GBP">GBP (£)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="CAD">CAD (C$)</option>
-                      <option value="ZAR">ZAR (R)</option>
-                    </select>
-                  </div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+                    Donation Amount ({currency})
+                  </label>
                   <div className="grid grid-cols-3 gap-2.5 mb-3">
                     {presetAmounts.map((val) => (
                       <button
