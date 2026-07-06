@@ -9,7 +9,13 @@ interface FeaturedSermonsProps {
 }
 
 export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll }: FeaturedSermonsProps) {
-  const featured = sermons.slice(0, 4);
+  const featured = [...sermons]
+    .sort((a, b) => {
+      const timeA = a.date ? new Date(a.date).getTime() : 0;
+      const timeB = b.date ? new Date(b.date).getTime() : 0;
+      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+    })
+    .slice(0, 4);
 
   return (
     <section id="sermons" className="relative py-24 sm:py-32 bg-[#f8f6f1] overflow-hidden">
