@@ -26,9 +26,40 @@ def clean_html(raw_html):
     cleantext = re.sub(cleanr, '', raw_html)
     return cleantext.strip()
 
+def get_browser_headers(referer=""):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive'
+    }
+    if referer:
+        headers['Referer'] = referer
+    return headers
+
+def download_file_browser(url, local_filepath, reporthook=None):
+    headers = get_browser_headers(referer=url)
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req) as response:
+        total_size = int(response.info().get('Content-Length', 0))
+        block_size = 1024 * 64 # 64 KB chunks
+        downloaded = 0
+        
+        with open(local_filepath, 'wb') as f:
+            block_num = 0
+            while True:
+                buffer = response.read(block_size)
+                if not buffer:
+                    break
+                f.write(buffer)
+                downloaded += len(buffer)
+                block_num += 1
+                if reporthook:
+                    reporthook(block_num, block_size, total_size)
+
 def parse_rss_feed(url):
     print(f"Fetching RSS feed from: {url}...")
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    headers = get_browser_headers()
     req = urllib.request.Request(url, headers=headers)
     
     with urllib.request.urlopen(req) as response:
@@ -37,7 +68,6 @@ def parse_rss_feed(url):
     root = ET.fromstring(xml_data)
     items = []
     
-    # Namespaces
     ns = {
         'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
         'media': 'http://search.yahoo.com/mrss/',
@@ -48,7 +78,6 @@ def parse_rss_feed(url):
         title = item.find('title')
         title_text = title.text if title is not None else "Untitled Sermon"
         
-        # Audio URL search in <enclosure>
         audio_url = ""
         enclosure = item.find('enclosure')
         if enclosure is not None:
@@ -59,7 +88,6 @@ def parse_rss_feed(url):
         if desc_node is not None:
             description = clean_html(desc_node.text)
             
-        # Image search in multiple places
         image_url = ""
         itunes_image = item.find('itunes:image', ns)
         if itunes_image is not None:
@@ -70,7 +98,6 @@ def parse_rss_feed(url):
             if media_content is not None:
                 image_url = media_content.get('url', '')
                 
-        # Fallback to channel image
         if not image_url:
             channel_image = root.find('.//channel/image/url')
             if channel_image is not None:
@@ -80,7 +107,6 @@ def parse_rss_feed(url):
         date_node = item.find('pubDate')
         if date_node is not None:
             try:
-                # Parse pubDate and format to YYYY-MM-DD
                 parsed_date = datetime.strptime(date_node.text[:25].strip(), "%a, %d %b %Y %H:%M:%S")
                 pub_date = parsed_date.strftime("%Y-%m-%d")
             except Exception:
@@ -99,13 +125,14 @@ def parse_rss_feed(url):
 
 def extract_sermon_details_from_post(url):
     print(f"Visiting page: {url}...")
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    headers = get_browser_headers(referer=url)
     try:
+        # Brief pause to avoid fast connection triggers
+        time.sleep(1.0)
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req) as response:
             html = response.read().decode('utf-8', errors='ignore')
             
-        # Extract title
         title = ""
         title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
         if title_match:
@@ -117,7 +144,6 @@ def extract_sermon_details_from_post(url):
             if h1_text:
                 title = h1_text
                 
-        # Extract description
         description = ""
         desc_match = re.search(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\'](.*?)["\']', html, re.IGNORECASE)
         if not desc_match:
@@ -125,13 +151,12 @@ def extract_sermon_details_from_post(url):
         if desc_match:
             description = desc_match.group(1).strip()
             
-        # Extract image
         image_url = ""
         img_match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']', html, re.IGNORECASE)
         if img_match:
             image_url = img_match.group(1).strip()
             
-        # Extract first MP3 link
+        audio_url = ""
         mp3_match = re.search(r'href=["\'](https?://[^"\']+\.mp3)["\']', html, re.IGNORECASE)
         audio_url = mp3_match.group(1).strip() if mp3_match else ""
         
@@ -149,18 +174,17 @@ def extract_sermon_details_from_post(url):
                 'date': datetime.now().strftime("%Y-%m-%d")
             }
     except Exception as e:
-        print(f"  Error reading sermon page {url}: {e}")
+        print(f"  Error reading sermon page: {e}")
     return None
 
 def parse_html_page(url):
     print(f"Scraping HTML page from: {url}...")
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    headers = get_browser_headers()
     req = urllib.request.Request(url, headers=headers)
     
     with urllib.request.urlopen(req) as response:
         html = response.read().decode('utf-8', errors='ignore')
     
-    # Extract all links on the page
     link_pattern = re.compile(r'href=["\'](https?://[^"\']+)["\']', re.IGNORECASE)
     all_links = list(set(link_pattern.findall(html)))
     
@@ -205,7 +229,6 @@ def parse_html_page(url):
                     items.append(details)
             return items
             
-    # Fallback to direct MP3 files on the page itself
     mp3_pattern = re.compile(r'href=["\'](https?://[^"\']+\.mp3)["\']', re.IGNORECASE)
     mp3_links = list(set(mp3_pattern.findall(html)))
     
@@ -254,21 +277,17 @@ def main():
     print("   JOSHUA GENERATION NESTED SERMON CRAWLER & IMPORT")
     print("=" * 60)
 
-    # 1. Input Server URL
-    default_host = "https://joshuasgeneration.com"
-    host_input = input(f"Enter Contabo Server API URL [{default_host}]: ").strip()
-    api_base = host_input if host_input else default_host
+    host_input = input("Enter Contabo Server API URL [https://joshuasgeneration.com]: ").strip()
+    api_base = host_input if host_input else "https://joshuasgeneration.com"
     if api_base.endswith('/'):
         api_base = api_base[:-1]
 
-    # 2. Input Sermon Page or RSS Feed Link
     source_url = ""
     while not source_url:
         source_url = input("Enter WordPress RSS Feed or Sermon Page URL: ").strip()
         if not source_url:
             print("URL is required!")
 
-    # 3. Detect Feed vs HTML page
     items = []
     try:
         if "feed" in source_url.lower() or source_url.endswith(".xml"):
@@ -336,7 +355,6 @@ def main():
                 print("Skipped.")
                 continue
 
-        # --- DOWNLOAD & UPLOAD COVER IMAGE ---
         uploaded_thumb_path = ""
         if item['imageUrl']:
             print("Downloading cover image...")
@@ -347,7 +365,7 @@ def main():
             
             temp_img = os.path.join(os.getcwd(), f"temp_{img_filename}")
             try:
-                urllib.request.urlretrieve(item['imageUrl'], temp_img)
+                download_file_browser(item['imageUrl'], temp_img)
                 print("Uploading cover image to Contabo...")
                 uploaded_thumb_path = upload_file_to_contabo(api_base, temp_img, img_filename)
                 print(f"Cover image uploaded: {uploaded_thumb_path}")
@@ -358,7 +376,6 @@ def main():
                     try: os.remove(temp_img)
                     except Exception: pass
 
-        # --- DOWNLOAD & UPLOAD AUDIO ---
         print("Downloading audio file...")
         parsed_audio = urllib.parse.urlparse(item['audioUrl'])
         audio_filename = os.path.basename(parsed_audio.path)
@@ -368,7 +385,7 @@ def main():
         temp_audio = os.path.join(os.getcwd(), f"temp_{audio_filename}")
         uploaded_audio_path = ""
         try:
-            urllib.request.urlretrieve(item['audioUrl'], temp_audio, reporthook=show_progress)
+            download_file_browser(item['audioUrl'], temp_audio, reporthook=show_progress)
             print("\nUploading audio to Contabo server...")
             uploaded_audio_path = upload_file_to_contabo(api_base, temp_audio, audio_filename)
             print(f"Audio file uploaded: {uploaded_audio_path}")
@@ -383,7 +400,6 @@ def main():
             print("Skipping database entry creation due to missing audio link.")
             continue
 
-        # --- SAVE SERMON RECORD ---
         sermon_id = f"sermon_{int(time.time())}{random.randint(100, 999)}"
         sermon_date = item['date'] if item['date'] else datetime.now().strftime("%Y-%m-%d")
         
@@ -410,8 +426,8 @@ def main():
         except Exception as e:
             print(f"Failed to create database record: {e}")
 
-        # Sleep briefly between requests to prevent rate limit issues
-        time.sleep(1)
+        # Safety pause
+        time.sleep(2.0)
 
     print(f"\nAll done! Successfully imported {imported_count} sermons.")
 
