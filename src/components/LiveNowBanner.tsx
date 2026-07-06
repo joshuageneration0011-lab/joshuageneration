@@ -23,7 +23,7 @@ export default function LiveNowBanner({ onJoinLive }: LiveNowBannerProps) {
             </div>
             <div>
               <h3 className="text-white font-semibold text-lg">Sunday Worship Service</h3>
-              <p className="text-white/60 text-sm">Pastor John Michael</p>
+              <p className="text-white/60 text-sm">Apostle Joshua Iyemifokhae</p>
             </div>
           </div>
 

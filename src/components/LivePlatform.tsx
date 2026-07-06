@@ -26,7 +26,7 @@ interface ChatMessage {
 }
 
 const participants: Participant[] = [
-  { id: 'p1', name: 'Pastor John Michael', isHost: true, isSpeaking: true, isMuted: false, isVideoOn: true, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80' },
+  { id: 'p1', name: 'Apostle Joshua Iyemifokhae', isHost: true, isSpeaking: true, isMuted: false, isVideoOn: true, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80' },
   { id: 'p2', name: 'Sarah Williams', isHost: false, isSpeaking: false, isMuted: true, isVideoOn: true, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80' },
   { id: 'p3', name: 'David Thompson', isHost: false, isSpeaking: false, isMuted: false, isVideoOn: true, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80' },
   { id: 'p4', name: 'Rachel Grace', isHost: false, isSpeaking: false, isMuted: true, isVideoOn: false, avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80' },
@@ -39,7 +39,7 @@ const participants: Participant[] = [
 const initialMessages: ChatMessage[] = [
   { id: 'm1', name: 'Sarah Williams', message: 'Praise the Lord! So blessed to be here tonight.', time: '7:32 PM' },
   { id: 'm2', name: 'David Thompson', message: 'Amen! Ready for a powerful word.', time: '7:33 PM' },
-  { id: 'm3', name: 'Pastor John Michael', message: 'Welcome everyone! Let us begin with a word of prayer.', time: '7:34 PM', isHost: true },
+  { id: 'm3', name: 'Apostle Joshua Iyemifokhae', message: 'Welcome everyone! Let us begin with a word of prayer.', time: '7:34 PM', isHost: true },
   { id: 'm4', name: 'Emily Watson', message: 'Praying from London! God bless you all.', time: '7:35 PM' },
 ];
 

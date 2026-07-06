@@ -4,7 +4,7 @@ export const sermons: Sermon[] = [
   {
     id: 's1',
     title: 'Walking in Divine Authority',
-    speaker: 'Pastor John Michael',
+    speaker: 'Apostle Joshua Iyemifokhae',
     duration: '45:22',
     thumbnail: 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
     views: 12400,
@@ -43,7 +43,7 @@ export const sermons: Sermon[] = [
   {
     id: 's4',
     title: 'Grace That Transforms',
-    speaker: 'Pastor John Michael',
+    speaker: 'Apostle Joshua Iyemifokhae',
     duration: '42:10',
     thumbnail: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80',
     views: 11200,
@@ -85,7 +85,7 @@ export const books: Book[] = [
   {
     id: 'b1',
     title: 'Purpose & Destiny',
-    author: 'Pastor John Michael',
+    author: 'Apostle Joshua Iyemifokhae',
     coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80',
     description: 'Discover God\'s unique purpose for your life and walk boldly in your destiny.',
     category: 'Purpose',
@@ -165,7 +165,7 @@ export const books: Book[] = [
   {
     id: 'b5',
     title: 'Healing for the Broken',
-    author: 'Pastor John Michael',
+    author: 'Apostle Joshua Iyemifokhae',
     coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80',
     description: 'Find emotional and spiritual healing through God\'s restoring power.',
     category: 'Healing',
@@ -211,7 +211,7 @@ export const events: Event[] = [
     location: 'Jerusalem Convention Center',
     description: 'A three-day conference featuring world-renowned speakers, worship, and breakthrough sessions.',
     imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
-    speakers: ['Pastor John Michael', 'Apostle David Thompson', 'Pastor Sarah Williams'],
+    speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson', 'Pastor Sarah Williams'],
   },
   {
     id: 'e2',
@@ -241,7 +241,7 @@ export const events: Event[] = [
     location: 'JGen Prayer Mountain',
     description: 'Seven days of intense prayer, fasting, and seeking God\'s face for the new year.',
     imageUrl: 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
-    speakers: ['Pastor John Michael', 'Apostle David Thompson'],
+    speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson'],
   },
 ];
 
@@ -249,7 +249,7 @@ export const blogPosts: BlogPost[] = [
   {
     id: 'p1',
     title: '5 Ways to Strengthen Your Faith in Difficult Times',
-    author: 'Pastor John Michael',
+    author: 'Apostle Joshua Iyemifokhae',
     date: '2025-12-08',
     readTime: '7 min read',
     excerpt: 'When life gets tough, our faith is tested. Here are five powerful ways to keep your faith strong...',

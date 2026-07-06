@@ -28,37 +28,37 @@ const allUsers = [
   { id: 5, name: 'Rachel Grace', email: 'rachel@example.com', status: 'inactive', joined: 'Mar 12, 2025', sermons: 8, donations: 150, avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80', role: 'Minister' },
   { id: 6, name: 'James O\'Brien', email: 'james@example.com', status: 'active', joined: 'Jan 20, 2025', sermons: 56, donations: 5000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Partner' },
   { id: 7, name: 'Maria Gonzalez', email: 'maria@example.com', status: 'active', joined: 'Oct 8, 2025', sermons: 15, donations: 800, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80', role: 'Member' },
-  { id: 8, name: 'Pastor John Michael', email: 'john@joshuagen.org', status: 'active', joined: 'Jan 1, 2020', sermons: 312, donations: 15000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Admin' },
+  { id: 8, name: 'Apostle Joshua Iyemifokhae', email: 'john@joshuagen.org', status: 'active', joined: 'Jan 1, 2020', sermons: 312, donations: 15000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Admin' },
 ];
 
 const allSermons = [
-  { id: 1, title: 'Walking in Divine Authority', speaker: 'Pastor John Michael', duration: '45:22', views: 12400, date: 'Dec 10, 2025', status: 'Published', category: 'Faith' },
+  { id: 1, title: 'Walking in Divine Authority', speaker: 'Apostle Joshua Iyemifokhae', duration: '45:22', views: 12400, date: 'Dec 10, 2025', status: 'Published', category: 'Faith' },
   { id: 2, title: 'The Power of Kingdom Prayer', speaker: 'Sarah Williams', duration: '38:15', views: 9800, date: 'Dec 3, 2025', status: 'Published', category: 'Prayer' },
   { id: 3, title: 'Breaking Generational Chains', speaker: 'Apostle David Thompson', duration: '52:40', views: 15600, date: 'Nov 28, 2025', status: 'Published', category: 'Freedom' },
-  { id: 4, title: 'Grace That Transforms', speaker: 'Pastor John Michael', duration: '42:10', views: 11200, date: 'Nov 20, 2025', status: 'Published', category: 'Grace' },
+  { id: 4, title: 'Grace That Transforms', speaker: 'Apostle Joshua Iyemifokhae', duration: '42:10', views: 11200, date: 'Nov 20, 2025', status: 'Published', category: 'Grace' },
   { id: 5, title: 'Rising in Unshakable Faith', speaker: 'Minister Rachel Grace', duration: '35:50', views: 8700, date: 'Nov 15, 2025', status: 'Published', category: 'Faith' },
   { id: 6, title: 'The Season of Harvest', speaker: 'Pastor Sarah Williams', duration: '48:30', views: 13200, date: 'Nov 8, 2025', status: 'Draft', category: 'Season' },
-  { id: 7, title: 'Overcoming Fear with Faith', speaker: 'Pastor John Michael', duration: '41:05', views: 7100, date: 'Nov 1, 2025', status: 'Published', category: 'Faith' },
+  { id: 7, title: 'Overcoming Fear with Faith', speaker: 'Apostle Joshua Iyemifokhae', duration: '41:05', views: 7100, date: 'Nov 1, 2025', status: 'Published', category: 'Faith' },
   { id: 8, title: 'The Armor of God', speaker: 'Apostle David Thompson', duration: '55:20', views: 18900, date: 'Oct 25, 2025', status: 'Published', category: 'Spiritual Warfare' },
 ];
 
 const allBooks = [
-  { id: 1, title: 'Purpose & Destiny', author: 'Pastor John Michael', downloads: 12400, pages: 248, status: 'Published', rating: 4.8, category: 'Purpose' },
+  { id: 1, title: 'Purpose & Destiny', author: 'Apostle Joshua Iyemifokhae', downloads: 12400, pages: 248, status: 'Published', rating: 4.8, category: 'Purpose' },
   { id: 2, title: 'The Prayer Warrior', author: 'Sarah Williams', downloads: 8900, pages: 312, status: 'Published', rating: 4.9, category: 'Prayer' },
   { id: 3, title: 'Kingdom Economics', author: 'David Thompson', downloads: 15600, pages: 196, status: 'Published', rating: 4.7, category: 'Finance' },
   { id: 4, title: 'Walking in the Spirit', author: 'Rachel Grace', downloads: 6700, pages: 224, status: 'Published', rating: 4.6, category: 'Spiritual Growth' },
-  { id: 5, title: 'Healing for the Broken', author: 'Pastor John Michael', downloads: 11200, pages: 176, status: 'Published', rating: 4.9, category: 'Healing' },
+  { id: 5, title: 'Healing for the Broken', author: 'Apostle Joshua Iyemifokhae', downloads: 11200, pages: 176, status: 'Published', rating: 4.9, category: 'Healing' },
   { id: 6, title: 'The Family Altar', author: 'Minister Rachel Grace', downloads: 4300, pages: 256, status: 'Draft', rating: 0, category: 'Family' },
 ];
 
 
 
 const allEvents = [
-  { id: 1, title: 'Kingdom Conference 2025', date: 'Jan 20, 2026', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Pastor John Michael', 'Apostle David Thompson', 'Pastor Sarah Williams'] },
+  { id: 1, title: 'Kingdom Conference 2025', date: 'Jan 20, 2026', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson', 'Pastor Sarah Williams'] },
   { id: 2, title: 'Youth Revival Night', date: 'Jan 15, 2026', time: '06:00 PM', location: 'JGen Youth Auditorium', registrations: 450, capacity: 500, status: 'Upcoming', speakers: ['Minister Rachel Grace', 'Youth Pastor Mark'] },
   { id: 3, title: 'Women of Faith Summit', date: 'Feb 8, 2026', time: '10:00 AM', location: 'Grace Cathedral', registrations: 680, capacity: 1000, status: 'Upcoming', speakers: ['Pastor Sarah Williams', 'Minister Rachel Grace'] },
-  { id: 4, title: 'Prayer & Fasting Week', date: 'Jan 3, 2026', time: '05:00 AM', location: 'JGen Prayer Mountain', registrations: 2300, capacity: 3000, status: 'Upcoming', speakers: ['Pastor John Michael', 'Apostle David Thompson'] },
-  { id: 5, title: 'Leadership Summit 2025', date: 'Oct 15, 2025', time: '08:00 AM', location: 'JGen Headquarters', registrations: 890, capacity: 800, status: 'Completed', speakers: ['Pastor John Michael'] },
+  { id: 4, title: 'Prayer & Fasting Week', date: 'Jan 3, 2026', time: '05:00 AM', location: 'JGen Prayer Mountain', registrations: 2300, capacity: 3000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson'] },
+  { id: 5, title: 'Leadership Summit 2025', date: 'Oct 15, 2025', time: '08:00 AM', location: 'JGen Headquarters', registrations: 890, capacity: 800, status: 'Completed', speakers: ['Apostle Joshua Iyemifokhae'] },
 ];
 
 const allPrayerRequests = [
@@ -350,7 +350,7 @@ export default function AdminDashboard({
                   <span className="text-white text-xs font-bold">{userRole === 'superadmin' ? 'JM' : 'MA'}</span>
                 </div>
                 <div className="hidden sm:block">
-                  <p className="text-gray-900 text-sm font-medium">{userRole === 'superadmin' ? 'Pastor John Michael' : 'Ministry Assistant'}</p>
+                  <p className="text-gray-900 text-sm font-medium">{userRole === 'superadmin' ? 'Apostle Joshua Iyemifokhae' : 'Ministry Assistant'}</p>
                   <p className="text-gray-400 text-[10px]">{userRole === 'superadmin' ? 'Super Admin' : 'Admin'}</p>
                 </div>
               </div>
@@ -1053,7 +1053,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
 
   // Form Fields
   const [title, setTitle] = useState('');
-  const [speaker, setSpeaker] = useState('Pastor John Michael');
+  const [speaker, setSpeaker] = useState('Apostle Joshua Iyemifokhae');
   const [category, setCategory] = useState('Faith');
   const [date, setDate] = useState('');
   const [duration, setDuration] = useState('45:00');
@@ -1108,7 +1108,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
   const openNewForm = () => {
     setEditingSermon(null);
     setTitle('');
-    setSpeaker('Pastor John Michael');
+    setSpeaker('Apostle Joshua Iyemifokhae');
     setCategory('Faith');
     setDate(new Date().toISOString().split('T')[0]);
     setDuration('45:00');
@@ -1545,7 +1545,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                     required
                     value={speaker} 
                     onChange={(e) => setSpeaker(e.target.value)} 
-                    placeholder="Pastor John Michael"
+                    placeholder="Apostle Joshua Iyemifokhae"
                     className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-455 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
                   />
                 </div>
@@ -2052,7 +2052,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
 
   // Form Fields
   const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('Pastor John Michael');
+  const [author, setAuthor] = useState('Apostle Joshua Iyemifokhae');
   const [category, setCategory] = useState('Purpose');
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
@@ -2064,7 +2064,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const openNewForm = () => {
     setEditingBook(null);
     setTitle('');
-    setAuthor('Pastor John Michael');
+    setAuthor('Apostle Joshua Iyemifokhae');
     setCategory('Purpose');
     setDescription('');
     setCoverUrl('');
@@ -2279,7 +2279,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                       required
                       value={author}
                       onChange={(e) => setAuthor(e.target.value)}
-                      placeholder="e.g. Pastor John Michael"
+                      placeholder="e.g. Apostle Joshua Iyemifokhae"
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none"
                     />
                   </div>
@@ -2515,7 +2515,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
 
   // Form Fields
   const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('Pastor John Michael');
+  const [author, setAuthor] = useState('Apostle Joshua Iyemifokhae');
   const [category, setCategory] = useState('Faith');
   const [readTime, setReadTime] = useState('5 min read');
   const [excerpt, setExcerpt] = useState('');
@@ -2567,7 +2567,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
   const openNewForm = () => {
     setEditingPost(null);
     setTitle('');
-    setAuthor('Pastor John Michael');
+    setAuthor('Apostle Joshua Iyemifokhae');
     setCategory('Faith');
     setReadTime('5 min read');
     setExcerpt('');
@@ -3638,7 +3638,7 @@ function EventsTab({ events, onUpdateEvents }: EventsTabProps) {
                   type="text" 
                   value={speakersInput}
                   onChange={(e) => setSpeakersInput(e.target.value)}
-                  placeholder="e.g. Pastor John Michael, Apostle David Thompson"
+                  placeholder="e.g. Apostle Joshua Iyemifokhae, Apostle David Thompson"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
                 />
               </div>
