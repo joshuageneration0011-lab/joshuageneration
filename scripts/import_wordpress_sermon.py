@@ -4,6 +4,9 @@ import sys
 import json
 import urllib.request
 import urllib.parse
+import random
+import time
+from datetime import datetime
 
 def show_progress(block_num, block_size, total_size):
     if total_size <= 0:
@@ -40,25 +43,63 @@ def main():
         if not title:
             print("Sermon Title is required!")
 
-    # 4. Input Speaker Name
+    # 4. Input Description
+    description = input("Enter Description [Optional]: ").strip()
+
+    # 5. Input Image URL
+    thumbnail_url = input("Enter WordPress/External Thumbnail Image URL [Optional]: ").strip()
+
+    # 6. Input Speaker Name
     default_speaker = "Apostle Joshua Iyemifokhae"
     speaker = input(f"Enter Speaker Name [{default_speaker}]: ").strip()
     if not speaker:
         speaker = default_speaker
 
-    # 5. Input Category
+    # 7. Input Category
     default_category = "Faith"
     category = input(f"Enter Category [{default_category}]: ").strip()
     if not category:
         category = default_category
 
-    # 6. Input Description
-    default_description = "Imported sermon from archive. Please edit this description later."
-    description = input("Enter Description [Optional]: ").strip()
-    if not description:
-        description = default_description
+    # --- DOWNLOAD & UPLOAD THUMBNAIL IMAGE ---
+    uploaded_thumbnail_path = ""
+    if thumbnail_url:
+        print("\n[1/4] Downloading thumbnail image...")
+        parsed_img_url = urllib.parse.urlparse(thumbnail_url)
+        img_filename = os.path.basename(parsed_img_url.path)
+        if not img_filename or '.' not in img_filename:
+            img_filename = "thumbnail.jpg"
+        
+        temp_img_path = os.path.join(os.getcwd(), img_filename)
+        try:
+            urllib.request.urlretrieve(thumbnail_url, temp_img_path)
+            print("Image download complete!")
+            
+            print("Uploading image to Contabo server...")
+            img_upload_url = f"{api_base}/api/upload?filename={urllib.parse.quote(img_filename)}"
+            with open(temp_img_path, 'rb') as f:
+                img_data = f.read()
+                
+            req = urllib.request.Request(
+                img_upload_url,
+                data=img_data,
+                headers={'Content-Type': 'application/octet-stream'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                uploaded_thumbnail_path = res_data.get('url')
+                print(f"Image upload complete! URL: {uploaded_thumbnail_path}")
+        except Exception as e:
+            print(f"Failed to process image: {e}")
+        finally:
+            if os.path.exists(temp_img_path):
+                try:
+                    os.remove(temp_img_path)
+                except Exception:
+                    pass
 
-    # 7. Generate safe file name
+    # --- DOWNLOAD & UPLOAD AUDIO FILE ---
     parsed_audio_url = urllib.parse.urlparse(audio_url)
     original_filename = os.path.basename(parsed_audio_url.path)
     if not original_filename.lower().endswith('.mp3'):
@@ -66,7 +107,7 @@ def main():
 
     temp_filepath = os.path.join(os.getcwd(), original_filename)
 
-    print("\n[1/3] Downloading audio from WordPress/source...")
+    print("\n[2/4] Downloading audio from WordPress/source...")
     try:
         urllib.request.urlretrieve(audio_url, temp_filepath, reporthook=show_progress)
         print("\nDownload complete successfully!")
@@ -74,8 +115,7 @@ def main():
         print(f"\nFailed to download audio file: {e}")
         return
 
-    # 8. Upload Audio to Server
-    print("\n[2/3] Uploading audio to Contabo server...")
+    print("\n[3/4] Uploading audio to Contabo server...")
     upload_url = f"{api_base}/api/upload?filename={urllib.parse.quote(original_filename)}"
     try:
         with open(temp_filepath, 'rb') as f:
@@ -96,7 +136,6 @@ def main():
             print(f"Upload complete! File URL: {uploaded_audio_path}")
     except Exception as e:
         print(f"Failed to upload audio: {e}")
-        # Clean up local file
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
         return
@@ -108,29 +147,23 @@ def main():
         except Exception:
             pass
 
-    # 9. Create Sermon Entry
-    print("\n[3/3] Creating sermon entry in database...")
-    import random
-    import time
-    
+    # --- CREATE SERMON ENTRY ---
+    print("\n[4/4] Creating sermon entry on server...")
     sermon_id = f"sermon_{int(time.time())}{random.randint(100, 999)}"
-    
-    # Format today's date
-    from datetime import datetime
     today_str = datetime.now().strftime("%Y-%m-%d")
 
     sermon_payload = {
         "id": sermon_id,
         "title": title,
         "speaker": speaker,
-        "duration": "45:00", # Can be updated when edited later
-        "thumbnail": "",     # Can be uploaded/edited later
+        "duration": "45:00",
+        "thumbnail": uploaded_thumbnail_path,
         "audioUrl": uploaded_audio_path,
         "videoUrl": "",
         "views": 0,
         "downloads": 0,
         "date": today_str,
-        "description": description,
+        "description": description if description else "Imported from WordPress archive.",
         "category": category,
         "audios": []
     }
@@ -151,8 +184,9 @@ def main():
             print(f"  - Title: {title}")
             print(f"  - Speaker: {speaker}")
             print(f"  - Audio Path: {uploaded_audio_path}")
+            print(f"  - Image Path: {uploaded_thumbnail_path}")
             print(f"  - Date: {today_str}")
-            print("\nYou can now open your Admin Dashboard, find this sermon, click edit, upload the cover image, verify the duration, and finalize it!")
+            print("\nYou can now open your Admin Dashboard, view the sermon, or edit it anytime!")
     except Exception as e:
         print(f"Failed to save sermon entry: {e}")
 
