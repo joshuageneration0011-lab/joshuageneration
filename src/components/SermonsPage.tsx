@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
-import { api, resolveApiUrl } from '@/utils/api';
+import { resolveApiUrl } from '@/utils/api';
 
 interface SermonsPageProps {
   sermons: Sermon[];
@@ -15,12 +15,6 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-
-  const handleDownloadIncrement = (id: string) => {
-    api.incrementSermonDownloads(id).catch((err) => {
-      console.error('Failed to increment download count:', err);
-    });
-  };
 
   // Categories extraction
   const categories = useMemo(() => {
@@ -225,22 +219,6 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                         <p className="text-[10px] text-gray-400 mt-1">Ministering Pastor</p>
                       </div>
                     </div>
-
-                    {sermon.audioUrl && (
-                      <a
-                        href={resolveApiUrl(sermon.audioUrl)}
-                        download={`${sermon.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadIncrement(sermon.id);
-                        }}
-                        className="py-1.5 px-2.5 rounded-xl bg-gray-50 hover:bg-royal-blue-50 text-gray-450 hover:text-royal-blue-600 border border-gray-200 hover:border-royal-blue-100 transition-all flex items-center gap-1"
-                        title="Download Sermon Audio"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span className="text-xs font-bold">{sermon.downloads || 0}</span>
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>
