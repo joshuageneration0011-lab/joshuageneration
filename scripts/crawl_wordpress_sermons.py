@@ -97,6 +97,61 @@ def parse_rss_feed(url):
             
     return items
 
+def extract_sermon_details_from_post(url):
+    print(f"Visiting page: {url}...")
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req) as response:
+            html = response.read().decode('utf-8', errors='ignore')
+            
+        # Extract title
+        title = ""
+        title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
+        if title_match:
+            title = title_match.group(1).split('|')[0].split('-')[0].strip()
+            
+        h1_match = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.IGNORECASE)
+        if h1_match:
+            h1_text = clean_html(h1_match.group(1))
+            if h1_text:
+                title = h1_text
+                
+        # Extract description
+        description = ""
+        desc_match = re.search(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\'](.*?)["\']', html, re.IGNORECASE)
+        if not desc_match:
+            desc_match = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\'](.*?)["\']', html, re.IGNORECASE)
+        if desc_match:
+            description = desc_match.group(1).strip()
+            
+        # Extract image
+        image_url = ""
+        img_match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']', html, re.IGNORECASE)
+        if img_match:
+            image_url = img_match.group(1).strip()
+            
+        # Extract first MP3 link
+        mp3_match = re.search(r'href=["\'](https?://[^"\']+\.mp3)["\']', html, re.IGNORECASE)
+        audio_url = mp3_match.group(1).strip() if mp3_match else ""
+        
+        if not audio_url:
+            src_match = re.search(r'src=["\'](https?://[^"\']+\.mp3)["\']', html, re.IGNORECASE)
+            audio_url = src_match.group(1).strip() if src_match else ""
+            
+        if audio_url:
+            print(f"  -> Found Audio: {audio_url[:50]}...")
+            return {
+                'title': title if title else "Untitled Sermon",
+                'audioUrl': audio_url,
+                'imageUrl': image_url,
+                'description': description if description else "Imported from sermon page.",
+                'date': datetime.now().strftime("%Y-%m-%d")
+            }
+    except Exception as e:
+        print(f"  Error reading sermon page {url}: {e}")
+    return None
+
 def parse_html_page(url):
     print(f"Scraping HTML page from: {url}...")
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -105,33 +160,64 @@ def parse_html_page(url):
     with urllib.request.urlopen(req) as response:
         html = response.read().decode('utf-8', errors='ignore')
     
-    # 1. Regex to find any MP3 URLs
+    # Extract all links on the page
+    link_pattern = re.compile(r'href=["\'](https?://[^"\']+)["\']', re.IGNORECASE)
+    all_links = list(set(link_pattern.findall(html)))
+    
+    parsed_source = urllib.parse.urlparse(url)
+    source_domain = parsed_source.netloc
+    
+    sermon_post_links = []
+    for link in all_links:
+        parsed_link = urllib.parse.urlparse(link)
+        if parsed_link.netloc != source_domain:
+            continue
+        if any(x in link.lower() for x in ['/category/', '/tag/', '/feed/', '/page/', '/wp-content/', '/wp-admin/', '?share=', 'facebook.com', 'twitter.com']):
+            continue
+            
+        if '/sermon/' in link.lower() or '/sermons/' in link.lower():
+            if link != url:
+                sermon_post_links.append(link)
+                
+    if not sermon_post_links:
+        for link in all_links:
+            parsed_link = urllib.parse.urlparse(link)
+            if parsed_link.netloc != source_domain:
+                continue
+            path_parts = [p for p in parsed_link.path.split('/') if p]
+            if len(path_parts) >= 1 and not any(x in link.lower() for x in ['/category/', '/tag/', '/feed/', '/page/', '/contact', '/about', '/donate', '/give', '/wp-includes/']):
+                if link != url:
+                    sermon_post_links.append(link)
+                    
+    sermon_post_links = sorted(list(set(sermon_post_links)))
+    
+    items = []
+    if sermon_post_links:
+        print(f"\nFound {len(sermon_post_links)} potential individual sermon pages.")
+        scan_choice = input("Do you want to scan these individual pages one-by-one? (y/n) [y]: ").strip().lower()
+        if scan_choice != 'n':
+            max_scan = input("How many pages to scan? (Press Enter for all): ").strip()
+            limit = int(max_scan) if max_scan.isdigit() else len(sermon_post_links)
+            
+            for post_url in sermon_post_links[:limit]:
+                details = extract_sermon_details_from_post(post_url)
+                if details:
+                    items.append(details)
+            return items
+            
+    # Fallback to direct MP3 files on the page itself
     mp3_pattern = re.compile(r'href=["\'](https?://[^"\']+\.mp3)["\']', re.IGNORECASE)
     mp3_links = list(set(mp3_pattern.findall(html)))
     
-    items = []
-    if not mp3_links:
-        print("No direct MP3 links found on the page.")
-        return items
-        
-    print(f"Found {len(mp3_links)} audio links on the page. Extracting context...")
-    
-    # 2. Try to find titles & images around the MP3 links
     for idx, mp3 in enumerate(mp3_links):
-        # Generate dummy title from filename
         filename = os.path.basename(urllib.parse.urlparse(mp3).path)
         title = os.path.splitext(filename)[0].replace('-', ' ').replace('_', ' ').title()
-        
-        # Try to find an image in the HTML
-        img_pattern = re.compile(r'src=["\'](https?://[^"\']+\.(?:png|jpg|jpeg|webp))["\']', re.IGNORECASE)
-        imgs = img_pattern.findall(html)
-        image_url = imgs[0] if imgs else ""
         
         items.append({
             'title': f"{title} (Scraped #{idx+1})",
             'audioUrl': mp3,
-            'imageUrl': image_url,
-            'description': "Scraped from web archive link.",
+            'imageUrl': "",
+            'description': "Scraped directly from page link.",
             'date': datetime.now().strftime("%Y-%m-%d")
         })
         
@@ -165,7 +251,7 @@ def save_sermon_to_contabo(api_base, sermon_payload):
 
 def main():
     print("=" * 60)
-    print("   JOSHUA GENERATION AUTOMATED SERMON CRAWLER & IMPORT")
+    print("   JOSHUA GENERATION NESTED SERMON CRAWLER & IMPORT")
     print("=" * 60)
 
     # 1. Input Server URL
@@ -190,14 +276,12 @@ def main():
         else:
             items = parse_html_page(source_url)
             if not items:
-                # Try RSS parser in case it's a feed anyway
                 try:
                     items = parse_rss_feed(source_url)
                 except Exception:
                     pass
     except Exception as e:
         print(f"Error parsing source: {e}")
-        # Try fallback to HTML scraping
         try:
             items = parse_html_page(source_url)
         except Exception as e2:
