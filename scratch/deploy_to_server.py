@@ -14,7 +14,13 @@ def main():
         
         # Stream output in real time
         for line in stdout:
-            print(line, end="")
+            try:
+                print(line, end="")
+            except UnicodeEncodeError:
+                try:
+                    print(line.encode('utf-8', 'ignore').decode('utf-8'), end="")
+                except Exception:
+                    pass
             
         err = stderr.read().decode('utf-8')
         if err:
