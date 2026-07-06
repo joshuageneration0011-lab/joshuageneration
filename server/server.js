@@ -181,6 +181,7 @@ async function initDb() {
           duration VARCHAR,
           thumbnail TEXT,
           views INT DEFAULT 0,
+          downloads INT DEFAULT 0,
           date VARCHAR,
           description TEXT,
           category VARCHAR,
@@ -193,6 +194,11 @@ async function initDb() {
         await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS audios JSONB DEFAULT '[]'::jsonb");
       } catch (err) {
         console.warn("Failed to check/add audios column to sermons table:", err.message);
+      }
+      try {
+        await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS downloads INT DEFAULT 0");
+      } catch (err) {
+        console.warn("Failed to check/add downloads column to sermons table:", err.message);
       }
 
       await pool.query(`
@@ -332,9 +338,9 @@ async function initDb() {
       if (sermonCheck.rowCount === 0) {
         for (const s of defaults.sermons) {
           await pool.query(
-            `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, date, description, category, video_url, audio_url)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-            [s.id, s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.date, s.description, s.category, s.videoUrl, s.audioUrl]
+            `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            [s.id, s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl, s.audioUrl]
           );
         }
         console.log('Seeded sermons table.');
@@ -530,6 +536,7 @@ const server = http.createServer(async (req, res) => {
           duration: row.duration,
           thumbnail: row.thumbnail,
           views: row.views,
+          downloads: row.downloads || 0,
           date: row.date,
           description: row.description,
           category: row.category,
@@ -571,6 +578,33 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       console.error('Failed to increment views:', e);
       sendJson(res, 500, { error: 'Failed to increment views' });
+    }
+    return;
+  }
+
+  // POST Increment Sermon Downloads (Public)
+  if (pathname.startsWith('/api/sermons/') && pathname.endsWith('/download') && method === 'POST') {
+    try {
+      const id = pathname.substring('/api/sermons/'.length, pathname.length - '/download'.length);
+      let updatedDownloads = 0;
+      if (pool) {
+        const result = await pool.query('UPDATE sermons SET downloads = COALESCE(downloads, 0) + 1 WHERE id = $1 RETURNING downloads', [id]);
+        if (result.rowCount > 0) {
+          updatedDownloads = result.rows[0].downloads;
+        }
+      } else {
+        const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+        const index = data.findIndex(x => x.id === id);
+        if (index !== -1) {
+          data[index].downloads = (data[index].downloads || 0) + 1;
+          updatedDownloads = data[index].downloads;
+          fs.writeFileSync(SERMONS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        }
+      }
+      sendJson(res, 200, { success: true, downloads: updatedDownloads });
+    } catch (e) {
+      console.error('Failed to increment downloads:', e);
+      sendJson(res, 500, { error: 'Failed to increment downloads' });
     }
     return;
   }
@@ -1098,21 +1132,22 @@ const server = http.createServer(async (req, res) => {
 
       if (pool) {
         await pool.query(
-          `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, date, description, category, video_url, audio_url, audios)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url, audios)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
            ON CONFLICT (id) DO UPDATE SET
              title = EXCLUDED.title,
              speaker = EXCLUDED.speaker,
              duration = EXCLUDED.duration,
              thumbnail = EXCLUDED.thumbnail,
              views = EXCLUDED.views,
+             downloads = EXCLUDED.downloads,
              date = EXCLUDED.date,
              description = EXCLUDED.description,
              category = EXCLUDED.category,
              video_url = EXCLUDED.video_url,
              audio_url = EXCLUDED.audio_url,
              audios = EXCLUDED.audios`,
-          [item.id, item.title, item.speaker, item.duration, item.thumbnail, item.views || 0, item.date, item.description, item.category, item.videoUrl, item.audioUrl, JSON.stringify(item.audios || [])]
+          [item.id, item.title, item.speaker, item.duration, item.thumbnail, item.views || 0, item.downloads || 0, item.date, item.description, item.category, item.videoUrl, item.audioUrl, JSON.stringify(item.audios || [])]
         );
       } else {
         const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));

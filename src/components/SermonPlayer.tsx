@@ -22,6 +22,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   const [copied, setCopied] = useState(false);
   const [notes, setNotes] = useState('');
   const [localViews, setLocalViews] = useState(sermon.views);
+  const [localDownloads, setLocalDownloads] = useState(sermon.downloads || 0);
   const [hasIncrementedView, setHasIncrementedView] = useState(false);
 
   // Series additions
@@ -52,6 +53,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     
     // Sync views
     setLocalViews(sermon.views);
+    setLocalDownloads(sermon.downloads || 0);
     setHasIncrementedView(false);
   }, [sermon.id, sermon.views]);
 
@@ -66,9 +68,18 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     }
   }, [currentTrackIndex]);
 
+  const handleDownloadIncrement = () => {
+    api.incrementSermonDownloads(sermon.id)
+      .then((newDownloads) => {
+        setLocalDownloads(newDownloads);
+      })
+      .catch((err) => console.error('Failed to increment downloads:', err));
+  };
+
   // Bulk download helper
   const downloadAllTracks = () => {
     if (!sermon.audios || sermon.audios.length === 0) return;
+    handleDownloadIncrement();
     sermon.audios.forEach((track, index) => {
       setTimeout(() => {
         const link = document.createElement('a');
@@ -330,13 +341,14 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                       <a
                         href={resolveApiUrl(activeTrack.audioUrl)}
                         download={`${activeTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                        onClick={handleDownloadIncrement}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/90 hover:text-white transition-all text-xs font-semibold"
                         title={`Download ${activeTrack.title}`}
                       >
                         <Download className="w-3.5 h-3.5" />
-                        Download
+                        Download ({localDownloads || 0})
                       </a>
                     )}
 
@@ -421,6 +433,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                         <a
                           href={resolveApiUrl(track.audioUrl)}
                           download={`${track.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                          onClick={handleDownloadIncrement}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-2 rounded-lg hover:bg-gray-100 text-gray-450 hover:text-gray-700 transition-colors"
@@ -454,6 +467,11 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                   <Eye className="w-3.5 h-3.5" />
                   {localViews.toLocaleString()} views
                 </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Download className="w-3.5 h-3.5" />
+                  {(localDownloads || 0).toLocaleString()} downloads
+                </span>
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight mb-3">
@@ -476,12 +494,13 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                   <a
                     href={resolveApiUrl(activeTrack.audioUrl)}
                     download={`${activeTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                    onClick={handleDownloadIncrement}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-500 text-white hover:text-white transition-all text-xs font-bold shadow-md shadow-royal-blue-600/15"
                   >
                     <Download className="w-4 h-4" />
-                    Download {sermon.audios && sermon.audios.length > 0 ? 'Current Part' : 'Audio Message'}
+                    Download {sermon.audios && sermon.audios.length > 0 ? 'Current Part' : 'Audio Message'} ({localDownloads || 0})
                   </a>
                 )}
               </div>

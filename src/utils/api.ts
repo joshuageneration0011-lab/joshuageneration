@@ -217,7 +217,18 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to increment views');
     const data = await res.json();
+    window.dispatchEvent(new Event('sermons_updated'));
     return data.views;
+  },
+
+  async incrementSermonDownloads(id: string): Promise<number> {
+    const res = await fetch(`${API_BASE_URL}/api/sermons/${id}/download`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to increment downloads');
+    const data = await res.json();
+    window.dispatchEvent(new Event('sermons_updated'));
+    return data.downloads;
   },
 
   async createDonation(donation: Omit<Donation, 'id' | 'date'>): Promise<Donation> {

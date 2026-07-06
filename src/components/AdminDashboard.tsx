@@ -12,7 +12,7 @@ import {
   Type, Camera, TrendingUp, Radio, Headphones
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import type { BlogPost, Book, Sermon, Donation, Settings as SettingsType, Event } from '@/types';
+import type { BlogPost, Book, Sermon, Donation, Settings as SettingsType, Event, SermonAudio } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events';
@@ -1287,6 +1287,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         audioUrl: finalAudioUrl.trim(),
         videoUrl: videoUrl.trim(),
         views: editingSermon ? editingSermon.views : 0,
+        downloads: editingSermon ? (editingSermon.downloads || 0) : 0,
         audios: sermonType === 'series' ? finalAudiosList : []
       };
 
@@ -1315,6 +1316,13 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     : totalViews >= 1000 
       ? (totalViews / 1000).toFixed(1) + 'K' 
       : totalViews.toString();
+
+  const totalDownloads = sermons.reduce((sum, s) => sum + (s.downloads || 0), 0);
+  const formattedDownloads = totalDownloads >= 1000000
+    ? (totalDownloads / 1000000).toFixed(1) + 'M'
+    : totalDownloads >= 1000
+      ? (totalDownloads / 1000).toFixed(1) + 'K'
+      : totalDownloads.toString();
 
   const filtered = sermons.filter(s => 
     s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -1356,7 +1364,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         {[
           { label: 'Total Sermons', value: sermons.length.toString(), icon: Tv, color: 'from-royal-blue-500 to-royal-blue-700' },
           { label: 'Total Views', value: formattedViews, icon: Eye, color: 'from-emerald-500 to-emerald-700' },
-          { label: 'Audio Messages', value: sermons.filter(s => s.audioUrl).length.toString(), icon: Headphones, color: 'from-gold-500 to-gold-600' },
+          { label: 'Total Downloads', value: formattedDownloads, icon: Download, color: 'from-gold-500 to-gold-600' },
           { label: 'This Month', value: sermons.filter(s => new Date(s.date).getMonth() === new Date().getMonth()).length.toString(), icon: Upload, color: 'from-violet-500 to-violet-700' },
         ].map((stat) => (
           <div key={stat.label} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
@@ -1376,12 +1384,12 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-450 uppercase tracking-wider">Sermon</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-450 uppercase tracking-wider">Category</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-450 uppercase tracking-wider">Duration</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-450 uppercase tracking-wider">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-450 uppercase tracking-wider">Media Format</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-455 uppercase tracking-wider">Views</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-450 uppercase tracking-wider">Actions</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-455 uppercase tracking-wider">Category</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-455 uppercase tracking-wider">Duration</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-455 uppercase tracking-wider">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-455 uppercase tracking-wider">Media Format</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-455 uppercase tracking-wider">Views / Downloads</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-455 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -1422,7 +1430,10 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{s.views.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    <div>{s.views.toLocaleString()} views</div>
+                    <div className="text-[10px] text-gray-400">{(s.downloads || 0).toLocaleString()} downloads</div>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button 

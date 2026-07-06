@@ -109,6 +109,26 @@ export default function App() {
     };
   }, []);
 
+  // Listen to sermons update triggers
+  useEffect(() => {
+    const handleSermonsUpdated = async () => {
+      try {
+        const loadedSermons = await getSavedSermons();
+        setSermons(loadedSermons);
+        setSelectedSermon(prev => {
+          if (!prev) return null;
+          return loadedSermons.find(s => s.id === prev.id) || prev;
+        });
+      } catch (err) {
+        console.error('Failed to reload sermons:', err);
+      }
+    };
+    window.addEventListener('sermons_updated', handleSermonsUpdated);
+    return () => {
+      window.removeEventListener('sermons_updated', handleSermonsUpdated);
+    };
+  }, []);
+
   // Redirect detail views to list views if reloaded with empty state
   useEffect(() => {
     if (currentPage === 'sermon-player' && !selectedSermon) {

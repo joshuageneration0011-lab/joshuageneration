@@ -14,6 +14,7 @@ export interface Sermon {
   audioUrl?: string;
   videoUrl?: string;
   views: number;
+  downloads?: number;
   date: string;
   description: string;
   category: string;

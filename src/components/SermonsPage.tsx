@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
-import { resolveApiUrl } from '@/utils/api';
+import { api, resolveApiUrl } from '@/utils/api';
 
 interface SermonsPageProps {
   sermons: Sermon[];
@@ -15,6 +15,12 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+
+  const handleDownloadIncrement = (id: string) => {
+    api.incrementSermonDownloads(id).catch((err) => {
+      console.error('Failed to increment download count:', err);
+    });
+  };
 
   // Categories extraction
   const categories = useMemo(() => {
@@ -194,6 +200,11 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                       <Eye className="w-3.5 h-3.5" />
                       {sermon.views.toLocaleString()} views
                     </span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <Download className="w-3.5 h-3.5" />
+                      {(sermon.downloads || 0).toLocaleString()} downloads
+                    </span>
                   </div>
 
                   <h3 className="text-lg font-bold text-gray-900 group-hover:text-royal-blue-600 transition-colors line-clamp-2 leading-snug mb-2">
@@ -219,11 +230,15 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                       <a
                         href={resolveApiUrl(sermon.audioUrl)}
                         download={`${sermon.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-2 rounded-xl bg-gray-50 hover:bg-royal-blue-50 text-gray-400 hover:text-royal-blue-600 border border-gray-200 hover:border-royal-blue-100 transition-all flex items-center justify-center"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadIncrement(sermon.id);
+                        }}
+                        className="py-1.5 px-2.5 rounded-xl bg-gray-50 hover:bg-royal-blue-50 text-gray-450 hover:text-royal-blue-600 border border-gray-200 hover:border-royal-blue-100 transition-all flex items-center gap-1"
                         title="Download Sermon Audio"
                       >
                         <Download className="w-4 h-4" />
+                        <span className="text-xs font-bold">{sermon.downloads || 0}</span>
                       </a>
                     )}
                   </div>

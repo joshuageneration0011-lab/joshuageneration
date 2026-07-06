@@ -1,4 +1,4 @@
-import { Headphones, Clock, Eye, ChevronRight } from 'lucide-react';
+import { Headphones, Clock, Eye, ChevronRight, Download } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { resolveApiUrl } from '@/utils/api';
 
@@ -127,9 +127,10 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll }: 
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-gray-700 leading-none truncate">{sermon.speaker}</p>
-                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400">
-                      <Eye className="w-3 h-3" />
-                      {sermon.views.toLocaleString()} views
+                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
+                      <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" /> {sermon.views.toLocaleString()}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-0.5"><Download className="w-3 h-3" /> {(sermon.downloads || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
