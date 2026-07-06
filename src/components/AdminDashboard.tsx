@@ -1047,6 +1047,8 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     audioUrl: string;
     file?: File;
     sourceMode: 'upload' | 'url';
+    uploadProgress?: number;
+    isUploading?: boolean;
   }[]>([]);
 
   // Form Fields
@@ -1067,6 +1069,10 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [thumbnailProgress, setThumbnailProgress] = useState(0);
+  const [audioUploading, setAudioUploading] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
 
   const addSeriesTrack = () => {
     setSeriesAudios([
@@ -1172,7 +1178,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     }
   };
 
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1183,9 +1189,23 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
 
     setThumbnailFile(file);
     setThumbnail(URL.createObjectURL(file));
+
+    setThumbnailUploading(true);
+    setThumbnailProgress(0);
+    try {
+      const uploadedUrl = await api.uploadFile(file, (pct) => {
+        setThumbnailProgress(pct);
+      });
+      setThumbnail(uploadedUrl);
+    } catch (err: any) {
+      console.error("Background thumbnail upload failed:", err);
+      alert("Background thumbnail upload failed: " + (err.message || err));
+    } finally {
+      setThumbnailUploading(false);
+    }
   };
 
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1199,6 +1219,31 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
 
     setAudioFile(file);
     setAudioUrl(URL.createObjectURL(file));
+
+    // Detect duration automatically
+    const audioObj = new Audio(URL.createObjectURL(file));
+    audioObj.addEventListener('loadedmetadata', () => {
+      const durationSeconds = audioObj.duration;
+      if (!isNaN(durationSeconds)) {
+        const minutes = Math.floor(durationSeconds / 60);
+        const seconds = Math.floor(durationSeconds % 60);
+        setDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      }
+    });
+
+    setAudioUploading(true);
+    setAudioProgress(0);
+    try {
+      const uploadedUrl = await api.uploadFile(file, (pct) => {
+        setAudioProgress(pct);
+      });
+      setAudioUrl(uploadedUrl);
+    } catch (err: any) {
+      console.error("Background audio upload failed:", err);
+      alert("Background audio upload failed: " + (err.message || err));
+    } finally {
+      setAudioUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1222,13 +1267,14 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
       const finalAudiosList: SermonAudio[] = [];
 
       if (sermonType === 'series') {
-        const uploadableTracks = seriesAudios.filter(t => t.sourceMode === 'upload' && t.file);
-        const totalUploads = uploadableTracks.length + (thumbnailSourceMode === 'upload' && thumbnailFile ? 1 : 0);
+        const uploadableTracks = seriesAudios.filter(t => t.sourceMode === 'upload' && t.file && t.audioUrl.startsWith('blob:'));
+        const needsThumbnailUpload = thumbnailSourceMode === 'upload' && thumbnailFile && thumbnail.startsWith('blob:');
+        const totalUploads = uploadableTracks.length + (needsThumbnailUpload ? 1 : 0);
         let uploadsDone = 0;
 
         // 1. Upload Thumbnail if a new file is pending
-        if (thumbnailSourceMode === 'upload' && thumbnailFile) {
-          finalThumbnail = await api.uploadFile(thumbnailFile);
+        if (needsThumbnailUpload) {
+          finalThumbnail = await api.uploadFile(thumbnailFile!);
           uploadsDone++;
           setUploadProgress(Math.round((uploadsDone / totalUploads) * 95));
         }
@@ -1237,7 +1283,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         for (let i = 0; i < seriesAudios.length; i++) {
           const track = seriesAudios[i];
           let trackUrl = track.audioUrl;
-          if (track.sourceMode === 'upload' && track.file) {
+          if (track.sourceMode === 'upload' && track.file && track.audioUrl.startsWith('blob:')) {
             const startPct = Math.round((uploadsDone / totalUploads) * 95);
             const nextPct = Math.round(((uploadsDone + 1) / totalUploads) * 95);
 
@@ -1258,13 +1304,13 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         finalAudioUrl = finalAudiosList[0]?.audioUrl || '';
       } else {
         // 1. Upload Thumbnail if a new file is pending
-        if (thumbnailSourceMode === 'upload' && thumbnailFile) {
+        if (thumbnailSourceMode === 'upload' && thumbnailFile && thumbnail.startsWith('blob:')) {
           setUploadProgress(5);
           finalThumbnail = await api.uploadFile(thumbnailFile);
         }
 
         // 2. Upload Audio if a new file is pending
-        if (audioSourceMode === 'upload' && audioFile) {
+        if (audioSourceMode === 'upload' && audioFile && audioUrl.startsWith('blob:')) {
           setUploadProgress(15);
           finalAudioUrl = await api.uploadFile(audioFile, (pct) => {
             const overallProgress = 15 + Math.round((pct * 80) / 100);
@@ -1606,14 +1652,27 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                 </div>
 
                 {thumbnailSourceMode === 'upload' ? (
-                  <div className="flex items-center gap-4">
-                    <input 
-                      key={thumbnail ? 'has-image' : 'no-image'}
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleThumbnailUpload} 
-                      className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-700 hover:file:bg-royal-blue-100 cursor-pointer"
-                    />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                      <input 
+                        key={thumbnail ? 'has-image' : 'no-image'}
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleThumbnailUpload} 
+                        className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-700 hover:file:bg-royal-blue-100 cursor-pointer"
+                      />
+                    </div>
+                    {thumbnailUploading && (
+                      <div className="space-y-1 max-w-xs">
+                        <div className="flex justify-between text-[10px] font-bold text-royal-blue-600">
+                          <span>Uploading Cover Image...</span>
+                          <span>{thumbnailProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                          <div className="bg-royal-blue-600 h-full transition-all duration-300" style={{ width: `${thumbnailProgress}%` }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <input 
@@ -1669,13 +1728,26 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                   )}
 
                   {audioSourceMode === 'upload' ? (
-                    <div className="flex items-center gap-4">
-                      <input 
-                        type="file" 
-                        accept="audio/*" 
-                        onChange={handleAudioUpload} 
-                        className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer"
-                      />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="file" 
+                          accept="audio/*" 
+                          onChange={handleAudioUpload} 
+                          className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer"
+                        />
+                      </div>
+                      {audioUploading && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-bold text-royal-blue-600">
+                            <span>Uploading Audio to Server...</span>
+                            <span>{audioProgress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                            <div className="bg-royal-blue-600 h-full transition-all duration-300" style={{ width: `${audioProgress}%` }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <input 
@@ -1804,20 +1876,63 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                             </div>
 
                             {track.sourceMode === 'upload' ? (
-                              <input
-                                type="file"
-                                accept="audio/*"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    updateSeriesTrack(track.id, {
-                                      file,
-                                      audioUrl: URL.createObjectURL(file)
-                                    });
-                                  }
-                                }}
-                                className="text-xs text-gray-500 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-750 hover:file:bg-royal-blue-100 cursor-pointer"
-                              />
+                              <div className="space-y-2">
+                                <input
+                                  type="file"
+                                  accept="audio/*"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      updateSeriesTrack(track.id, {
+                                        file,
+                                        audioUrl: URL.createObjectURL(file),
+                                        isUploading: true,
+                                        uploadProgress: 0
+                                      });
+
+                                      // Detect duration automatically
+                                      const audioObj = new Audio(URL.createObjectURL(file));
+                                      audioObj.addEventListener('loadedmetadata', () => {
+                                        const durationSeconds = audioObj.duration;
+                                        if (!isNaN(durationSeconds)) {
+                                          const minutes = Math.floor(durationSeconds / 60);
+                                          const seconds = Math.floor(durationSeconds % 60);
+                                          updateSeriesTrack(track.id, {
+                                            duration: `${minutes}:${seconds.toString().padStart(2, '0')}`
+                                          });
+                                        }
+                                      });
+
+                                      // Start background upload
+                                      try {
+                                        const uploadedUrl = await api.uploadFile(file, (pct) => {
+                                          updateSeriesTrack(track.id, { uploadProgress: pct });
+                                        });
+                                        updateSeriesTrack(track.id, {
+                                          audioUrl: uploadedUrl,
+                                          isUploading: false
+                                        });
+                                      } catch (err: any) {
+                                        console.error("Track background upload failed:", err);
+                                        alert("Track upload failed: " + (err.message || err));
+                                        updateSeriesTrack(track.id, { isUploading: false });
+                                      }
+                                    }
+                                  }}
+                                  className="text-xs text-gray-500 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-750 hover:file:bg-royal-blue-100 cursor-pointer"
+                                />
+                                {track.isUploading && (
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between text-[10px] font-bold text-royal-blue-600">
+                                      <span>Uploading Track...</span>
+                                      <span>{track.uploadProgress || 0}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                                      <div className="bg-royal-blue-600 h-full transition-all duration-300" style={{ width: `${track.uploadProgress || 0}%` }} />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <input
                                 type="url"
@@ -1880,8 +1995,13 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                     >Cancel</button>
                     <button 
                       type="submit"
-                      className="px-5 py-2.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-royal-blue-500/20 hover:scale-[1.02] active:scale-100 transition-all"
-                    >{editingSermon ? 'Save Changes' : 'Create Sermon'}</button>
+                      disabled={thumbnailUploading || audioUploading || seriesAudios.some(t => t.isUploading)}
+                      className="px-5 py-2.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-royal-blue-500/20 hover:scale-[1.02] active:scale-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {thumbnailUploading || audioUploading || seriesAudios.some(t => t.isUploading) 
+                        ? 'Uploading in Background...' 
+                        : (editingSermon ? 'Save Changes' : 'Create Sermon')}
+                    </button>
                   </div>
                 )}
               </div>
