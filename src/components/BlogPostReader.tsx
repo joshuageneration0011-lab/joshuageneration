@@ -148,9 +148,10 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
             </div>
 
             {/* Body Text */}
-            <article className="prose max-w-none text-gray-700 leading-relaxed text-justify font-serif text-lg whitespace-pre-line selection:bg-royal-blue-100/60">
-              {post.content || post.excerpt}
-            </article>
+            <article 
+              className="prose max-w-none text-gray-700 leading-relaxed text-justify font-serif text-lg selection:bg-royal-blue-100/60"
+              dangerouslySetInnerHTML={{ __html: post.content || post.excerpt }}
+            />
 
             {/* Inlined Share Box */}
             <div className="border-t border-b border-gray-100 py-6 my-10 flex flex-wrap items-center justify-between gap-4">
