@@ -13,6 +13,16 @@ type SortOption = 'newest' | 'views';
 
 const SERMONS_PER_PAGE = 12;
 
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return num.toString();
+};
+
 export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -211,45 +221,46 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                 </div>
 
                 {/* Details */}
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
-                    <span className="flex items-center gap-1 font-medium">
-                      <Calendar className="w-3.5 h-3.5" />
+                <div className="p-5 flex flex-col flex-grow">
+                  {/* Speaker Info at the top */}
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0">
+                      {sermon.speaker.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-800 leading-none truncate">{sermon.speaker}</p>
+                      <p className="text-[9px] text-gray-400 mt-1 leading-none">Ministering Pastor</p>
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-[15px] font-bold text-gray-900 group-hover:text-royal-blue-600 transition-colors line-clamp-2 leading-snug mb-1.5">
+                    {sermon.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-gray-500 text-xs line-clamp-2 leading-relaxed mb-4 flex-grow">
+                    {sermon.description}
+                  </p>
+
+                  {/* Bottom Stats Row */}
+                  <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-gray-300" />
                       {new Date(sermon.date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                       })}
                     </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3.5 h-3.5" />
-                      {sermon.views.toLocaleString()} views
-                    </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <Download className="w-3.5 h-3.5" />
-                      {(sermon.downloads || 0).toLocaleString()} downloads
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-royal-blue-600 transition-colors line-clamp-2 leading-snug mb-2">
-                    {sermon.title}
-                  </h3>
-
-                  <p className="text-gray-500 text-sm line-clamp-2 leading-relaxed mb-4 flex-grow">
-                    {sermon.description}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-xs">
-                        {sermon.speaker.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-800 leading-none">{sermon.speaker}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">Ministering Pastor</p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-0.5" title={`${sermon.views.toLocaleString()} views`}>
+                        <Eye className="w-3.5 h-3.5 text-gray-400" /> {formatNumber(sermon.views)}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-0.5" title={`${(sermon.downloads || 0).toLocaleString()} downloads`}>
+                        <Download className="w-3.5 h-3.5 text-gray-400" /> {formatNumber(sermon.downloads || 0)}
+                      </span>
                     </div>
                   </div>
                 </div>
