@@ -14,6 +14,7 @@ import {
 import { cn } from '@/utils/cn';
 import type { BlogPost, Book, Sermon, Donation, Settings as SettingsType, Event, SermonAudio } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
+import { compressImage } from '@/utils/image';
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events';
 
@@ -1220,20 +1221,21 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
   };
 
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Thumbnail exceeds 2MB. Please select a smaller image.');
-      return;
-    }
-
-    setThumbnailFile(file);
-    setThumbnail(URL.createObjectURL(file));
 
     setThumbnailUploading(true);
     setThumbnailProgress(0);
+
     try {
+      // Compress image client-side to keep uploads lightning fast and small
+      if (file.type.startsWith('image/')) {
+        file = await compressImage(file, 800, 0.8);
+      }
+
+      setThumbnailFile(file);
+      setThumbnail(URL.createObjectURL(file));
+
       const uploadedUrl = await api.uploadFile(file, (pct) => {
         setThumbnailProgress(pct);
       });
@@ -3416,9 +3418,15 @@ function EventsTab({ events, onUpdateEvents }: EventsTabProps) {
     }
   };
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
+      let file = e.target.files[0];
+      try {
+        file = await compressImage(file, 800, 0.8);
+      } catch (err) {
+        console.error("Failed to compress event image:", err);
+      }
+      setImageFile(file);
     }
   };
 

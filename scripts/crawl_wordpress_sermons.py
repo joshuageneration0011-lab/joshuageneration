@@ -317,6 +317,40 @@ def download_file(url, local_filepath, max_retries=MAX_RETRIES):
     raise last_error
 
 
+def optimize_image_file(file_path):
+    """Resize image to max 800px width and compress using Pillow if available."""
+    try:
+        from PIL import Image
+        
+        # Determine image format
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
+            return
+            
+        with Image.open(file_path) as img:
+            w, h = img.size
+            if w > 800:
+                ratio = 800.0 / w
+                new_size = (800, int(h * ratio))
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
+                
+            if ext in ('.jpg', '.jpeg'):
+                img.convert('RGB').save(file_path, 'JPEG', quality=75, optimize=True)
+            elif ext == '.png':
+                if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                    img.save(file_path, 'PNG', optimize=True)
+                else:
+                    img.convert('P', palette=Image.ADAPTIVE).save(file_path, 'PNG', optimize=True)
+            elif ext == '.webp':
+                img.save(file_path, 'WEBP', quality=75, method=6)
+                
+        print(f"  Image optimized successfully: {os.path.basename(file_path)} ({os.path.getsize(file_path)/1024:.1f} KB)")
+    except ImportError:
+        pass  # Pillow not installed, skip optimization silently
+    except Exception as e:
+        print(f"  Warning: Image optimization failed: {e}")
+
+
 # ── Authentication ──────────────────────────────────────────────────
 
 def _try_login(api_base, email, password):
@@ -875,6 +909,7 @@ def main():
                 temp_img = os.path.join(os.getcwd(), f"temp_{img_filename}")
                 try:
                     download_file(item['imageUrl'], temp_img)
+                    optimize_image_file(temp_img)
                     thumb_path = upload_file_to_contabo(api_base, temp_img, img_filename)
                     print(f"  Thumbnail uploaded: {thumb_path}")
                 except Exception as e:
