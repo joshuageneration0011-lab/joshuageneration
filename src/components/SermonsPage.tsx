@@ -11,7 +11,7 @@ interface SermonsPageProps {
 
 type SortOption = 'newest' | 'views';
 
-const SERMONS_PER_PAGE = 9;
+const SERMONS_PER_PAGE = 12;
 
 export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,7 +141,7 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
         {/* Sermons Grid */}
         {paginatedSermons.length > 0 ? (
           <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {paginatedSermons.map((sermon, index) => (
               <div
                 key={sermon.id}
