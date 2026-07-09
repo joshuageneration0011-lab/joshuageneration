@@ -1,4 +1,4 @@
-import { Headphones, Clock, Eye, ChevronRight, Download } from 'lucide-react';
+import { Headphones, Clock, Eye, ChevronRight, Download, Play } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { resolveApiUrl } from '@/utils/api';
 
