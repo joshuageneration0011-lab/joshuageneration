@@ -32,6 +32,168 @@ RETRY_BASE_DELAY = 4  # seconds
 AUTH_TOKEN = ""
 
 
+# Bitrate tables and audio duration helper functions for correct timer metadata estimation
+BITRATES = {
+    1: { # MPEG-1
+        1: [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448], # Layer I
+        2: [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],    # Layer II
+        3: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]     # Layer III
+    },
+    2: { # MPEG-2 & 2.5
+        1: [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
+        2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+        3: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+    }
+}
+
+def get_audio_duration(file_path):
+    """Calculate the duration of a local audio file (primarily MP3) in MM:SS or H:MM:SS format."""
+    try:
+        if not os.path.exists(file_path):
+            return "45:00"
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            return "45:00"
+
+        with open(file_path, 'rb') as f:
+            header = f.read(10)
+            if len(header) < 10:
+                return "45:00"
+            offset = 0
+            if header[0:3] == b'ID3':
+                size = ((header[6] & 0x7F) << 21) | \
+                       ((header[7] & 0x7F) << 14) | \
+                       ((header[8] & 0x7F) << 7)  | \
+                       (header[9] & 0x7F)
+                offset = size + 10
+                f.seek(offset)
+
+            buffer = f.read(4096)
+            if len(buffer) < 4:
+                return "45:00"
+
+            for i in range(len(buffer) - 3):
+                if buffer[i] == 0xFF and (buffer[i+1] & 0xE0) == 0xE0:
+                    b1 = buffer[i+1]
+                    b2 = buffer[i+2]
+                    version_bits = (b1 & 0x18) >> 3
+                    version = 1
+                    if version_bits == 0:
+                        version = 2.5
+                    elif version_bits == 2:
+                        version = 2
+
+                    layer_bits = (b1 & 0x06) >> 1
+                    layer = 4 - layer_bits if layer_bits in [1, 2, 3] else 3
+                    bitrate_idx = (b2 & 0xF0) >> 4
+                    if bitrate_idx == 0 or bitrate_idx == 15:
+                        continue
+
+                    if version == 1:
+                        br_list = BITRATES[1].get(layer, BITRATES[1][3])
+                    else:
+                        br_list = BITRATES[2].get(layer, BITRATES[2][3])
+
+                    bitrate = br_list[bitrate_idx]
+                    audio_bytes = file_size - offset
+                    duration_seconds = int(audio_bytes / (bitrate * 1000 / 8))
+
+                    hours = duration_seconds // 3600
+                    minutes = (duration_seconds % 3600) // 60
+                    seconds = duration_seconds % 60
+                    if hours > 0:
+                        return f"{hours}:{minutes:02d}:{seconds:02d}"
+                    else:
+                        return f"{minutes:02d}:{seconds:02d}"
+    except Exception as e:
+        print(f"  Warning: Error calculating local audio duration: {e}")
+    return "45:00"
+
+def get_remote_audio_duration(audio_url):
+    """Estimate the duration of a remote audio file by parsing its content length and bitrate."""
+    try:
+        content_length = 0
+        cmd_head = ['curl', '-I', '-L', '-s', '--connect-timeout', '10', audio_url]
+        res_head = subprocess.run(cmd_head, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in res_head.stdout.split('\n'):
+            if line.lower().startswith('content-length:'):
+                try:
+                    content_length = int(line.split(':')[1].strip())
+                except:
+                    pass
+
+        if content_length == 0:
+            req = urllib.request.Request(audio_url, method='HEAD', headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urllib.request.urlopen(req, context=SSL_CTX, timeout=10) as resp:
+                    content_length = int(resp.headers.get('Content-Length', 0))
+            except:
+                pass
+
+        if content_length == 0:
+            return "45:00"
+
+        cmd_range = ['curl', '-L', '-r', '0-8192', '-s', '--connect-timeout', '10', audio_url]
+        res_range = subprocess.run(cmd_range, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        buffer = res_range.stdout
+
+        if len(buffer) < 4:
+            req = urllib.request.Request(audio_url, headers={'Range': 'bytes=0-8192', 'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urllib.request.urlopen(req, context=SSL_CTX, timeout=10) as resp:
+                    buffer = resp.read()
+            except:
+                pass
+
+        if len(buffer) < 10:
+            return "45:00"
+
+        offset = 0
+        if buffer[0:3] == b'ID3':
+            size = ((buffer[6] & 0x7F) << 21) | \
+                   ((buffer[7] & 0x7F) << 14) | \
+                   ((buffer[8] & 0x7F) << 7)  | \
+                   (buffer[9] & 0x7F)
+            offset = size + 10
+
+        for i in range(offset, len(buffer) - 3):
+            if buffer[i] == 0xFF and (buffer[i+1] & 0xE0) == 0xE0:
+                b1 = buffer[i+1]
+                b2 = buffer[i+2]
+                version_bits = (b1 & 0x18) >> 3
+                version = 1
+                if version_bits == 0:
+                    version = 2.5
+                elif version_bits == 2:
+                    version = 2
+
+                layer_bits = (b1 & 0x06) >> 1
+                layer = 4 - layer_bits if layer_bits in [1, 2, 3] else 3
+                bitrate_idx = (b2 & 0xF0) >> 4
+                if bitrate_idx == 0 or bitrate_idx == 15:
+                    continue
+
+                if version == 1:
+                    br_list = BITRATES[1].get(layer, BITRATES[1][3])
+                else:
+                    br_list = BITRATES[2].get(layer, BITRATES[2][3])
+
+                bitrate = br_list[bitrate_idx]
+                audio_bytes = content_length - offset
+                duration_seconds = int(audio_bytes / (bitrate * 1000 / 8))
+
+                hours = duration_seconds // 3600
+                minutes = (duration_seconds % 3600) // 60
+                seconds = duration_seconds % 60
+                if hours > 0:
+                    return f"{hours}:{minutes:02d}:{seconds:02d}"
+                else:
+                    return f"{minutes:02d}:{seconds:02d}"
+    except Exception as e:
+        print(f"  Warning: Error calculating remote audio duration: {e}")
+    return "45:00"
+
+
 def get_browser_headers(referer=""):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
@@ -269,13 +431,19 @@ def parse_rss_feed(url):
             except Exception:
                 pub_date = date_node.text
 
+        duration = ""
+        itunes_dur = item.find('itunes:duration', ns)
+        if itunes_dur is not None and itunes_dur.text:
+            duration = itunes_dur.text.strip()
+
         if audio_url:
             items.append({
                 'title': title_text,
                 'audioUrl': audio_url,
                 'imageUrl': image_url,
                 'description': description,
-                'date': pub_date
+                'date': pub_date,
+                'duration': duration
             })
 
     return items
@@ -330,7 +498,8 @@ def extract_sermon_details_from_post(url):
                 'audioUrl': audio_url,
                 'imageUrl': image_url,
                 'description': description if description else "Imported from sermon page.",
-                'date': datetime.now().strftime("%Y-%m-%d")
+                'date': datetime.now().strftime("%Y-%m-%d"),
+                'duration': ""
             }
         else:
             print(f"    -> No audio found on this page.")
@@ -403,7 +572,8 @@ def parse_html_page(url):
             'audioUrl': full_audio_url,
             'imageUrl': "",
             'description': "Scraped directly from page link.",
-            'date': datetime.now().strftime("%Y-%m-%d")
+            'date': datetime.now().strftime("%Y-%m-%d"),
+            'duration': ""
         })
 
     return items
@@ -682,12 +852,17 @@ def main():
 
         audio_path = ""
         thumb_path = ""
+        duration = item.get('duration', '').strip()
 
         if mode == '1':
             # Direct link mode — use the WordPress URLs directly
             audio_path = item['audioUrl']
             thumb_path = item['imageUrl'] if item['imageUrl'] else ""
             print(f"  Using direct audio link: {audio_path[:70]}...")
+            if not duration:
+                print("  Calculating audio duration from remote stream...")
+                duration = get_remote_audio_duration(audio_path)
+                print(f"  Duration: {duration}")
         else:
             # Download + Upload mode
             # Download & upload thumbnail
@@ -720,6 +895,10 @@ def main():
             temp_audio = os.path.join(os.getcwd(), f"temp_{audio_filename}")
             try:
                 download_file(item['audioUrl'], temp_audio)
+                if not duration:
+                    print("  Calculating audio duration from downloaded file...")
+                    duration = get_audio_duration(temp_audio)
+                    print(f"  Duration: {duration}")
                 audio_path = upload_file_to_contabo(api_base, temp_audio, audio_filename)
                 print(f"  Audio uploaded: {audio_path}")
             except Exception as e:
@@ -736,6 +915,9 @@ def main():
             skipped_count += 1
             continue
 
+        if not duration:
+            duration = "45:00"
+
         # Create sermon record
         sermon_id = f"sermon_{int(time.time())}{random.randint(100, 999)}"
         sermon_date = item['date'] if item['date'] else datetime.now().strftime("%Y-%m-%d")
@@ -744,7 +926,7 @@ def main():
             "id": sermon_id,
             "title": item['title'],
             "speaker": speaker,
-            "duration": "45:00",
+            "duration": duration,
             "thumbnail": thumb_path,
             "audioUrl": audio_path,
             "videoUrl": "",
