@@ -4,10 +4,10 @@ import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
 
 const navLinks = [
-  { name: 'Home', href: '#home', icon: Home, page: 'home' as Page },
-  { name: 'Sermons', href: '#sermons', icon: Tv, page: 'sermons' as Page },
-  { name: 'Books', href: '#books', icon: BookOpen, page: 'books' as Page },
-  { name: 'Blog', href: '#blog', icon: Library, page: 'blog' as Page },
+  { name: 'Home', href: '/', icon: Home, page: 'home' as Page },
+  { name: 'Sermons', href: '/sermons', icon: Tv, page: 'sermons' as Page },
+  { name: 'Books', href: '/books', icon: BookOpen, page: 'books' as Page },
+  { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
   { name: 'Events', href: '#events', icon: Gift },
   { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
 ];
@@ -47,10 +47,16 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
       if (currentPage !== 'home' && onNavigate) {
         onNavigate('home');
         setTimeout(() => {
-          window.location.hash = link.href;
+          const element = document.getElementById(link.href.replace('#', ''));
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
         }, 100);
       } else {
-        window.location.hash = link.href;
+        const element = document.getElementById(link.href.replace('#', ''));
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
       }
     }
   };
@@ -68,8 +74,7 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
       }
       return currentPage === link.page;
     }
-    // Hash links are active only on home page if the hash matches
-    return currentPage === 'home' && window.location.hash === link.href;
+    return false;
   };
 
   return (

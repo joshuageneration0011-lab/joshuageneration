@@ -155,7 +155,7 @@ export default function AdminDashboard({
     if (onLogout) {
       onLogout();
     }
-    window.location.hash = 'admin-login';
+    window.history.pushState(null, '', '/admin-login');
   };
 
   const loadDonations = async () => {

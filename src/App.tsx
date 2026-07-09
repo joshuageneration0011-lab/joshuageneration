@@ -42,18 +42,21 @@ const PageLoader = () => (
 
 export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate';
 
-const getPageFromHash = (): Page => {
-  const hash = window.location.hash.replace('#', '') as Page;
+const getPageFromPath = (): Page => {
+  const path = window.location.pathname.replace(/^\//, '') as Page;
   const validPages: Page[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate'];
-  if (validPages.includes(hash)) {
-    return hash;
+  if (validPages.includes(path)) {
+    return path;
+  }
+  if (path === '') {
+    return 'home';
   }
   return 'home';
 };
 
 export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState<Page>(() => getPageFromHash());
+  const [currentPage, setCurrentPage] = useState<Page>(() => getPageFromPath());
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => api.isAuthenticated());
   const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -68,10 +71,10 @@ export default function App() {
   const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
   const [isRadioActive, setIsRadioActive] = useState(false);
 
-  // Sync hash routing on popstate/hashchange & handle global auth session expiration
+  // Sync history routing on popstate & handle global auth session expiration
   useEffect(() => {
-    const handleHashChange = () => {
-      const page = getPageFromHash();
+    const handlePopState = () => {
+      const page = getPageFromPath();
       setCurrentPage(page);
     };
     const handleUnauthorized = () => {
@@ -80,16 +83,11 @@ export default function App() {
       alert('Session expired. Please log in again.');
     };
     
-    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('jg_unauthorized', handleUnauthorized);
     
-    // Set default hash if not present
-    if (!window.location.hash) {
-      window.location.hash = 'home';
-    }
-    
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('jg_unauthorized', handleUnauthorized);
     };
   }, []);
@@ -197,7 +195,8 @@ export default function App() {
 
   const navigate = (page: Page) => {
     console.log('[Routing] Navigating to page:', page);
-    window.location.hash = page;
+    const path = page === 'home' ? '/' : `/${page}`;
+    window.history.pushState(null, '', path);
     setCurrentPage(page);
     window.scrollTo(0, 0);
   };

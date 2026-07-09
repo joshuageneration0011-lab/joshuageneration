@@ -1,12 +1,12 @@
 import { Heart, Mail, MapPin, Phone, Send } from 'lucide-react';
 
 const quickLinks = [
-  { name: 'Sermons', href: '#sermons' },
-  { name: 'Books', href: '#books' },
-  { name: 'Blog', href: '#blog' },
+  { name: 'Sermons', href: '/sermons' },
+  { name: 'Books', href: '/books' },
+  { name: 'Blog', href: '/blog' },
   { name: 'Events', href: '#events' },
   { name: 'Prayer Requests', href: '#prayer' },
-  { name: 'Donate', href: '#donate' },
+  { name: 'Donate', href: '/donate' },
   { name: 'Careers', href: '#' },
 ];
 
@@ -42,7 +42,10 @@ export default function Footer({ onNavigate }: FooterProps) {
         e.preventDefault();
         onNavigate('home');
         setTimeout(() => {
-          window.location.hash = href;
+          const element = document.getElementById(href.replace('#', ''));
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
         }, 100);
       }
     }
