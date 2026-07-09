@@ -527,7 +527,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/sermons' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT * FROM sermons ORDER BY date DESC');
+        const result = await pool.query('SELECT * FROM sermons ORDER BY id DESC');
         // Map database naming back to frontend interface
         const sermons = result.rows.map(row => ({
           id: row.id,

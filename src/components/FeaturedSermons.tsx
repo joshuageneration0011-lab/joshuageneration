@@ -10,11 +10,7 @@ interface FeaturedSermonsProps {
 
 export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll }: FeaturedSermonsProps) {
   const featured = [...sermons]
-    .sort((a, b) => {
-      const timeA = a.date ? new Date(a.date).getTime() : 0;
-      const timeB = b.date ? new Date(b.date).getTime() : 0;
-      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
-    })
+    .sort((a, b) => Number(b.id) - Number(a.id))
     .slice(0, 4);
 
   return (

@@ -37,7 +37,7 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
       })
       .sort((a, b) => {
         if (sortBy === 'newest') {
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+          return Number(b.id) - Number(a.id);
         } else if (sortBy === 'views') {
           return b.views - a.views;
         }
