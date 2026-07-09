@@ -527,29 +527,46 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/sermons' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT * FROM sermons ORDER BY id DESC');
-        // Map database naming back to frontend interface
-        const sermons = result.rows.map(row => ({
-          id: row.id,
-          title: row.title,
-          speaker: row.speaker,
-          duration: row.duration,
-          thumbnail: row.thumbnail,
-          views: row.views,
-          downloads: row.downloads || 0,
-          date: row.date,
-          description: row.description,
-          category: row.category,
-          videoUrl: row.video_url,
-          audioUrl: row.audio_url,
-          audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || [])
-        }));
-        sendJson(res, 200, sermons);
-      } else {
+        try {
+          const result = await pool.query('SELECT * FROM sermons ORDER BY id DESC');
+          // Map database naming back to frontend interface
+          const sermons = result.rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            speaker: row.speaker,
+            duration: row.duration,
+            thumbnail: row.thumbnail,
+            views: row.views,
+            downloads: row.downloads || 0,
+            date: row.date,
+            description: row.description,
+            category: row.category,
+            videoUrl: row.video_url,
+            audioUrl: row.audio_url,
+            audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || [])
+          }));
+          // Cache locally as fallback backup
+          try {
+            fs.writeFileSync(SERMONS_FILE, JSON.stringify(sermons, null, 2), 'utf-8');
+          } catch (cacheErr) {
+            console.error('Failed to write local sermons cache:', cacheErr);
+          }
+          sendJson(res, 200, sermons);
+          return;
+        } catch (dbErr) {
+          console.warn('Database SELECT failed, falling back to local JSON cache:', dbErr.message);
+        }
+      }
+
+      // Local file fallback (used when pool is disabled or database query throws)
+      if (fs.existsSync(SERMONS_FILE)) {
         const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
         sendJson(res, 200, data);
+      } else {
+        sendJson(res, 200, []);
       }
     } catch (e) {
+      console.error('All sermon retrieval sources failed:', e);
       sendJson(res, 500, { error: 'Failed to retrieve sermons' });
     }
     return;

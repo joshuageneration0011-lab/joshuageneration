@@ -7,6 +7,7 @@ import { resolveApiUrl } from '@/utils/api';
 interface SermonsPageProps {
   sermons: Sermon[];
   onSermonSelect: (sermon: Sermon) => void;
+  isLoading?: boolean;
 }
 
 type SortOption = 'newest' | 'views';
@@ -23,7 +24,7 @@ const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProps) {
+export default function SermonsPage({ sermons, onSermonSelect, isLoading = false }: SermonsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -149,7 +150,44 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
         </div>
 
         {/* Sermons Grid */}
-        {paginatedSermons.length > 0 ? (
+        {isLoading ? (
+          <div className="space-y-6">
+            {/* Mobile Skeleton List */}
+            <div className="flex flex-col sm:hidden border-t-2 border-black pt-2 mb-8 divide-y divide-gray-100">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="py-4 flex items-start justify-between gap-4 animate-pulse">
+                  <div className="flex-1 space-y-2.5">
+                    <div className="h-4 bg-gray-200 rounded w-11/12" />
+                    <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  </div>
+                  <div className="w-20 h-20 bg-gray-150 rounded-xl flex-shrink-0" />
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Skeleton Grid */}
+            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden animate-pulse flex flex-col h-full">
+                  <div className="aspect-[16/10] bg-gray-100" />
+                  <div className="p-5 flex-grow space-y-3 flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-gray-250" />
+                      <div className="h-3 bg-gray-200 rounded w-24" />
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-11/12" />
+                    <div className="h-3 bg-gray-200 rounded w-2/3 flex-grow" />
+                    <div className="pt-3 border-t border-gray-100 flex justify-between mt-auto">
+                      <div className="h-3 bg-gray-200 rounded w-16" />
+                      <div className="h-3 bg-gray-250 rounded w-12" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : paginatedSermons.length > 0 ? (
           <>
           {/* Mobile List View (only visible on mobile screens) */}
           <div className="flex flex-col sm:hidden border-t-2 border-black pt-2 mb-8">

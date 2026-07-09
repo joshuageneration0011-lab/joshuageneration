@@ -59,6 +59,7 @@ export default function App() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [sermons, setSermons] = useState<Sermon[]>([]);
+  const [isLoadingSermons, setIsLoadingSermons] = useState(true);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
@@ -144,6 +145,7 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoadingSermons(true);
         const loadedSermons = await getSavedSermons();
         setSermons(loadedSermons);
       } catch (err) {
@@ -178,6 +180,7 @@ export default function App() {
       } catch (err) {
         console.error('Failed to load radio settings:', err);
       }
+      setIsLoadingSermons(false);
     };
     fetchData();
   }, []);
@@ -385,6 +388,7 @@ export default function App() {
         <Suspense fallback={<PageLoader />}>
           <SermonsPage
             sermons={sermons}
+            isLoading={isLoadingSermons}
             onSermonSelect={(sermon) => {
               setSelectedSermon(sermon);
               navigate('sermon-player');
@@ -552,6 +556,7 @@ export default function App() {
         <StatsSection />
         <FeaturedSermons
           sermons={sermons}
+          isLoading={isLoadingSermons}
           onSermonSelect={(sermon) => {
             setSelectedSermon(sermon);
             navigate('sermon-player');
