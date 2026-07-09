@@ -159,18 +159,31 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
                 onClick={() => onSermonSelect(sermon)}
                 className="group cursor-pointer py-4 flex items-start justify-between gap-4 border-b border-gray-200"
               >
-                {/* Left Side: Title and Date */}
+                {/* Left Side: Title, Preacher, Date, and Stats */}
                 <div className="flex-1 min-w-0 pr-2">
-                  <h3 className="text-xs font-bold text-gray-800 leading-snug uppercase tracking-wide group-hover:text-royal-blue-600 transition-colors">
-                    {sermon.title.toUpperCase()} BY {sermon.speaker.toUpperCase()}
+                  <h3 className="text-[13px] font-extrabold text-gray-900 leading-snug uppercase tracking-wide group-hover:text-royal-blue-600 transition-colors mb-1">
+                    {sermon.title}
                   </h3>
-                  <p className="text-[11px] text-gray-400 font-medium mt-2">
-                    {new Date(sermon.date).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
+                  <p className="text-[11px] font-bold text-royal-blue-600 uppercase tracking-tight">
+                    By {sermon.speaker}
                   </p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[10px] text-gray-400 font-medium">
+                    <span>
+                      {new Date(sermon.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                    <span className="text-gray-300">•</span>
+                    <span className="flex items-center gap-0.5">
+                      <Eye className="w-3 h-3 text-gray-400" /> {formatNumber(sermon.views)}
+                    </span>
+                    <span className="text-gray-300">•</span>
+                    <span className="flex items-center gap-0.5">
+                      <Download className="w-3 h-3 text-gray-400" /> {formatNumber(sermon.downloads || 0)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Right Side: Thumbnail */}
