@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
 import { resolveApiUrl } from '@/utils/api';
@@ -11,10 +11,13 @@ interface SermonsPageProps {
 
 type SortOption = 'newest' | 'views';
 
+const SERMONS_PER_PAGE = 9;
+
 export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Categories extraction
   const categories = useMemo(() => {
@@ -41,6 +44,34 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
         return 0;
       });
   }, [searchQuery, selectedCategory, sortBy]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, sortBy]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedSermons.length / SERMONS_PER_PAGE));
+  const paginatedSermons = useMemo(() => {
+    const start = (currentPage - 1) * SERMONS_PER_PAGE;
+    return filteredAndSortedSermons.slice(start, start + SERMONS_PER_PAGE);
+  }, [filteredAndSortedSermons, currentPage]);
+
+  const getPageNumbers = () => {
+    const pages: (number | '...')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('...');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   return (
     <div className="pt-24 lg:pt-28 pb-20 bg-gray-50/50 min-h-screen">
@@ -108,9 +139,10 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
         </div>
 
         {/* Sermons Grid */}
-        {filteredAndSortedSermons.length > 0 ? (
+        {paginatedSermons.length > 0 ? (
+          <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredAndSortedSermons.map((sermon, index) => (
+            {paginatedSermons.map((sermon, index) => (
               <div
                 key={sermon.id}
                 onClick={() => onSermonSelect(sermon)}
@@ -224,6 +256,63 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-12 pt-8 border-t border-gray-200">
+              <p className="text-sm text-gray-500">
+                Showing <span className="font-semibold text-gray-700">{(currentPage - 1) * SERMONS_PER_PAGE + 1}</span>–<span className="font-semibold text-gray-700">{Math.min(currentPage * SERMONS_PER_PAGE, filteredAndSortedSermons.length)}</span> of{' '}
+                <span className="font-semibold text-gray-700">{filteredAndSortedSermons.length}</span> sermons
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={currentPage === 1}
+                  className={cn(
+                    'p-2.5 rounded-xl border text-sm font-medium transition-all duration-200',
+                    currentPage === 1
+                      ? 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'
+                      : 'border-gray-200 text-gray-600 hover:bg-royal-blue-50 hover:text-royal-blue-600 hover:border-royal-blue-200'
+                  )}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {getPageNumbers().map((page, i) =>
+                  page === '...' ? (
+                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">…</span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => { setCurrentPage(page as number); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className={cn(
+                        'w-10 h-10 rounded-xl text-sm font-semibold transition-all duration-200 border',
+                        currentPage === page
+                          ? 'bg-royal-blue-600 text-white border-royal-blue-600 shadow-md shadow-royal-blue-500/25'
+                          : 'bg-white text-gray-600 border-gray-200 hover:bg-royal-blue-50 hover:text-royal-blue-600 hover:border-royal-blue-200'
+                      )}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={currentPage === totalPages}
+                  className={cn(
+                    'p-2.5 rounded-xl border text-sm font-medium transition-all duration-200',
+                    currentPage === totalPages
+                      ? 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'
+                      : 'border-gray-200 text-gray-600 hover:bg-royal-blue-50 hover:text-royal-blue-600 hover:border-royal-blue-200'
+                  )}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         ) : (
           <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-soft">
             <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100 text-gray-400">

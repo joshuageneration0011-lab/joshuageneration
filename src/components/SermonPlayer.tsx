@@ -57,7 +57,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     setHasIncrementedView(false);
   }, [sermon.id, sermon.views]);
 
-  // Trigger audio reload/play when track changes
+  // Trigger audio reload/play when track or sermon changes
   useEffect(() => {
     const media = audioRef.current;
     if (media) {
@@ -66,7 +66,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
         media.play().catch((err) => console.log('Playback failed:', err));
       }
     }
-  }, [currentTrackIndex]);
+  }, [currentTrackIndex, activeTrack.audioUrl, sermon.id]);
 
   const handleDownloadIncrement = () => {
     api.incrementSermonDownloads(sermon.id)

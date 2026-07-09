@@ -605,6 +605,20 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Pagination
+  const USERS_PER_PAGE = 10;
+  const [userPage, setUserPage] = useState(1);
+  const userTotalPages = Math.max(1, Math.ceil(filtered.length / USERS_PER_PAGE));
+  const paginatedUsers = filtered.slice(
+    (userPage - 1) * USERS_PER_PAGE,
+    userPage * USERS_PER_PAGE
+  );
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setUserPage(1);
+  }, [searchTerm]);
+
   const handleAddClick = () => {
     setEditingUser(null);
     setName('');
@@ -721,14 +735,14 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.length === 0 ? (
+              {paginatedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={userRole === 'superadmin' ? 7 : 6} className="text-center py-8 text-gray-500 text-sm">
                     No members found matching your search.
                   </td>
                 </tr>
               ) : (
-                filtered.map((user) => (
+                paginatedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -791,10 +805,37 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
           </table>
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
-          <p className="text-gray-500 text-xs">Showing {filtered.length} of {users.length} users</p>
+          <p className="text-gray-505 text-xs">
+            Showing {filtered.length === 0 ? 0 : (userPage - 1) * USERS_PER_PAGE + 1}–{Math.min(userPage * USERS_PER_PAGE, filtered.length)} of {filtered.length} users
+          </p>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors">Previous</button>
-            <button className="px-3 py-1.5 rounded-lg bg-royal-blue-600 text-white text-xs hover:bg-royal-blue-700 transition-colors">Next</button>
+            <button
+              onClick={() => setUserPage(p => Math.max(1, p - 1))}
+              disabled={userPage === 1}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                userPage === 1
+                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              Previous
+            </button>
+            <span className="text-xs text-gray-500 font-medium">
+              Page {userPage} of {userTotalPages}
+            </span>
+            <button
+              onClick={() => setUserPage(p => Math.min(userTotalPages, p + 1))}
+              disabled={userPage === userTotalPages}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                userPage === userTotalPages
+                  ? 'bg-royal-blue-200 text-royal-blue-300 cursor-not-allowed'
+                  : 'bg-royal-blue-600 text-white hover:bg-royal-blue-700'
+              )}
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
@@ -1376,6 +1417,18 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     s.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Pagination
+  const ADMIN_SERMONS_PER_PAGE = 10;
+  const [sermonPage, setSermonPage] = useState(1);
+  const sermonTotalPages = Math.max(1, Math.ceil(filtered.length / ADMIN_SERMONS_PER_PAGE));
+  const paginatedSermons = filtered.slice(
+    (sermonPage - 1) * ADMIN_SERMONS_PER_PAGE,
+    sermonPage * ADMIN_SERMONS_PER_PAGE
+  );
+
+  // Reset to page 1 when search changes
+  useEffect(() => { setSermonPage(1); }, [searchTerm]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1439,7 +1492,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((s) => (
+              {paginatedSermons.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -1505,6 +1558,41 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
               )}
             </tbody>
           </table>
+        </div>
+        {/* Pagination Footer */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
+          <p className="text-gray-500 text-xs">
+            Showing {filtered.length === 0 ? 0 : (sermonPage - 1) * ADMIN_SERMONS_PER_PAGE + 1}–{Math.min(sermonPage * ADMIN_SERMONS_PER_PAGE, filtered.length)} of {filtered.length} sermons
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSermonPage(p => Math.max(1, p - 1))}
+              disabled={sermonPage === 1}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                sermonPage === 1
+                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              Previous
+            </button>
+            <span className="text-xs text-gray-500 font-medium">
+              Page {sermonPage} of {sermonTotalPages}
+            </span>
+            <button
+              onClick={() => setSermonPage(p => Math.min(sermonTotalPages, p + 1))}
+              disabled={sermonPage === sermonTotalPages}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                sermonPage === sermonTotalPages
+                  ? 'bg-royal-blue-200 text-royal-blue-300 cursor-not-allowed'
+                  : 'bg-royal-blue-600 text-white hover:bg-royal-blue-700'
+              )}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
@@ -3932,6 +4020,20 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
       ? missionDonations
       : donations;
 
+  // Pagination
+  const DONATIONS_PER_PAGE = 10;
+  const [donationPage, setDonationPage] = useState(1);
+  const donationTotalPages = Math.max(1, Math.ceil(filteredDonations.length / DONATIONS_PER_PAGE));
+  const paginatedDonations = filteredDonations.slice(
+    (donationPage - 1) * DONATIONS_PER_PAGE,
+    donationPage * DONATIONS_PER_PAGE
+  );
+
+  // Reset page when category tab changes
+  useEffect(() => {
+    setDonationPage(1);
+  }, [activeTab]);
+
   const totalAll = donations.reduce((sum, d) => sum + d.amount, 0);
   const totalProphetic = propheticDonations.reduce((sum, d) => sum + d.amount, 0);
   const totalMission = missionDonations.reduce((sum, d) => sum + d.amount, 0);
@@ -4061,7 +4163,7 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredDonations.map((d) => (
+              {paginatedDonations.map((d) => (
                 <tr key={d.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <div>
@@ -4088,7 +4190,7 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
                   </td>
                 </tr>
               ))}
-              {filteredDonations.length === 0 && (
+              {paginatedDonations.length === 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-gray-500 text-sm font-medium">
                     No successful payments found for this category.
@@ -4097,6 +4199,41 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
               )}
             </tbody>
           </table>
+        </div>
+        {/* Pagination Footer */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
+          <p className="text-gray-555 text-xs">
+            Showing {filteredDonations.length === 0 ? 0 : (donationPage - 1) * DONATIONS_PER_PAGE + 1}–{Math.min(donationPage * DONATIONS_PER_PAGE, filteredDonations.length)} of {filteredDonations.length} payments
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDonationPage(p => Math.max(1, p - 1))}
+              disabled={donationPage === 1}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                donationPage === 1
+                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              Previous
+            </button>
+            <span className="text-xs text-gray-500 font-medium">
+              Page {donationPage} of {donationTotalPages}
+            </span>
+            <button
+              onClick={() => setDonationPage(p => Math.min(donationTotalPages, p + 1))}
+              disabled={donationPage === donationTotalPages}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                donationPage === donationTotalPages
+                  ? 'bg-royal-blue-200 text-royal-blue-300 cursor-not-allowed'
+                  : 'bg-royal-blue-600 text-white hover:bg-royal-blue-700'
+              )}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>
