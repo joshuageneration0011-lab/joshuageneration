@@ -151,7 +151,48 @@ export default function SermonsPage({ sermons, onSermonSelect }: SermonsPageProp
         {/* Sermons Grid */}
         {paginatedSermons.length > 0 ? (
           <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {/* Mobile List View (only visible on mobile screens) */}
+          <div className="flex flex-col sm:hidden border-t-2 border-black pt-2 mb-8">
+            {paginatedSermons.map((sermon) => (
+              <div
+                key={sermon.id}
+                onClick={() => onSermonSelect(sermon)}
+                className="group cursor-pointer py-4 flex items-start justify-between gap-4 border-b border-gray-200"
+              >
+                {/* Left Side: Title and Date */}
+                <div className="flex-1 min-w-0 pr-2">
+                  <h3 className="text-xs font-bold text-gray-800 leading-snug uppercase tracking-wide group-hover:text-royal-blue-600 transition-colors">
+                    {sermon.title.toUpperCase()} BY {sermon.speaker.toUpperCase()}
+                  </h3>
+                  <p className="text-[11px] text-gray-400 font-medium mt-2">
+                    {new Date(sermon.date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+
+                {/* Right Side: Thumbnail */}
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-900 flex-shrink-0 relative">
+                  {sermon.thumbnail ? (
+                    <img
+                      src={resolveApiUrl(sermon.thumbnail)}
+                      alt={sermon.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-royal-blue-950 flex items-center justify-center">
+                      <Headphones className="w-5 h-5 text-white/50" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop & Tablet Grid View */}
+          <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {paginatedSermons.map((sermon, index) => (
               <div
                 key={sermon.id}
