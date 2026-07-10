@@ -54,7 +54,8 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
               amount: donationData.amount,
               purpose: donationData.purpose,
               frequency: donationData.frequency,
-              method: 'Flutterwave'
+              method: 'Flutterwave',
+              currency: donationData.currency || 'USD'
             })
           }).then(res => {
             if (res.ok) {

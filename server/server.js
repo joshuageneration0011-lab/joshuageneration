@@ -366,9 +366,16 @@ async function initDb() {
           purpose VARCHAR NOT NULL,
           date VARCHAR NOT NULL,
           method VARCHAR NOT NULL,
-          frequency VARCHAR NOT NULL
+          frequency VARCHAR NOT NULL,
+          currency VARCHAR DEFAULT 'USD'
         );
       `);
+
+      try {
+        await pool.query("ALTER TABLE donations ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'USD'");
+      } catch (err) {
+        console.warn("Failed to check/add currency column to donations:", err.message);
+      }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS settings (
@@ -1009,7 +1016,7 @@ const server = http.createServer(async (req, res) => {
   // POST Create Donation (Public)
   if (pathname === '/api/donations' && method === 'POST') {
     try {
-      const { donor, email, amount, purpose, method: payMethod, frequency } = await getJsonBody(req);
+      const { donor, email, amount, purpose, method: payMethod, frequency, currency } = await getJsonBody(req);
       if (!donor || !email || !amount || !purpose) {
         sendJson(res, 400, { error: 'Required fields missing: donor, email, amount, purpose' });
         return;
@@ -1024,19 +1031,105 @@ const server = http.createServer(async (req, res) => {
         purpose,
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         method: payMethod || 'Credit Card',
-        frequency: frequency || 'one-time'
+        frequency: frequency || 'one-time',
+        currency: currency || 'USD'
       };
 
       if (pool) {
         await pool.query(
-          `INSERT INTO donations (id, donor, email, amount, purpose, date, method, frequency)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [donation.id, donation.donor, donation.email, donation.amount, donation.purpose, donation.date, donation.method, donation.frequency]
+          `INSERT INTO donations (id, donor, email, amount, purpose, date, method, frequency, currency)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [donation.id, donation.donor, donation.email, donation.amount, donation.purpose, donation.date, donation.method, donation.frequency, donation.currency]
         );
       } else {
         const donations = JSON.parse(fs.readFileSync(DONATIONS_FILE, 'utf-8'));
         donations.unshift(donation);
         fs.writeFileSync(DONATIONS_FILE, JSON.stringify(donations, null, 2), 'utf-8');
+      }
+
+      // Send Heartfelt Thank You Email to Donor
+      try {
+        const currencySymbols = {
+          NGN: '₦',
+          USD: '$',
+          GBP: '£',
+          EUR: '€',
+          CAD: 'C$',
+          ZAR: 'R'
+        };
+        const currencyCode = donation.currency || 'USD';
+        const currencySymbol = currencySymbols[currencyCode] || '$';
+        const formattedAmount = `${currencySymbol}${donation.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        const thankYouSubject = "Thank You for Your Generous Seed - Joshua Generation";
+        const thankYouHtml = `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px 20px; color: #1f2937; background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <h1 style="color: #1e3a8a; font-size: 26px; font-weight: 700; margin: 0;">Joshua Generation</h1>
+              <p style="color: #6b7280; font-size: 14px; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">Partnership & Missions</p>
+            </div>
+            
+            <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+              <h2 style="color: #1e3a8a; font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 15px;">Dear ${donation.donor},</h2>
+              
+              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                We are profoundly grateful for your generous donation of <strong>${formattedAmount}</strong> received on ${donation.date}. Your seed has been successfully received, and we thank God for your willingness to support the work of the Kingdom.
+              </p>
+              
+              <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <p style="font-style: italic; font-size: 15px; line-height: 1.6; color: #1e40af; margin: 0;">
+                  "Remember this: Whoever sows sparingly will also reap sparingly, and whoever sows generously will also reap generously. Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver."
+                </p>
+                <p style="text-align: right; font-weight: 600; font-size: 13px; color: #1e40af; margin: 8px 0 0 0;">— 2 Corinthians 9:6-7</p>
+              </div>
+
+              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Through your partnership, we are able to reach more souls, publish life-transforming resources, and expand the gospel of our Lord Jesus Christ to the ends of the earth. We pray that the Lord opens the windows of heaven and pours out a blessing upon you that you will not have room enough to store.
+              </p>
+              
+              <div style="border-top: 1px solid #f3f4f6; padding-top: 20px; margin-top: 25px; font-size: 14px; color: #4b5563;">
+                <h3 style="color: #1e3a8a; font-size: 14px; font-weight: 600; margin-top: 0; margin-bottom: 8px;">Donation Summary:</h3>
+                <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 4px 0; font-weight: 500;">Transaction ID:</td>
+                    <td style="padding: 4px 0; text-align: right; color: #111827; font-family: monospace;">${donation.id}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; font-weight: 500;">Amount Seeded:</td>
+                    <td style="padding: 4px 0; text-align: right; color: #111827; font-weight: 600;">${formattedAmount}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; font-weight: 500;">Purpose:</td>
+                    <td style="padding: 4px 0; text-align: right; color: #111827;">${donation.purpose}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; font-weight: 500;">Method:</td>
+                    <td style="padding: 4px 0; text-align: right; color: #111827;">${donation.method}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 25px; font-size: 12px; color: #9ca3af;">
+              <p style="margin: 0 0 5px 0;">You are receiving this email because you made a donation to Joshua Generation.</p>
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} Joshua Generation Ministry. All rights reserved.</p>
+            </div>
+          </div>
+        `;
+
+        sendZeptoEmail(donation.email, donation.donor, thankYouSubject, thankYouHtml)
+          .then(success => {
+            if (success) {
+              console.log(`[Donation Email] Successfully sent thank you to ${donation.email}`);
+            } else {
+              console.warn(`[Donation Email] Failed to send thank you to ${donation.email}`);
+            }
+          })
+          .catch(err => {
+            console.error(`[Donation Email] Error during email dispatch:`, err);
+          });
+      } catch (err) {
+        console.error('Failed to generate thank you email:', err);
       }
 
       sendJson(res, 200, donation);
