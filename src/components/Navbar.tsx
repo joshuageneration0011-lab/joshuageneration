@@ -8,6 +8,7 @@ const navLinks = [
   { name: 'Sermons', href: '/sermons', icon: Tv, page: 'sermons' as Page },
   { name: 'Books', href: '/books', icon: BookOpen, page: 'books' as Page },
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
+  { name: 'Partnership', href: '/partnership', icon: Heart, page: 'partnership' as Page },
   { name: 'Events', href: '#events', icon: Gift },
   { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
 ];

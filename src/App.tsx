@@ -28,6 +28,7 @@ const BookReader = lazy(() => import('@/components/BookReader'));
 const BlogPage = lazy(() => import('@/components/BlogPage'));
 const BlogPostReader = lazy(() => import('@/components/BlogPostReader'));
 const DonatePage = lazy(() => import('@/components/DonatePage'));
+const PartnershipPage = lazy(() => import('@/components/PartnershipPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -40,11 +41,11 @@ const PageLoader = () => (
 );
 
 
-export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate';
+export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate' | 'partnership';
 
 const getPageFromPath = (): Page => {
   const path = window.location.pathname.replace(/^\//, '') as Page;
-  const validPages: Page[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate'];
+  const validPages: Page[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership'];
   if (validPages.includes(path)) {
     return path;
   }
@@ -513,6 +514,24 @@ export default function App() {
               window.scrollTo(0, 0);
             }}
           />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      </div>
+    );
+  }
+
+  if (currentPage === 'partnership') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onLoginClick={() => setIsLoginOpen(true)}
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <PartnershipPage onBack={() => navigate('home')} onNavigateToDonate={navigateToDonate} />
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
