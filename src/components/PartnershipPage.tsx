@@ -58,7 +58,10 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
             Partner with Apostle Joshua Iyemifokhae
           </h1>
           <p className="text-gray-500 text-base sm:text-lg leading-relaxed">
-            Join hands with us in taking the gospel message to the ends of the earth. Your committed support helps us build local altars, empower young believers, and release dynamic digital ministry resources globally.
+            As a Partner, we continually pray for you and believe God for His blessings upon your life, family, business, career, and ministry. We trust God to multiply the seed you sow and cause you to abound in every good work according to His Word.
+          </p>
+          <p className="text-gold-600 font-semibold text-sm italic font-cormorant tracking-wide">
+            — 2 Corinthians 9:10
           </p>
         </div>
 
