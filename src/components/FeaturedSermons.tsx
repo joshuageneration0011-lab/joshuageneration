@@ -12,7 +12,7 @@ interface FeaturedSermonsProps {
 export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll, isLoading = false }: FeaturedSermonsProps) {
   const featured = [...sermons]
     .sort((a, b) => Number(b.id) - Number(a.id))
-    .slice(0, 4);
+    .slice(0, 8);
 
   return (
     <section id="sermons" className="relative py-24 sm:py-32 bg-[#f8f6f1] overflow-hidden">
@@ -52,7 +52,7 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll, is
         {/* Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden animate-pulse flex flex-col h-full">
                 <div className="h-44 bg-gray-200" />
                 <div className="p-5 flex flex-col gap-3 flex-grow">

@@ -1,7 +1,15 @@
-with open(r"c:\Users\UCHE\Music\Webapp\joshuageneration.com\src\components\AdminDashboard.tsx", "r", encoding="utf-8") as f:
-    lines = f.readlines()
-
-for i in range(98, 400):
-    line = lines[i]
-    if "menu" in line.lower() or "tab" in line.lower() or "role" in line.lower():
-        print(f"{i+1}: {line.strip()}")
+with open('src/components/AdminDashboard.tsx', 'r', encoding='utf-8') as f:
+    content = f.read()
+    
+lines = content.split('\n')
+print("--- THUMBNAIL INPUTS ---")
+for i, line in enumerate(lines):
+    if 'handleThumbnailUpload' in line or 'thumbnailSourceMode' in line:
+        if i > 1200:
+            print(f"Line {i+1}: {line.strip()}")
+            start = max(0, i - 3)
+            end = min(len(lines), i + 6)
+            print("CONTEXT:")
+            for idx in range(start, end):
+                print(f"  {idx+1}: {lines[idx]}")
+            print("-" * 50)

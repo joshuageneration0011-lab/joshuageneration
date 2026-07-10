@@ -30,6 +30,8 @@ RETRY_BASE_DELAY = 4  # seconds
 
 # Global auth token for Contabo server
 AUTH_TOKEN = ""
+AUTH_EMAIL = ""
+AUTH_PASSWORD = ""
 
 
 # Bitrate tables and audio duration helper functions for correct timer metadata estimation
@@ -383,7 +385,7 @@ def _try_login(api_base, email, password):
 
 def login_to_contabo(api_base):
     """Auto-login with default credentials, prompt only if that fails."""
-    global AUTH_TOKEN
+    global AUTH_TOKEN, AUTH_EMAIL, AUTH_PASSWORD
     
     print("\n--- Server Authentication ---")
     
@@ -393,6 +395,8 @@ def login_to_contabo(api_base):
     print(f"  Trying default admin credentials ({default_email})...")
     
     if _try_login(api_base, default_email, default_password):
+        AUTH_EMAIL = default_email
+        AUTH_PASSWORD = default_password
         return True
     
     # Default failed, try manual entry
@@ -401,10 +405,13 @@ def login_to_contabo(api_base):
         email = input(f"  Admin email [{default_email}]: ").strip() or default_email
         password = getpass.getpass("  Admin password: ")
         if _try_login(api_base, email, password):
+            AUTH_EMAIL = email
+            AUTH_PASSWORD = password
             return True
         print(f"  Login failed (attempt {attempt+1}/3)")
     
     return False
+
 
 
 # ── HTML/RSS Parsing ────────────────────────────────────────────────
@@ -616,49 +623,87 @@ def parse_html_page(url):
 # ── Contabo Server API ──────────────────────────────────────────────
 
 def upload_file_to_contabo(api_base, local_filepath, original_name):
-    """Upload a local file to the Contabo server with auth."""
+    """Upload a local file to the Contabo server with auth, using curl.exe if available."""
+    global AUTH_TOKEN, AUTH_EMAIL, AUTH_PASSWORD
     upload_url = f"{api_base}/api/upload?filename={urllib.parse.quote(original_name)}"
     file_size = os.path.getsize(local_filepath)
     print(f"  Uploading {file_size / (1024*1024):.1f}MB to server...")
     
-    with open(local_filepath, 'rb') as f:
-        file_data = f.read()
-
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            req = urllib.request.Request(
-                upload_url,
-                data=file_data,
-                headers={
-                    'Content-Type': 'application/octet-stream',
-                    'Authorization': f'Bearer {AUTH_TOKEN}',
-                    'User-Agent': 'SermonCrawler/1.0'
-                },
-                method='POST'
-            )
-            with urllib.request.urlopen(req, context=SSL_CTX, timeout=300) as response:
-                res_data = json.loads(response.read().decode('utf-8'))
-                return res_data.get('url')
-        except urllib.error.HTTPError as he:
-            try:
-                err_body = he.read().decode('utf-8', errors='ignore')
-                print(f"  Upload HTTP error {he.code}: {err_body}")
-            except:
-                print(f"  Upload HTTP error {he.code}: {he.reason}")
-            if attempt < MAX_RETRIES:
-                wait = RETRY_BASE_DELAY * attempt
-                print(f"  Retrying in {wait}s...")
-                time.sleep(wait)
+            # Try native curl.exe / curl first
+            cmd = [
+                'curl.exe',
+                '-sS',
+                '-L',
+                '--max-time', '600',
+                '-H', f'Authorization: Bearer {AUTH_TOKEN}',
+                '-H', 'Content-Type: application/octet-stream',
+                '--data-binary', f'@{local_filepath}',
+                upload_url
+            ]
+            result = subprocess.run(cmd, capture_output=True, timeout=610)
+            if result.returncode == 0:
+                res_body = result.stdout.decode('utf-8', errors='ignore')
+                res_data = json.loads(res_body)
+                if 'url' in res_data:
+                    return res_data['url']
+                elif 'error' in res_data and 'Unauthorized' in res_data['error']:
+                    print("  Token expired or unauthorized. Re-authenticating...")
+                    if _try_login(api_base, AUTH_EMAIL, AUTH_PASSWORD):
+                        continue
+                raise Exception(f"Upload failed: {res_body}")
             else:
-                raise he
+                err_msg = result.stderr.decode('utf-8', errors='ignore').strip()
+                raise Exception(f"curl upload failed with code {result.returncode}: {err_msg}")
         except Exception as e:
+            print(f"  Upload attempt {attempt} failed: {e}")
+            
+            # Check for unauthorized to trigger re-auth
+            if "unauthorized" in str(e).lower() or "401" in str(e):
+                print("  Re-authenticating due to 401/Unauthorized...")
+                _try_login(api_base, AUTH_EMAIL, AUTH_PASSWORD)
+                
             if attempt < MAX_RETRIES:
                 wait = RETRY_BASE_DELAY * attempt
-                print(f"  Upload attempt {attempt} failed: {e}")
                 print(f"  Retrying in {wait}s...")
                 time.sleep(wait)
             else:
-                raise
+                # Fallback to urllib
+                try:
+                    with open(local_filepath, 'rb') as f:
+                        file_data = f.read()
+                    req = urllib.request.Request(
+                        upload_url,
+                        data=file_data,
+                        headers={
+                            'Content-Type': 'application/octet-stream',
+                            'Authorization': f'Bearer {AUTH_TOKEN}',
+                            'User-Agent': 'SermonCrawler/1.0'
+                        },
+                        method='POST'
+                    )
+                    with urllib.request.urlopen(req, context=SSL_CTX, timeout=300) as response:
+                        res_data = json.loads(response.read().decode('utf-8'))
+                        return res_data.get('url')
+                except urllib.error.HTTPError as he:
+                    if he.code == 401:
+                        print("  Re-authenticating due to 401...")
+                        if _try_login(api_base, AUTH_EMAIL, AUTH_PASSWORD):
+                            req = urllib.request.Request(
+                                upload_url,
+                                data=file_data,
+                                headers={
+                                    'Content-Type': 'application/octet-stream',
+                                    'Authorization': f'Bearer {AUTH_TOKEN}',
+                                    'User-Agent': 'SermonCrawler/1.0'
+                                },
+                                method='POST'
+                            )
+                            with urllib.request.urlopen(req, context=SSL_CTX, timeout=300) as response:
+                                res_data = json.loads(response.read().decode('utf-8'))
+                                return res_data.get('url')
+                    raise he
 
 
 def fetch_existing_sermons(api_base):
@@ -681,6 +726,7 @@ def fetch_existing_sermons(api_base):
 
 def save_sermon_to_contabo(api_base, sermon_payload):
     """Save a sermon record to the Contabo server with auth."""
+    global AUTH_TOKEN, AUTH_EMAIL, AUTH_PASSWORD
     sermon_url = f"{api_base}/api/sermons"
     
     for attempt in range(1, MAX_RETRIES + 1):
@@ -697,6 +743,18 @@ def save_sermon_to_contabo(api_base, sermon_payload):
             )
             with urllib.request.urlopen(req, context=SSL_CTX, timeout=30) as response:
                 return response.read().decode('utf-8')
+        except urllib.error.HTTPError as he:
+            if he.code == 401:
+                print("  Token expired or unauthorized while saving. Re-authenticating...")
+                if _try_login(api_base, AUTH_EMAIL, AUTH_PASSWORD):
+                    continue
+            if attempt < MAX_RETRIES:
+                wait = RETRY_BASE_DELAY * attempt
+                print(f"  API attempt {attempt} failed: {he.reason}")
+                print(f"  Retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                raise he
         except Exception as e:
             if attempt < MAX_RETRIES:
                 wait = RETRY_BASE_DELAY * attempt

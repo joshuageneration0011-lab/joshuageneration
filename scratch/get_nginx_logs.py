@@ -8,8 +8,8 @@ def main():
         ssh.connect("84.46.243.59", username="root", password="GgCXXuFM5H40Yj4uv", timeout=30)
         print("SSH Connection established successfully!")
         
-        # Check backend logs
-        cmd = "pm2 logs joshuagen-backend --lines 100 --nostream"
+        # Read Nginx error logs
+        cmd = "tail -n 100 /var/log/nginx/error.log"
         print(f"Executing: {cmd}")
         stdin, stdout, stderr = ssh.exec_command(cmd)
         log_content = stdout.read().decode('utf-8', errors='ignore')
