@@ -116,7 +116,7 @@ async function sendZeptoEmail(toEmail, toName, subject, htmlBody) {
       headers: {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": `Zoho-enczapikey ${token}`
+        "Authorization": token.startsWith("Zoho-enczapikey") ? token : `Zoho-enczapikey ${token}`
       },
       body: JSON.stringify({
         "from": {
