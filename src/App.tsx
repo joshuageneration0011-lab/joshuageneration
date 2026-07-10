@@ -600,7 +600,6 @@ export default function App() {
         />
         <TestimonialsSection />
 
-        <PrayerRequestSection />
         <DonationBanner onGiveClick={navigateToDonate} />
       </main>
       <Footer onNavigate={navigate} />
