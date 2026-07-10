@@ -14,7 +14,6 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
       icon: Crown,
       color: 'from-gold-500 to-amber-600',
       shadow: 'shadow-gold-500/15',
-      suggestedAmounts: { NGN: '₦30,000', USD: '$50', GBP: '£40' },
       features: [
         'Partner Contact Access to Apostle Joshua Iyemifokhae',
         'Personal New Month Prayer Declarations',
@@ -27,7 +26,6 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
       icon: Globe,
       color: 'from-royal-blue-500 to-indigo-600',
       shadow: 'shadow-royal-blue-500/15',
-      suggestedAmounts: { NGN: '₦50,000', USD: '$80', GBP: '£65' },
       features: [
         'Reserved Seating at Apostolic Retreats',
         'Monthly Partner Zoom Prayer Meetings',
@@ -90,16 +88,7 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
 
                   <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-royal-blue-600 transition-colors">{tier.name}</h3>
                   <p className="text-gray-500 text-xs sm:text-sm leading-relaxed mb-6">{tier.description}</p>
-                  
-                  {/* Price info */}
-                  <div className="border-t border-b border-gray-100 py-4 mb-6">
-                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">Suggested Commitment</p>
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-2xl font-bold text-gray-900">{tier.suggestedAmounts.USD}</span>
-                      <span className="text-sm text-gray-400">/ month</span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">Equivalent to: {tier.suggestedAmounts.NGN} or {tier.suggestedAmounts.GBP}</p>
-                  </div>
+                  <div className="h-6" />
 
                   {/* Features */}
                   <ul className="space-y-3">
