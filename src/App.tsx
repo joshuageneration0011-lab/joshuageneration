@@ -59,6 +59,8 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<Page>(() => getPageFromPath());
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => api.isAuthenticated());
+  const [users, setUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState<{ sermons: number; books: number; members: number } | null>(null);
   const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
@@ -152,6 +154,13 @@ export default function App() {
       }
 
       try {
+        const loadedStats = await api.getStats();
+        setStats(loadedStats);
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      }
+
+      try {
         const loadedBooks = await getSavedBooks();
         setBooks(loadedBooks);
       } catch (err) {
@@ -184,6 +193,21 @@ export default function App() {
     fetchData();
   }, []);
 
+  // Fetch users when authenticated
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      const fetchUsers = async () => {
+        try {
+          const loadedUsers = await api.getUsers();
+          setUsers(loadedUsers);
+        } catch (err) {
+          console.error('Failed to load users:', err);
+        }
+      };
+      fetchUsers();
+    }
+  }, [isAdminAuthenticated]);
+
   const handleUpdateRadio = async (url: string, active: boolean) => {
     setMixlrUrl(url);
     setIsRadioActive(active);
@@ -191,6 +215,26 @@ export default function App() {
       await api.saveRadio(url, active);
     } catch (err) {
       console.error('Failed to save radio settings:', err);
+    }
+  };
+
+  const reloadStats = async () => {
+    try {
+      const loadedStats = await api.getStats();
+      setStats(loadedStats);
+    } catch (err) {
+      console.error('Failed to reload stats:', err);
+    }
+  };
+
+  const handleUpdateUsers = async (newUsers: any[]) => {
+    try {
+      await api.saveUsers(newUsers);
+      setUsers(newUsers);
+      await reloadStats();
+    } catch (err) {
+      console.error('Failed to update users:', err);
+      alert('Failed to update users list.');
     }
   };
 
@@ -309,6 +353,7 @@ export default function App() {
               }
             }
             setBooks(newBooks);
+            await reloadStats();
           }}
           sermons={sermons}
           onUpdateSermons={async (newSermons) => {
@@ -337,6 +382,7 @@ export default function App() {
               }
             }
             setSermons(newSermons);
+            await reloadStats();
           }}
           events={events}
           onUpdateEvents={async (newEvents) => {
@@ -369,6 +415,8 @@ export default function App() {
           mixlrUrl={mixlrUrl}
           isRadioActive={isRadioActive}
           onUpdateRadio={handleUpdateRadio}
+          users={users}
+          onUpdateUsers={handleUpdateUsers}
         />
       </Suspense>
     );
@@ -571,7 +619,11 @@ export default function App() {
           onBooksClick={() => navigate('books')}
           onBlogClick={() => navigate('blog')}
         />
-        <StatsSection />
+        <StatsSection
+          sermonsCount={stats?.sermons}
+          booksCount={stats?.books}
+          membersCount={stats?.members}
+        />
         <FeaturedSermons
           sermons={sermons}
           isLoading={isLoadingSermons}

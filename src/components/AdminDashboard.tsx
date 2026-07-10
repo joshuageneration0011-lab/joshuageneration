@@ -94,6 +94,8 @@ interface AdminDashboardProps {
   onUpdateRadio: (url: string, active: boolean) => void;
   events: Event[];
   onUpdateEvents: (events: Event[]) => void;
+  users: any[];
+  onUpdateUsers: (newUsers: any[]) => void;
   onLogout?: () => void;
 }
 
@@ -109,22 +111,14 @@ export default function AdminDashboard({
   onUpdateRadio,
   events,
   onUpdateEvents,
+  users,
+  onUpdateUsers,
   onLogout
 }: AdminDashboardProps) {
   const userRole = api.getRole();
 
-  const [users, setUsers] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('jg_admin_users');
-      return saved ? JSON.parse(saved) : allUsers;
-    } catch (e) {
-      return allUsers;
-    }
-  });
-
   const handleUpdateUsers = (newUsers: any[]) => {
-    setUsers(newUsers);
-    localStorage.setItem('jg_admin_users', JSON.stringify(newUsers));
+    onUpdateUsers(newUsers);
   };
 
   const sidebarItems: { id: AdminTab; label: string; icon: any; badge?: string }[] = [

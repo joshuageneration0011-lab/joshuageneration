@@ -1,14 +1,49 @@
 import { BookOpen, Users, Globe, Tv, Heart } from 'lucide-react';
 
-const statItems = [
-  { icon: Tv,         label: 'Sermons',       value: '1240', suffix: '+',  format: false },
-  { icon: BookOpen,   label: 'Books',         value: '28',   suffix: '',   format: false },
-  { icon: Users,      label: 'Members',       value: '45',   suffix: 'K+', format: false },
-  { icon: Globe,      label: 'Countries',     value: '120',  suffix: '+',  format: false },
-  { icon: Heart,      label: 'Monthly Givers',value: '3',    suffix: 'K+', format: false },
-];
+interface StatsSectionProps {
+  sermonsCount?: number;
+  booksCount?: number;
+  membersCount?: number;
+}
 
-export default function StatsSection() {
+export default function StatsSection({ sermonsCount, booksCount, membersCount }: StatsSectionProps) {
+  const statItems = [
+    { 
+      icon: Tv,         
+      label: 'Sermons',       
+      value: sermonsCount !== undefined ? String(sermonsCount) : '1240', 
+      suffix: sermonsCount !== undefined ? '' : '+',  
+      format: false 
+    },
+    { 
+      icon: BookOpen,   
+      label: 'Books',         
+      value: booksCount !== undefined ? String(booksCount) : '28',   
+      suffix: '',   
+      format: false 
+    },
+    { 
+      icon: Users,      
+      label: 'Members',       
+      value: membersCount !== undefined ? String(membersCount) : '45',   
+      suffix: membersCount !== undefined ? '' : 'K+', 
+      format: false 
+    },
+    { 
+      icon: Globe,      
+      label: 'Countries',     
+      value: '120',  
+      suffix: '+',  
+      format: false 
+    },
+    { 
+      icon: Heart,      
+      label: 'Monthly Givers',
+      value: '3',    
+      suffix: 'K+', 
+      format: false 
+    },
+  ];
   return (
     <section className="relative py-20 bg-[#0a0f1e] overflow-hidden">
       {/* Subtle grid */}

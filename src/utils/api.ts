@@ -291,6 +291,33 @@ export const api = {
     });
     await handleResponse(res, 'Failed to delete event');
     return true;
+  },
+
+  // Users (Admin only)
+  async getUsers(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/api/users`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    await handleResponse(res, 'Failed to fetch users');
+    return res.json();
+  },
+
+  async saveUsers(users: any[]): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/users`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(users)
+    });
+    await handleResponse(res, 'Failed to save users');
+    return true;
+  },
+
+  // Stats (Public)
+  async getStats(): Promise<{ sermons: number; books: number; members: number }> {
+    const res = await fetch(`${API_BASE_URL}/api/stats`);
+    if (!res.ok) throw new Error('Failed to fetch stats');
+    return res.json();
   }
 };
 

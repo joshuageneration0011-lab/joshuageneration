@@ -35,6 +35,7 @@ const CREDENTIALS_FILE = path.join(DATA_DIR, 'credentials.json');
 const DONATIONS_FILE = path.join(DATA_DIR, 'donations.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 
 // In-memory sessions store
@@ -72,6 +73,17 @@ const defaultEvents = [
   { id: '1', title: 'Kingdom Conference 2026', date: '2026-01-20', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson', 'Pastor Sarah Williams'], description: 'A life-changing global conference.', imageUrl: '' },
   { id: '2', title: 'Youth Revival Night', date: '2026-01-15', time: '06:00 PM', location: 'JGen Youth Auditorium', registrations: 450, capacity: 500, status: 'Upcoming', speakers: ['Minister Rachel Grace', 'Youth Pastor Mark'], description: 'Revival, praise, and fire for the youth.', imageUrl: '' },
   { id: '3', title: 'Women of Faith Summit', date: '2026-02-08', time: '10:00 AM', location: 'Grace Cathedral', registrations: 680, capacity: 1000, status: 'Upcoming', speakers: ['Pastor Sarah Williams', 'Minister Rachel Grace'], description: 'Gathering of women of destiny.', imageUrl: '' }
+];
+
+const defaultUsers = [
+  { id: 1, name: 'Emily Watson', email: 'emily@example.com', status: 'active', joined: 'Dec 10, 2025', sermons: 24, donations: 350, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80', role: 'Member' },
+  { id: 2, name: 'Michael Adebayo', email: 'michael@example.com', status: 'active', joined: 'Nov 28, 2025', sermons: 18, donations: 1200, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80', role: 'Partner' },
+  { id: 3, name: 'Sarah Chen', email: 'sarah@example.com', status: 'new', joined: 'Dec 15, 2025', sermons: 3, donations: 0, avatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&q=80', role: 'Member' },
+  { id: 4, name: 'David Kim', email: 'david@example.com', status: 'active', joined: 'Sep 5, 2025', sermons: 42, donations: 2500, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80', role: 'Partner' },
+  { id: 5, name: 'Rachel Grace', email: 'rachel@example.com', status: 'inactive', joined: 'Mar 12, 2025', sermons: 8, donations: 150, avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80', role: 'Minister' },
+  { id: 6, name: 'James O\'Brien', email: 'james@example.com', status: 'active', joined: 'Jan 20, 2025', sermons: 56, donations: 5000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Partner' },
+  { id: 7, name: 'Maria Gonzalez', email: 'maria@example.com', status: 'active', joined: 'Oct 8, 2025', sermons: 15, donations: 800, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80', role: 'Member' },
+  { id: 8, name: 'Apostle Joshua Iyemifokhae', email: 'john@joshuagen.org', status: 'active', joined: 'Jan 1, 2020', sermons: 312, donations: 15000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Admin' }
 ];
 
 // --- File Data Init Helpers ---
@@ -161,6 +173,10 @@ function initLocalData() {
   if (!fs.existsSync(EVENTS_FILE)) {
     fs.writeFileSync(EVENTS_FILE, JSON.stringify(defaultEvents, null, 2), 'utf-8');
     console.log('Initialized local events database.');
+  }
+  if (!fs.existsSync(USERS_FILE)) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2), 'utf-8');
+    console.log('Initialized local users database.');
   }
 }
 
@@ -322,6 +338,32 @@ async function initDb() {
           );
         }
         console.log('Seeded events table.');
+      }
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id BIGINT PRIMARY KEY,
+          name VARCHAR NOT NULL,
+          email VARCHAR NOT NULL,
+          status VARCHAR NOT NULL,
+          joined VARCHAR NOT NULL,
+          sermons INT DEFAULT 0,
+          donations REAL DEFAULT 0,
+          avatar TEXT,
+          role VARCHAR NOT NULL
+        );
+      `);
+
+      const userCheck = await pool.query('SELECT 1 FROM users LIMIT 1');
+      if (userCheck.rowCount === 0) {
+        for (const u of defaultUsers) {
+          await pool.query(
+            `INSERT INTO users (id, name, email, status, joined, sermons, donations, avatar, role)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [u.id, u.name, u.email, u.status, u.joined, u.sermons, u.donations, u.avatar, u.role]
+          );
+        }
+        console.log('Seeded users table.');
       }
 
       // Seed if empty
@@ -876,6 +918,49 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET Stats (Public)
+  if (pathname === '/api/stats' && method === 'GET') {
+    try {
+      let sermonsCount = 0;
+      let booksCount = 0;
+      let membersCount = 0;
+
+      if (pool) {
+        const sermonsRes = await pool.query('SELECT COUNT(*) FROM sermons');
+        sermonsCount = parseInt(sermonsRes.rows[0].count, 10);
+
+        const booksRes = await pool.query('SELECT COUNT(*) FROM books');
+        booksCount = parseInt(booksRes.rows[0].count, 10);
+
+        const usersRes = await pool.query('SELECT COUNT(*) FROM users');
+        membersCount = parseInt(usersRes.rows[0].count, 10);
+      } else {
+        if (fs.existsSync(SERMONS_FILE)) {
+          const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+          sermonsCount = data.length;
+        }
+        if (fs.existsSync(BOOKS_FILE)) {
+          const data = JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf-8'));
+          booksCount = data.length;
+        }
+        if (fs.existsSync(USERS_FILE)) {
+          const data = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+          membersCount = data.length;
+        }
+      }
+
+      sendJson(res, 200, {
+        sermons: sermonsCount,
+        books: booksCount,
+        members: membersCount
+      });
+    } catch (e) {
+      console.error('Failed to retrieve stats:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve stats' });
+    }
+    return;
+  }
+
   // GET Events (Public)
   if (pathname === '/api/events' && method === 'GET') {
     try {
@@ -962,6 +1047,65 @@ const server = http.createServer(async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) {
     sendJson(res, 401, { error: 'Unauthorized admin access' });
+    return;
+  }
+
+  // GET Users (Admin only)
+  if (pathname === '/api/users' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
+        const users = result.rows.map(row => ({
+          id: Number(row.id),
+          name: row.name,
+          email: row.email,
+          status: row.status,
+          joined: row.joined,
+          sermons: row.sermons,
+          donations: row.donations,
+          avatar: row.avatar,
+          role: row.role
+        }));
+        sendJson(res, 200, users);
+      } else {
+        const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+        sendJson(res, 200, users);
+      }
+    } catch (e) {
+      console.error('Failed to retrieve users:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve users' });
+    }
+    return;
+  }
+
+  // POST Users (Admin only)
+  if (pathname === '/api/users' && method === 'POST') {
+    try {
+      const data = await getJsonBody(req);
+      if (Array.isArray(data)) {
+        if (pool) {
+          await pool.query('BEGIN');
+          await pool.query('TRUNCATE TABLE users');
+          for (const u of data) {
+            await pool.query(
+              `INSERT INTO users (id, name, email, status, joined, sermons, donations, avatar, role)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              [u.id, u.name, u.email, u.status, u.joined, u.sermons, u.donations, u.avatar, u.role]
+            );
+          }
+          await pool.query('COMMIT');
+        } else {
+          fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        }
+        sendJson(res, 200, { success: true });
+      } else {
+        sendJson(res, 400, { error: 'Expected users array' });
+      }
+    } catch (e) {
+      if (pool) await pool.query('ROLLBACK');
+      console.error('Failed to save users:', e);
+      sendJson(res, 500, { error: 'Failed to save users' });
+    }
     return;
   }
 
