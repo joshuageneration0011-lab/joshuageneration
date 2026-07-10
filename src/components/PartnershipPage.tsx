@@ -8,7 +8,7 @@ interface PartnershipPageProps {
 }
 
 export default function PartnershipPage({ onBack, onNavigateToDonate }: PartnershipPageProps) {
-  const [selectedTier, setSelectedTier] = useState<string>('Grace Partner');
+  const [selectedTier, setSelectedTier] = useState<string>('Partner with Apostle Joshua Iyemifokhae');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -17,42 +17,29 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
 
   const tiers = [
     {
-      name: 'Grace Partner',
-      description: 'Support day-to-day digital operations and media outreaches.',
-      icon: Users,
-      color: 'from-blue-500 to-royal-blue-600',
-      shadow: 'shadow-blue-500/10',
-      suggestedAmounts: { NGN: '₦10,000', USD: '$20', GBP: '£15' },
-      features: [
-        'Access to partner-only updates',
-        'Monthly digital devotionals',
-        'Special prayer focus listing'
-      ]
-    },
-    {
-      name: 'Prophetic Partner',
-      description: 'Accelerate the global broadcasts, crusades and translations.',
+      name: 'Partner with Apostle Joshua Iyemifokhae',
+      description: 'Support the apostolic calling, prophetic ministry operations, and direct global message broadcasting.',
       icon: Crown,
       color: 'from-gold-500 to-amber-600',
       shadow: 'shadow-gold-500/15',
       suggestedAmounts: { NGN: '₦30,000', USD: '$50', GBP: '£40' },
       features: [
-        'All Grace Partner privileges',
-        'Priority seating at global conferences',
-        'Quarterly visual impact reports'
+        'Direct connection to apostolic covenant prayers',
+        'Special partner updates & counseling alignment options',
+        'Priority invitations & seating at physical events'
       ]
     },
     {
-      name: 'Kingdom General',
-      description: 'Sponsor key missions, local structures and literature prints.',
-      icon: ShieldCheck,
-      color: 'from-purple-600 to-indigo-700',
-      shadow: 'shadow-purple-600/15',
-      suggestedAmounts: { NGN: '₦100,000', USD: '$150', GBP: '£120' },
+      name: 'Partner with the Outreaches',
+      description: 'Fuel physical crusades, local church planting, humanitarian aid, and free books/literature distribution.',
+      icon: Globe,
+      color: 'from-royal-blue-500 to-indigo-600',
+      shadow: 'shadow-royal-blue-500/15',
+      suggestedAmounts: { NGN: '₦50,000', USD: '$80', GBP: '£65' },
       features: [
-        'All Prophetic Partner privileges',
-        'Annual partner roundtable invite',
-        'Direct prophetic alignment & counseling access'
+        'Monthly physical crusade and souls-won reports',
+        'Sponsorship mention in print & digital outreach materials',
+        'Exclusive invitations to roundtable planning panels'
       ]
     }
   ];
@@ -100,7 +87,7 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
         </div>
 
         {/* Tiers Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 max-w-5xl mx-auto gap-8 mb-16">
           {tiers.map((tier) => {
             const Icon = tier.icon;
             const isSelected = selectedTier === tier.name;
