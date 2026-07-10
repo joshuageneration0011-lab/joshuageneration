@@ -16,9 +16,9 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
       shadow: 'shadow-gold-500/15',
       suggestedAmounts: { NGN: '₦30,000', USD: '$50', GBP: '£40' },
       features: [
-        'Direct connection to apostolic covenant prayers',
-        'Special partner updates & counseling alignment options',
-        'Priority invitations & seating at physical events'
+        'Partner Contact Access to Apostle Joshua Iyemifokhae',
+        'Personal New Month Prayer Declarations',
+        'Monthly Private Zoom Prayer Meetings'
       ]
     },
     {
