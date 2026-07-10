@@ -36,6 +36,14 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
     }
   ];
 
+  const handleSelectTier = (tierName: string) => {
+    if (tierName === 'Partner with Apostle Joshua Iyemifokhae') {
+      window.open('https://selar.com/showlove/joshuasgeneration', '_blank', 'noopener,noreferrer');
+    } else {
+      onNavigateToDonate(tierName);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -72,7 +80,7 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
             return (
               <div
                 key={tier.name}
-                onClick={() => onNavigateToDonate(tier.name)}
+                onClick={() => handleSelectTier(tier.name)}
                 className="relative flex flex-col justify-between p-8 rounded-3xl border-2 border-gray-200/80 hover:border-royal-blue-500 hover:ring-4 hover:ring-royal-blue-500/10 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer bg-white hover:scale-[1.02] group"
               >
                 <div>
