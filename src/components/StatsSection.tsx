@@ -1,13 +1,11 @@
-import { BookOpen, Users, Globe, DollarSign, Tv, Heart } from 'lucide-react';
-import { stats } from '@/data/mockData';
+import { BookOpen, Users, Globe, Tv, Heart } from 'lucide-react';
 
 const statItems = [
-  { icon: Tv,         label: 'Sermons',       value: stats.totalSermons,  suffix: '+',  format: false },
-  { icon: BookOpen,   label: 'Books',         value: stats.totalBooks,    suffix: '',   format: false },
-  { icon: Users,      label: 'Members',       value: stats.totalMembers,  suffix: '+',  format: true  },
-  { icon: Globe,      label: 'Countries',     value: stats.totalCountries,suffix: '+',  format: false },
-  { icon: DollarSign, label: 'Raised',        value: `$${(stats.totalDonations / 1000000).toFixed(1)}M`, suffix: '', format: false },
-  { icon: Heart,      label: 'Monthly Givers',value: 3200,                suffix: '+',  format: true  },
+  { icon: Tv,         label: 'Sermons',       value: '1240', suffix: '+',  format: false },
+  { icon: BookOpen,   label: 'Books',         value: '28',   suffix: '',   format: false },
+  { icon: Users,      label: 'Members',       value: '45',   suffix: 'K+', format: false },
+  { icon: Globe,      label: 'Countries',     value: '120',  suffix: '+',  format: false },
+  { icon: Heart,      label: 'Monthly Givers',value: '3',    suffix: 'K+', format: false },
 ];
 
 export default function StatsSection() {
@@ -40,7 +38,7 @@ export default function StatsSection() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 justify-center">
           {statItems.map((item) => (
             <div
               key={item.label}
