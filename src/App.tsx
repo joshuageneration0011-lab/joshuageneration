@@ -58,7 +58,10 @@ const getPageFromPath = (): Page => {
 export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<Page>(() => getPageFromPath());
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => api.isAuthenticated());
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
+    return api.isAuthenticated() && (api.getRole() === 'admin' || api.getRole() === 'superadmin');
+  });
+  const [isUserAuthenticated, setIsUserAuthenticated] = useState(() => api.isAuthenticated());
   const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState<{ sermons: number; books: number; members: number } | null>(null);
   const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null);
@@ -82,6 +85,7 @@ export default function App() {
     };
     const handleUnauthorized = () => {
       setIsAdminAuthenticated(false);
+      setIsUserAuthenticated(false);
       navigate('admin-login');
       alert('Session expired. Please log in again.');
     };
@@ -253,7 +257,15 @@ export default function App() {
 
   const handleAdminLogin = () => {
     setIsAdminAuthenticated(true);
+    setIsUserAuthenticated(true);
     navigate('admin');
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setIsAdminAuthenticated(false);
+    setIsUserAuthenticated(false);
+    navigate('home');
   };
 
   const handleAdminClick = () => {
@@ -297,7 +309,7 @@ export default function App() {
         </div>
       }>
         <AdminDashboard
-          onLogout={() => setIsAdminAuthenticated(false)}
+          onLogout={handleLogout}
           posts={posts}
           onUpdatePosts={async (newPosts) => {
             if (newPosts.length < posts.length) {
@@ -432,6 +444,8 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <SermonsPage
@@ -444,7 +458,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -457,6 +471,8 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <SermonPlayer
@@ -469,7 +485,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -482,6 +498,8 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BooksPage
@@ -493,7 +511,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -506,6 +524,8 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BookReader
@@ -514,7 +534,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -527,6 +547,8 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BlogPage
@@ -538,7 +560,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -551,6 +573,8 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BlogPostReader
@@ -564,7 +588,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -577,12 +601,14 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <PartnershipPage onBack={() => navigate('home')} onNavigateToDonate={navigateToDonate} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -595,12 +621,14 @@ export default function App() {
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <DonatePage onBack={() => navigate('home')} initialCause={donateCause} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
       </div>
     );
   }
@@ -612,6 +640,8 @@ export default function App() {
         onNavigate={navigate}
         onAdminClick={handleAdminClick}
         currentPage={currentPage}
+        isAuthenticated={isUserAuthenticated}
+        onLogoutClick={handleLogout}
       />
       <main>
         <HeroSection 
@@ -656,7 +686,7 @@ export default function App() {
       </main>
       <Footer onNavigate={navigate} />
       <RadioPlayer mixlrUrl={mixlrUrl} isActive={isRadioActive} />
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
     </div>
   );
 }

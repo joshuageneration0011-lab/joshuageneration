@@ -18,9 +18,11 @@ interface NavbarProps {
   onNavigate?: (page: Page) => void;
   onAdminClick?: () => void;
   currentPage?: Page;
+  isAuthenticated?: boolean;
+  onLogoutClick?: () => void;
 }
 
-export default function Navbar({ onLoginClick, onNavigate, onAdminClick, currentPage = 'home' }: NavbarProps) {
+export default function Navbar({ onLoginClick, onNavigate, onAdminClick, currentPage = 'home', isAuthenticated, onLogoutClick }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -170,15 +172,18 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
                 <Heart className="w-5 h-5" />
               </button>
               <button
-                onClick={onLoginClick}
+                onClick={isAuthenticated ? onLogoutClick : onLoginClick}
+                title={isAuthenticated ? 'Log Out' : 'Sign In'}
                 className={cn(
-                  'p-2.5 rounded-xl transition-all duration-200',
+                  'p-2.5 rounded-xl transition-all duration-200 flex items-center gap-1.5',
                   isScrolled || currentPage !== 'home'
                     ? 'text-gray-500 hover:text-royal-blue-600 hover:bg-royal-blue-50'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    : 'text-white/70 hover:text-white hover:bg-white/10',
+                  isAuthenticated && 'text-royal-blue-600 font-semibold'
                 )}
               >
                 <User className="w-5 h-5" />
+                {isAuthenticated && <span className="text-[10px] font-semibold hidden md:inline">Log Out</span>}
               </button>
               <button 
                 onClick={() => onNavigate && onNavigate('donate')}
@@ -242,10 +247,17 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
               <Heart className="w-5 h-5 text-gray-400" />
               Saved
             </button>
-            <button onClick={() => { setIsOpen(false); onLoginClick?.(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50 transition-all duration-200 font-medium">
-              <User className="w-5 h-5 text-gray-400" />
-              Profile
-            </button>
+            {isAuthenticated ? (
+              <button onClick={() => { setIsOpen(false); onLogoutClick?.(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 font-medium w-full">
+                <User className="w-5 h-5 text-red-500" />
+                Log Out
+              </button>
+            ) : (
+              <button onClick={() => { setIsOpen(false); onLoginClick?.(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50 transition-all duration-200 font-medium w-full">
+                <User className="w-5 h-5 text-gray-400" />
+                Sign In
+              </button>
+            )}
             {onAdminClick && (
               <button onClick={() => { setIsOpen(false); onAdminClick(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50 transition-all duration-200 font-medium">
                 <Shield className="w-5 h-5 text-gray-400" />

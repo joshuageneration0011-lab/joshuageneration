@@ -50,6 +50,64 @@ export const api = {
     }
   },
 
+  async registerRequest(name: string, email: string, password: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/register-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to request registration verification.');
+    }
+    return true;
+  },
+
+  async registerVerify(email: string, otp: string): Promise<{ success: boolean; token?: string; role?: string; name?: string; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register-verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        localStorage.setItem('jg_admin_token', data.token);
+        localStorage.setItem('jg_admin_role', data.role || 'member');
+        return { success: true, token: data.token, role: data.role, name: data.name };
+      }
+      return { success: false, error: data.error || 'Verification failed' };
+    } catch (e) {
+      return { success: false, error: 'Cannot connect to server' };
+    }
+  },
+
+  async forgotPasswordRequest(email: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to request password reset.');
+    }
+    return true;
+  },
+
+  async forgotPasswordReset(email: string, otp: string, newPassword: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to reset password.');
+    }
+    return true;
+  },
+
   logout() {
     localStorage.removeItem('jg_admin_token');
     localStorage.removeItem('jg_admin_role');

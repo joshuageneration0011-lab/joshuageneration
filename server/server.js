@@ -69,6 +69,65 @@ function verifyPassword(password, salt, hash) {
   return newHash === hash;
 }
 
+// --- Zepto Mail & OTP Helpers ---
+const pendingRegistrations = new Map();
+const pendingPasswordResets = new Map();
+
+async function sendZeptoEmail(toEmail, toName, subject, htmlBody) {
+  const token = process.env.ZEPTOMAIL_TOKEN;
+  const senderEmail = process.env.ZEPTOMAIL_SENDER_EMAIL || "noreply@joshuagen.org";
+  const senderName = process.env.ZEPTOMAIL_SENDER_NAME || "Joshua Generation";
+
+  if (!token) {
+    console.log(`[ZeptoMail Fallback] No Token found in environment. Logging email content instead:`);
+    console.log(`To: ${toName} <${toEmail}>`);
+    console.log(`Sender: ${senderName} <${senderEmail}>`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Body:\n${htmlBody}`);
+    console.log("-----------------------------------------");
+    return true;
+  }
+
+  try {
+    const response = await fetch("https://api.zeptomail.com/v1.1/email", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": `Zoho-enczapikey ${token}`
+      },
+      body: JSON.stringify({
+        "from": {
+          "address": senderEmail,
+          "name": senderName
+        },
+        "to": [
+          {
+            "email_address": {
+              "address": toEmail,
+              "name": toName || toEmail
+            }
+          }
+        ],
+        "subject": subject,
+        "htmlbody": htmlBody
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[ZeptoMail Error] Failed to send email to ${toEmail}. Status: ${response.status}. Response: ${errText}`);
+      return false;
+    }
+
+    console.log(`[ZeptoMail Success] Email sent successfully to ${toEmail}`);
+    return true;
+  } catch (err) {
+    console.error(`[ZeptoMail Exception] Exception while sending email to ${toEmail}:`, err);
+    return false;
+  }
+}
+
 const defaultEvents = [
   { id: '1', title: 'Kingdom Conference 2026', date: '2026-01-20', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson', 'Pastor Sarah Williams'], description: 'A life-changing global conference.', imageUrl: '' },
   { id: '2', title: 'Youth Revival Night', date: '2026-01-15', time: '06:00 PM', location: 'JGen Youth Auditorium', registrations: 450, capacity: 500, status: 'Upcoming', speakers: ['Minister Rachel Grace', 'Youth Pastor Mark'], description: 'Revival, praise, and fire for the youth.', imageUrl: '' },
@@ -522,6 +581,263 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- PUBLIC ROUTES ---
+
+  // Register Request
+  if (pathname === '/api/auth/register-request' && method === 'POST') {
+    try {
+      const { name, email, password } = await getJsonBody(req);
+      if (!name || !email || !password) {
+        sendJson(res, 400, { error: 'Name, email, and password required' });
+        return;
+      }
+
+      // Check if user already exists
+      let exists = false;
+      if (pool) {
+        const result = await pool.query('SELECT 1 FROM credentials WHERE LOWER(username) = LOWER($1)', [email]);
+        exists = result.rowCount > 0;
+      } else {
+        if (fs.existsSync(CREDENTIALS_FILE)) {
+          const fileData = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
+          if (Array.isArray(fileData)) {
+            exists = fileData.some(c => c.username.toLowerCase() === email.toLowerCase());
+          } else {
+            exists = fileData.username.toLowerCase() === email.toLowerCase();
+          }
+        }
+      }
+
+      if (exists) {
+        sendJson(res, 400, { error: 'An account with this email already exists' });
+        return;
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      pendingRegistrations.set(email.toLowerCase(), {
+        name,
+        password,
+        otp,
+        expiresAt: Date.now() + 10 * 60 * 1000 // 10 mins
+      });
+
+      const subject = "Verify Your Registration - Joshua Generation";
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #1e3a8a;">Welcome to Joshua Generation!</h2>
+          <p>Thank you for registering. Please use the following One-Time Password (OTP) to complete your registration:</p>
+          <div style="font-size: 24px; font-weight: bold; background: #f3f4f6; padding: 15px; text-align: center; border-radius: 8px; letter-spacing: 4px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This code is valid for 10 minutes. If you did not request this, you can safely ignore this email.</p>
+          <br/>
+          <hr style="border: none; border-top: 1px solid #eee;" />
+          <p style="font-size: 12px; color: #666;">Joshua Generation Digital Ministry Platform</p>
+        </div>
+      `;
+
+      await sendZeptoEmail(email, name, subject, htmlBody);
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Register request error:', e);
+      sendJson(res, 500, { error: 'Failed to process registration request' });
+    }
+    return;
+  }
+
+  // Register Verify
+  if (pathname === '/api/auth/register-verify' && method === 'POST') {
+    try {
+      const { email, otp } = await getJsonBody(req);
+      if (!email || !otp) {
+        sendJson(res, 400, { error: 'Email and OTP required' });
+        return;
+      }
+
+      const pending = pendingRegistrations.get(email.toLowerCase());
+      if (!pending || Date.now() > pending.expiresAt) {
+        sendJson(res, 400, { error: 'Verification session expired or invalid' });
+        return;
+      }
+
+      if (pending.otp !== otp) {
+        sendJson(res, 400, { error: 'Invalid verification code' });
+        return;
+      }
+
+      const { salt, hash } = hashPassword(pending.password);
+
+      // Save credentials
+      if (pool) {
+        await pool.query(
+          'INSERT INTO credentials (username, salt, hash, role) VALUES ($1, $2, $3, $4)',
+          [email, salt, hash, 'member']
+        );
+      } else {
+        let credsList = [];
+        if (fs.existsSync(CREDENTIALS_FILE)) {
+          const fileData = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
+          credsList = Array.isArray(fileData) ? fileData : [fileData];
+        }
+        credsList.push({ username: email, salt, hash, role: 'member' });
+        fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(credsList, null, 2), 'utf-8');
+      }
+
+      // Add to users/members list
+      const userId = Date.now();
+      const joinedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const newUser = {
+        id: userId,
+        name: pending.name,
+        email: email,
+        status: 'active',
+        joined: joinedDate,
+        sermons: 0,
+        donations: 0,
+        avatar: '',
+        role: 'Member'
+      };
+
+      if (pool) {
+        await pool.query(
+          `INSERT INTO users (id, name, email, status, joined, sermons, donations, avatar, role)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [newUser.id, newUser.name, newUser.email, newUser.status, newUser.joined, newUser.sermons, newUser.donations, newUser.avatar, newUser.role]
+        );
+      } else {
+        let usersList = [];
+        if (fs.existsSync(USERS_FILE)) {
+          usersList = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+        }
+        usersList.push(newUser);
+        fs.writeFileSync(USERS_FILE, JSON.stringify(usersList, null, 2), 'utf-8');
+      }
+
+      // Generate session token
+      const token = crypto.randomBytes(32).toString('hex');
+      sessions.set(token, {
+        username: email,
+        role: 'member',
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 Hours Session
+      });
+
+      pendingRegistrations.delete(email.toLowerCase());
+      sendJson(res, 200, { success: true, token, role: 'member', name: pending.name });
+    } catch (e) {
+      console.error('Register verify error:', e);
+      sendJson(res, 500, { error: 'Failed to verify registration' });
+    }
+    return;
+  }
+
+  // Forgot Password Request
+  if (pathname === '/api/auth/forgot-password-request' && method === 'POST') {
+    try {
+      const { email } = await getJsonBody(req);
+      if (!email) {
+        sendJson(res, 400, { error: 'Email is required' });
+        return;
+      }
+
+      // Verify email exists
+      let exists = false;
+      if (pool) {
+        const result = await pool.query('SELECT 1 FROM credentials WHERE LOWER(username) = LOWER($1)', [email]);
+        exists = result.rowCount > 0;
+      } else {
+        if (fs.existsSync(CREDENTIALS_FILE)) {
+          const fileData = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
+          if (Array.isArray(fileData)) {
+            exists = fileData.some(c => c.username.toLowerCase() === email.toLowerCase());
+          } else {
+            exists = fileData.username.toLowerCase() === email.toLowerCase();
+          }
+        }
+      }
+
+      if (!exists) {
+        // Return 200 for security to prevent user enumeration
+        sendJson(res, 200, { success: true });
+        return;
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      pendingPasswordResets.set(email.toLowerCase(), {
+        otp,
+        expiresAt: Date.now() + 10 * 60 * 1000 // 10 mins
+      });
+
+      const subject = "Reset Your Password - Joshua Generation";
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #1e3a8a;">Password Reset Request</h2>
+          <p>We received a request to reset your password. Please use the following One-Time Password (OTP) to reset your password:</p>
+          <div style="font-size: 24px; font-weight: bold; background: #f3f4f6; padding: 15px; text-align: center; border-radius: 8px; letter-spacing: 4px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This code is valid for 10 minutes. If you did not request a password reset, you can safely ignore this email.</p>
+          <br/>
+          <hr style="border: none; border-top: 1px solid #eee;" />
+          <p style="font-size: 12px; color: #666;">Joshua Generation Digital Ministry Platform</p>
+        </div>
+      `;
+
+      await sendZeptoEmail(email, email, subject, htmlBody);
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Forgot password request error:', e);
+      sendJson(res, 500, { error: 'Failed to process password reset request' });
+    }
+    return;
+  }
+
+  // Forgot Password Reset
+  if (pathname === '/api/auth/forgot-password-reset' && method === 'POST') {
+    try {
+      const { email, otp, newPassword } = await getJsonBody(req);
+      if (!email || !otp || !newPassword) {
+        sendJson(res, 400, { error: 'Email, OTP, and new password required' });
+        return;
+      }
+
+      const pending = pendingPasswordResets.get(email.toLowerCase());
+      if (!pending || Date.now() > pending.expiresAt) {
+        sendJson(res, 400, { error: 'Verification session expired or invalid' });
+        return;
+      }
+
+      if (pending.otp !== otp) {
+        sendJson(res, 400, { error: 'Invalid verification code' });
+        return;
+      }
+
+      const { salt, hash } = hashPassword(newPassword);
+
+      if (pool) {
+        await pool.query(
+          'UPDATE credentials SET salt = $1, hash = $2 WHERE LOWER(username) = LOWER($3)',
+          [salt, hash, email]
+        );
+      } else {
+        if (fs.existsSync(CREDENTIALS_FILE)) {
+          const fileData = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
+          const credsList = Array.isArray(fileData) ? fileData : [fileData];
+          const userIndex = credsList.findIndex(c => c.username.toLowerCase() === email.toLowerCase());
+          if (userIndex !== -1) {
+            credsList[userIndex].salt = salt;
+            credsList[userIndex].hash = hash;
+            fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(credsList, null, 2), 'utf-8');
+          }
+        }
+      }
+
+      pendingPasswordResets.delete(email.toLowerCase());
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Forgot password reset error:', e);
+      sendJson(res, 500, { error: 'Failed to reset password' });
+    }
+    return;
+  }
 
   // Admin Login
   if (pathname === '/api/auth/login' && method === 'POST') {
