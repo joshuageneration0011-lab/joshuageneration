@@ -10,7 +10,7 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
   const tiers = [
     {
       name: 'Partner with Apostle Joshua Iyemifokhae',
-      description: 'Support the apostolic calling, prophetic ministry operations, and direct global message broadcasting.',
+      description: 'Partner with Apostle Joshua Iyemifokhae as he devotes himself to preaching the Gospel, teaching God’s Word, and fulfilling God’s mandate to reach lives around the world.',
       icon: Crown,
       color: 'from-gold-500 to-amber-600',
       shadow: 'shadow-gold-500/15',
@@ -23,7 +23,7 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
     },
     {
       name: 'Partner with the Outreaches',
-      description: 'Fuel physical crusades, local church planting, humanitarian aid, and free books/literature distribution.',
+      description: 'Support evangelistic missions and Gospel campaigns all over the world.',
       icon: Globe,
       color: 'from-royal-blue-500 to-indigo-600',
       shadow: 'shadow-royal-blue-500/15',
