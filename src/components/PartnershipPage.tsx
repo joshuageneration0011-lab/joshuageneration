@@ -29,9 +29,9 @@ export default function PartnershipPage({ onBack, onNavigateToDonate }: Partners
       shadow: 'shadow-royal-blue-500/15',
       suggestedAmounts: { NGN: '₦50,000', USD: '$80', GBP: '£65' },
       features: [
-        'Monthly physical crusade and souls-won reports',
-        'Sponsorship mention in print & digital outreach materials',
-        'Exclusive invitations to roundtable planning panels'
+        'Reserved Seating at Apostolic Retreats',
+        'Monthly Partner Zoom Prayer Meetings',
+        'New month prayer declarations'
       ]
     }
   ];
