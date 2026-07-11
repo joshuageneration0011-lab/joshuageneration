@@ -6,10 +6,41 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Set category or speaker default
 const DEFAULT_SPEAKER = 'Apostle Joshua Iyemifokhae';
 const DEFAULT_CATEGORY = 'Faith';
-const DEFAULT_THUMBNAIL = 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80';
+
+// Curated pool of high-quality worship/sermon-themed images (used as fallback)
+const SERMON_THUMBNAILS = [
+  'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=800&q=80',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
+  'https://images.unsplash.com/photo-1476611338391-6f395a0dd82e?w=800&q=80',
+  'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&q=80',
+  'https://images.unsplash.com/photo-1536599018102-9f803c140fc1?w=800&q=80',
+  'https://images.unsplash.com/photo-1532635248-cdd3d399f56b?w=800&q=80',
+  'https://images.unsplash.com/photo-1463594373317-c40da600a0e1?w=800&q=80',
+  'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=800&q=80',
+  'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=800&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+  'https://images.unsplash.com/photo-1476820865390-c52aeebb9891?w=800&q=80',
+  'https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?w=800&q=80',
+  'https://images.unsplash.com/photo-1418985991508-e47386d96a71?w=800&q=80',
+  'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800&q=80',
+  'https://images.unsplash.com/photo-1504386106331-3e4e71712b38?w=800&q=80',
+  'https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?w=800&q=80',
+  'https://images.unsplash.com/photo-1428515613728-6b4607e44363?w=800&q=80',
+  'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=800&q=80',
+  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80',
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80',
+];
+
+function pickThumbnail(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash) + id.charCodeAt(i);
+    hash |= 0;
+  }
+  return SERMON_THUMBNAILS[Math.abs(hash) % SERMON_THUMBNAILS.length];
+}
 
 // Helper to load environment variables from server/.env
 function loadEnv() {
@@ -114,8 +145,8 @@ async function restoreSermons() {
         continue;
       }
       
-      // Get featured image URL from the embedded data
-      let thumbnail = DEFAULT_THUMBNAIL;
+      // Get featured image URL from the embedded data, fall back to curated pool
+      let thumbnail = pickThumbnail(uniqueId);
       const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0];
       if (featuredMedia && featuredMedia.source_url) {
         thumbnail = featuredMedia.source_url;
