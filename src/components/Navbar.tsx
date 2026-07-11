@@ -10,7 +10,7 @@ const navLinks = [
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
   { name: 'Partnership', href: '/partnership', icon: Heart, page: 'partnership' as Page },
   { name: 'Events', href: '#events', icon: Gift },
-  { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
+  // { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
 ];
 
 interface NavbarProps {
