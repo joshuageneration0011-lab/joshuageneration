@@ -633,7 +633,14 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     setEditingUser(user);
     setName(user.name);
     setEmail(user.email);
-    setRole(user.role);
+    
+    // Map legacy roles to the new 3-tier system
+    let mappedRole = user.role;
+    if (['Member', 'Partner', 'Minister'].includes(mappedRole)) {
+      mappedRole = 'User';
+    }
+    setRole(mappedRole);
+    
     setStatus(user.status);
     setJoined(user.joined);
     setSermons(user.sermons);
@@ -752,11 +759,10 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                        user.role === 'Superadmin' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100/50' :
                         user.role === 'Admin' ? 'bg-gold-50 text-gold-700 border-gold-100/50' :
-                        user.role === 'Partner' ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50' :
-                        user.role === 'Minister' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100/50' :
                         'bg-gray-50 text-gray-605 border-gray-100/50'
-                      )}>{user.role}</span>
+                      )}>{['Member', 'Partner', 'Minister'].includes(user.role) ? 'User' : user.role}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn('flex items-center gap-1 text-xs font-medium',
