@@ -637,7 +637,7 @@ const server = http.createServer(async (req, res) => {
       if (targetPath.startsWith('/sermon/')) {
         const id = targetPath.split('/').pop();
         if (pool) {
-          const result = await pool.query('SELECT title, description, image_url FROM sermons WHERE id = $1', [id]);
+          const result = await pool.query('SELECT title, description, thumbnail as image_url FROM sermons WHERE id = $1', [id]);
           if (result.rows.length > 0) {
             title = `${result.rows[0].title} - Joshua Generation`;
             description = result.rows[0].description || description;
