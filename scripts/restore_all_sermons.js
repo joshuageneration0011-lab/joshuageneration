@@ -49,15 +49,21 @@ const pool = new pg.Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Helper to strip HTML tags for descriptions
+// Helper to strip HTML tags and decode HTML entities
 function cleanHtml(html) {
   if (!html) return '';
   return html
     .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&#038;/g, '&')
+    .replace(/&amp;/g, '&')
     .replace(/&nbsp;/g, ' ')
     .replace(/&#8217;/g, "'")
-    .replace(/&#8211;/g, "–")
-    .replace(/&#8230;/g, "...")
+    .replace(/&#8211;/g, '–')
+    .replace(/&#8230;/g, '...')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
     .replace(/\s+/g, ' ')
     .trim();
 }
