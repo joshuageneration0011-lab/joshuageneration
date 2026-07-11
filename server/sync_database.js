@@ -33,11 +33,6 @@ async function syncData() {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
             [p.id, p.title, p.author, p.date, p.readTime || p.read_time, p.excerpt, p.imageUrl || p.image_url, p.category, p.content, p.seoTitle || p.seo_title, p.seoDescription || p.seo_description, p.seoKeywords || p.seo_keywords, p.slug]
           );
-        } else {
-          await pool.query(
-            `UPDATE blog_posts SET title=$1, author=$2, date=$3, read_time=$4, excerpt=$5, image_url=$6, category=$7, content=$8, seo_title=$9, seo_description=$10, seo_keywords=$11, slug=$12 WHERE id=$13`,
-            [p.title, p.author, p.date, p.readTime || p.read_time, p.excerpt, p.imageUrl || p.image_url, p.category, p.content, p.seoTitle || p.seo_title, p.seoDescription || p.seo_description, p.seoKeywords || p.seo_keywords, p.slug, p.id]
-          );
         }
       }
       console.log('Blog posts synchronized.');
@@ -59,11 +54,6 @@ async function syncData() {
             `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
             [s.id, s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl || s.video_url, s.audioUrl || s.audio_url]
-          );
-        } else {
-          await pool.query(
-            `UPDATE sermons SET title=$1, speaker=$2, duration=$3, thumbnail=$4, views=$5, downloads=$6, date=$7, description=$8, category=$9, video_url=$10, audio_url=$11 WHERE id=$12`,
-            [s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl || s.video_url, s.audioUrl || s.audio_url, s.id]
           );
         }
       }
@@ -87,11 +77,6 @@ async function syncData() {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
             [b.id, b.title, b.author, b.coverUrl || b.cover_url, b.description, b.category, b.downloadUrl || b.download_url, b.rating || 4.8, b.amazonUrl || b.amazon_url || '', b.selarUrl || b.selar_url || '', b.pages || 150, JSON.stringify(b.chapters || [])]
           );
-        } else {
-          await pool.query(
-            `UPDATE books SET title=$1, author=$2, cover_url=$3, description=$4, category=$5, download_url=$6, rating=$7, amazon_url=$8, selar_url=$9, pages=$10, chapters=$11 WHERE id=$12`,
-            [b.title, b.author, b.coverUrl || b.cover_url, b.description, b.category, b.downloadUrl || b.download_url, b.rating || 4.8, b.amazonUrl || b.amazon_url || '', b.selarUrl || b.selar_url || '', b.pages || 150, JSON.stringify(b.chapters || []), b.id]
-          );
         }
       }
       console.log('Books synchronized.');
@@ -113,11 +98,6 @@ async function syncData() {
             `INSERT INTO events (id, title, date, time, location, description, image_url, type, is_featured, registration_link)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
             [ev.id, ev.title, ev.date, ev.time, ev.location, ev.description, ev.imageUrl || ev.image_url, ev.type, ev.isFeatured || ev.is_featured || false, ev.registrationLink || ev.registration_link || '']
-          );
-        } else {
-          await pool.query(
-            `UPDATE events SET title=$1, date=$2, time=$3, location=$4, description=$5, image_url=$6, type=$7, is_featured=$8, registration_link=$9 WHERE id=$10`,
-            [ev.title, ev.date, ev.time, ev.location, ev.description, ev.imageUrl || ev.image_url, ev.type, ev.isFeatured || ev.is_featured || false, ev.registrationLink || ev.registration_link || '', ev.id]
           );
         }
       }
