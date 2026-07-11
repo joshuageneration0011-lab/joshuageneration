@@ -12,10 +12,11 @@ echo "Building frontend..."
 npm install
 npm run build
 
-# Install server dependencies and restart backend process
-echo "Restarting backend..."
+# Install server dependencies, sync database, and restart backend process
+echo "Setting up backend..."
 cd server
 npm install
+node sync_database.js
 pm2 restart joshuagen-backend --update-env
 
 # Copy Nginx config and reload Nginx
