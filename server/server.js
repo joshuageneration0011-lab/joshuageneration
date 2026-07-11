@@ -634,6 +634,14 @@ const server = http.createServer(async (req, res) => {
       let description = 'A digital ministry platform dedicated to raising a generation of believers who know God, walk in purpose, and transform their world.';
       let imageUrl = 'https://joshuasgeneration.com/assets/favicon.ico';
 
+      // Helper to ensure URL is absolute
+      const makeAbsolute = (url) => {
+        if (!url) return url;
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('/')) return `https://joshuasgeneration.com${url}`;
+        return `https://joshuasgeneration.com/${url}`;
+      };
+
       if (targetPath.startsWith('/sermon/')) {
         const id = targetPath.split('/').pop();
         if (pool) {
@@ -641,7 +649,7 @@ const server = http.createServer(async (req, res) => {
           if (result.rows.length > 0) {
             title = `${result.rows[0].title} - Joshua Generation`;
             description = result.rows[0].description || description;
-            imageUrl = result.rows[0].image_url || imageUrl;
+            imageUrl = makeAbsolute(result.rows[0].image_url) || imageUrl;
           }
         }
       } else if (targetPath.startsWith('/blog/')) {
@@ -651,7 +659,7 @@ const server = http.createServer(async (req, res) => {
           if (result.rows.length > 0) {
             title = `${result.rows[0].title} - Joshua Generation Blog`;
             description = result.rows[0].description || description;
-            imageUrl = result.rows[0].image_url || imageUrl;
+            imageUrl = makeAbsolute(result.rows[0].image_url) || imageUrl;
           }
         }
       } else if (targetPath.startsWith('/books/')) {
@@ -661,7 +669,7 @@ const server = http.createServer(async (req, res) => {
           if (result.rows.length > 0) {
             title = `${result.rows[0].title} - Joshua Generation Books`;
             description = result.rows[0].description || description;
-            imageUrl = result.rows[0].image_url || imageUrl;
+            imageUrl = makeAbsolute(result.rows[0].image_url) || imageUrl;
           }
         }
       }
