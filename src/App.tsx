@@ -43,11 +43,14 @@ const PageLoader = () => (
 );
 
 
-export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate' | 'partnership' | 'podcast';
+export type Page = string;
 
 const getPageFromPath = (): Page => {
   const path = window.location.pathname.replace(/^\//, '') as Page;
-  const validPages: Page[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast'];
+  if (path.startsWith('blog/')) return 'blog-details';
+  if (path.startsWith('sermon/')) return 'sermon-player';
+  if (path.startsWith('books/')) return 'book-details';
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast'];
   if (validPages.includes(path)) {
     return path;
   }
@@ -139,14 +142,38 @@ export default function App() {
 
   // Redirect detail views to list views if reloaded with empty state
   useEffect(() => {
-    if (currentPage === 'sermon-player' && !selectedSermon) {
+    if (currentPage === 'sermon-player' && !selectedSermon && !window.location.pathname.startsWith('/sermon/')) {
       navigate('sermons');
-    } else if (currentPage === 'book-details' && !selectedBook) {
+    } else if (currentPage === 'book-details' && !selectedBook && !window.location.pathname.startsWith('/books/')) {
       navigate('books');
-    } else if (currentPage === 'blog-details' && !selectedPost) {
+    } else if (currentPage === 'blog-details' && !selectedPost && !window.location.pathname.startsWith('/blog/')) {
       navigate('blog');
     }
   }, [currentPage, selectedSermon, selectedBook, selectedPost]);
+
+  // Handle shared link initial load
+  useEffect(() => {
+    const path = window.location.pathname.replace(/^\//, '');
+    if (path.startsWith('blog/')) {
+      const id = path.split('/')[1];
+      getSavedBlogPosts().then(posts => {
+        const post = posts.find(p => p.id === id);
+        if (post) setSelectedPost(post);
+      });
+    } else if (path.startsWith('sermon/')) {
+      const id = path.split('/')[1];
+      getSavedSermons().then(sermons => {
+        const sermon = sermons.find(s => s.id === id);
+        if (sermon) setSelectedSermon(sermon);
+      });
+    } else if (path.startsWith('books/')) {
+      const id = path.split('/')[1];
+      getSavedBooks().then(books => {
+        const book = books.find(b => b.id === id);
+        if (book) setSelectedBook(book);
+      });
+    }
+  }, []);
 
   // Fetch initial data from Backend
   useEffect(() => {
@@ -244,9 +271,12 @@ export default function App() {
     }
   };
 
-  const navigate = (page: Page) => {
+  const navigate = (page: Page, id?: string) => {
     console.log('[Routing] Navigating to page:', page);
-    const path = page === 'home' ? '/' : `/${page}`;
+    let path = page === 'home' ? '/' : `/${page}`;
+    if (page === 'blog-details' && id) path = `/blog/${id}`;
+    if (page === 'sermon-player' && id) path = `/sermon/${id}`;
+    if (page === 'book-details' && id) path = `/books/${id}`;
     window.history.pushState(null, '', path);
     setCurrentPage(page);
     window.scrollTo(0, 0);
@@ -455,7 +485,7 @@ export default function App() {
             isLoading={isLoadingSermons}
             onSermonSelect={(sermon) => {
               setSelectedSermon(sermon);
-              navigate('sermon-player');
+              navigate('sermon-player', sermon.id);
             }}
           />
         </Suspense>
@@ -508,7 +538,7 @@ export default function App() {
             books={books}
             onBookSelect={(book) => {
               setSelectedBook(book);
-              navigate('book-details');
+              navigate('book-details', book.id);
             }}
           />
         </Suspense>
@@ -557,7 +587,7 @@ export default function App() {
             posts={posts}
             onPostSelect={(post) => {
               setSelectedPost(post);
-              navigate('blog-details');
+              navigate('blog-details', post.id);
             }}
           />
         </Suspense>
@@ -566,6 +596,10 @@ export default function App() {
       </div>
     );
   }
+
+  if (currentPage === 'blog-details' && !selectedPost) return <PageLoader />;
+  if (currentPage === 'sermon-player' && !selectedSermon) return <PageLoader />;
+  if (currentPage === 'book-details' && !selectedBook) return <PageLoader />;
 
   if (currentPage === 'blog-details' && selectedPost) {
     return (
@@ -681,7 +715,7 @@ export default function App() {
           isLoading={isLoadingSermons}
           onSermonSelect={(sermon) => {
             setSelectedSermon(sermon);
-            navigate('sermon-player');
+            navigate('sermon-player', sermon.id);
           }}
           onViewAll={() => navigate('sermons')}
         />
@@ -689,7 +723,7 @@ export default function App() {
           books={books}
           onBookSelect={(book) => {
             setSelectedBook(book);
-            navigate('book-details');
+            navigate('book-details', book.id);
           }}
           onViewAll={() => navigate('books')}
         />
@@ -698,7 +732,7 @@ export default function App() {
           posts={posts}
           onPostSelect={(post) => {
             setSelectedPost(post);
-            navigate('blog-details');
+            navigate('blog-details', post.id);
           }}
           onViewAll={() => navigate('blog')}
         />
