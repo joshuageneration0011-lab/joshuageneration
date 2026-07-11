@@ -62,16 +62,16 @@ export default function Footer({ onNavigate }: FooterProps) {
 
   return (
     <footer className="relative mt-24">
-      {/* Background with Royal Blue Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-royal-blue-900 to-slate-950 pointer-events-none -z-10" />
-      
-      {/* Decorative Blur Orbs */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-royal-blue-600/20 rounded-full blur-[100px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gold-600/10 rounded-full blur-[100px] pointer-events-none -z-10" />
+      {/* Background Container (overflow hidden so orbs don't spill out, but doesn't clip the newsletter card above) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-royal-blue-900 to-slate-950 overflow-hidden rounded-t-[2.5rem]">
+        {/* Decorative Blur Orbs */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-royal-blue-600/20 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gold-600/10 rounded-full blur-[100px] pointer-events-none" />
+      </div>
 
       {/* Floating Newsletter Card */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative -mt-20 mb-16 z-10">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 sm:p-12 shadow-2xl shadow-royal-blue-900/50 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="bg-royal-blue-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-12 shadow-2xl shadow-royal-blue-900/50 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex-1 text-center md:text-left">
             <h3 className="text-2xl font-bold text-white mb-2">Stay Connected</h3>
             <p className="text-royal-blue-100 text-sm">
