@@ -157,13 +157,13 @@ const defaultEvents = [
 ];
 
 const defaultUsers = [
-  { id: 1, name: 'Emily Watson', email: 'emily@example.com', status: 'active', joined: 'Dec 10, 2025', sermons: 24, donations: 350, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80', role: 'Member' },
+  { id: 1, name: 'Emily Watson', email: 'emily@example.com', status: 'active', joined: 'Dec 10, 2025', sermons: 24, donations: 350, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80', role: 'User' },
   { id: 2, name: 'Michael Adebayo', email: 'michael@example.com', status: 'active', joined: 'Nov 28, 2025', sermons: 18, donations: 1200, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80', role: 'Partner' },
-  { id: 3, name: 'Sarah Chen', email: 'sarah@example.com', status: 'new', joined: 'Dec 15, 2025', sermons: 3, donations: 0, avatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&q=80', role: 'Member' },
+  { id: 3, name: 'Sarah Chen', email: 'sarah@example.com', status: 'new', joined: 'Dec 15, 2025', sermons: 3, donations: 0, avatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&q=80', role: 'User' },
   { id: 4, name: 'David Kim', email: 'david@example.com', status: 'active', joined: 'Sep 5, 2025', sermons: 42, donations: 2500, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80', role: 'Partner' },
   { id: 5, name: 'Rachel Grace', email: 'rachel@example.com', status: 'inactive', joined: 'Mar 12, 2025', sermons: 8, donations: 150, avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80', role: 'Minister' },
   { id: 6, name: 'James O\'Brien', email: 'james@example.com', status: 'active', joined: 'Jan 20, 2025', sermons: 56, donations: 5000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Partner' },
-  { id: 7, name: 'Maria Gonzalez', email: 'maria@example.com', status: 'active', joined: 'Oct 8, 2025', sermons: 15, donations: 800, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80', role: 'Member' },
+  { id: 7, name: 'Maria Gonzalez', email: 'maria@example.com', status: 'active', joined: 'Oct 8, 2025', sermons: 15, donations: 800, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80', role: 'User' },
   { id: 8, name: 'Apostle Joshua Iyemifokhae', email: 'john@joshuagen.org', status: 'active', joined: 'Jan 1, 2020', sermons: 312, donations: 15000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Admin' }
 ];
 
@@ -723,7 +723,7 @@ const server = http.createServer(async (req, res) => {
         sermons: 0,
         donations: 0,
         avatar: '',
-        role: 'Member'
+        role: 'User'
       };
 
       if (pool) {

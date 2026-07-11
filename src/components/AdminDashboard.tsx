@@ -590,7 +590,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
   // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'Member' | 'Partner' | 'Minister' | 'Admin' | 'Superadmin'>('Member');
+  const [role, setRole] = useState<'User' | 'Admin' | 'Superadmin'>('User');
   const [status, setStatus] = useState<'active' | 'new' | 'inactive'>('new');
   const [joined, setJoined] = useState('');
   const [sermons, setSermons] = useState<number>(0);
@@ -620,7 +620,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     setEditingUser(null);
     setName('');
     setEmail('');
-    setRole('Member');
+    setRole('User');
     setStatus('new');
     setJoined(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
     setSermons(0);
@@ -888,9 +888,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                     disabled={userRole !== 'superadmin'}
                     className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <option value="Member">Member</option>
-                    <option value="Partner">Partner</option>
-                    <option value="Minister">Minister</option>
+                    <option value="User">User</option>
                     <option value="Admin">Admin</option>
                     <option value="Superadmin">Superadmin</option>
                   </select>
