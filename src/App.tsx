@@ -16,6 +16,7 @@ import TestimonialsSection from '@/components/TestimonialsSection';
 import StatsSection from '@/components/StatsSection';
 
 import Footer from '@/components/Footer';
+import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
 import LoginModal from '@/components/LoginModal';
 import RadioPlayer from '@/components/RadioPlayer';
 
@@ -706,6 +707,7 @@ export default function App() {
         <DonationBanner onGiveClick={navigateToDonate} />
       </main>
       <Footer onNavigate={navigate} />
+      <PushNotificationPrompt />
       <RadioPlayer mixlrUrl={mixlrUrl} isActive={isRadioActive} />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
     </div>

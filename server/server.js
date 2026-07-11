@@ -3,6 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import webpush from 'web-push';
+
+const vapidPublicKey = 'BJBaNfrwFP_ZX_Awp6_rgOoWJt42KKagStsZfInoih_gZyK7dDDogJA_2cm0JCNDY0erJ7g7_WRr8Xe3m_wZjls';
+const vapidPrivateKey = 'aKHYYiUWorSmhB8bGJc8lTlBDeP-1bgOd1QHU-MMzxo';
+webpush.setVapidDetails('mailto:hello@joshuagen.org', vapidPublicKey, vapidPrivateKey);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -405,7 +410,10 @@ async function initDb() {
           speakers JSONB DEFAULT '[]'::jsonb,
           registrations INT DEFAULT 0,
           capacity INT DEFAULT 1000,
-          status VARCHAR DEFAULT 'Upcoming'
+          status VARCHAR DEFAULT 'Upcoming',
+          type VARCHAR DEFAULT 'Service',
+          is_featured BOOLEAN DEFAULT false,
+          registration_link TEXT
         );
       `);
 
@@ -420,6 +428,14 @@ async function initDb() {
         }
         console.log('Seeded events table.');
       }
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+          endpoint VARCHAR PRIMARY KEY,
+          keys JSONB NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -602,7 +618,103 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // --- SEO DYNAMIC OPENGRAPH HANDLER ---
+  if (pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
+    const targetPath = pathname;
+    try {
+      const indexPath = path.join(__dirname, '../dist/index.html');
+      if (!fs.existsSync(indexPath)) {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+      }
+      let html = fs.readFileSync(indexPath, 'utf-8');
+      
+      let title = 'Joshua Generation';
+      let description = 'A digital ministry platform dedicated to raising a generation of believers who know God, walk in purpose, and transform their world.';
+      let imageUrl = 'https://joshuasgeneration.com/assets/favicon.ico';
+
+      if (targetPath.startsWith('/sermon/')) {
+        const id = targetPath.split('/').pop();
+        if (pool) {
+          const result = await pool.query('SELECT title, description, image_url FROM sermons WHERE id = $1', [id]);
+          if (result.rows.length > 0) {
+            title = `${result.rows[0].title} - Joshua Generation`;
+            description = result.rows[0].description || description;
+            imageUrl = result.rows[0].image_url || imageUrl;
+          }
+        }
+      } else if (targetPath.startsWith('/blog/')) {
+        const id = targetPath.split('/').pop();
+        if (pool) {
+          const result = await pool.query('SELECT title, excerpt as description, image_url FROM blog_posts WHERE id = $1', [id]);
+          if (result.rows.length > 0) {
+            title = `${result.rows[0].title} - Joshua Generation Blog`;
+            description = result.rows[0].description || description;
+            imageUrl = result.rows[0].image_url || imageUrl;
+          }
+        }
+      } else if (targetPath.startsWith('/books/')) {
+        const id = targetPath.split('/').pop();
+        if (pool) {
+          const result = await pool.query('SELECT title, description, cover_url as image_url FROM books WHERE id = $1', [id]);
+          if (result.rows.length > 0) {
+            title = `${result.rows[0].title} - Joshua Generation Books`;
+            description = result.rows[0].description || description;
+            imageUrl = result.rows[0].image_url || imageUrl;
+          }
+        }
+      }
+
+      html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
+      const ogTags = `
+        <meta property="og:title" content="${title.replace(/"/g, '&quot;')}">
+        <meta property="og:description" content="${description.replace(/"/g, '&quot;')}">
+        <meta property="og:image" content="${imageUrl}">
+        <meta property="og:type" content="website">
+        <meta name="twitter:card" content="summary_large_image">
+      `;
+      html = html.replace('</head>', `${ogTags}</head>`);
+      
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    } catch (err) {
+      console.error('SEO Error:', err);
+      res.writeHead(500);
+      res.end('Server Error');
+    }
+    return;
+  }
+
   // --- PUBLIC ROUTES ---
+
+  // Push Notification Public Key
+  if (pathname === '/api/push/public-key' && method === 'GET') {
+    sendJson(res, 200, { publicKey: vapidPublicKey });
+    return;
+  }
+
+  // Push Notification Subscribe
+  if (pathname === '/api/push/subscribe' && method === 'POST') {
+    try {
+      const subscription = await getJsonBody(req);
+      if (!subscription || !subscription.endpoint) {
+        sendJson(res, 400, { error: 'Invalid subscription object' });
+        return;
+      }
+      if (pool) {
+        await pool.query(
+          'INSERT INTO push_subscriptions (endpoint, keys) VALUES ($1, $2) ON CONFLICT (endpoint) DO UPDATE SET keys = EXCLUDED.keys',
+          [subscription.endpoint, JSON.stringify(subscription.keys || {})]
+        );
+      }
+      sendJson(res, 201, { message: 'Subscribed successfully' });
+    } catch (err) {
+      console.error('Push Subscribe Error:', err);
+      sendJson(res, 500, { error: 'Failed to subscribe' });
+    }
+    return;
+  }
 
   // Register Request
   if (pathname === '/api/auth/register-request' && method === 'POST') {

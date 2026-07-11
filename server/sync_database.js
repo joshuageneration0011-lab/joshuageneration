@@ -3,6 +3,11 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import path from 'path';
 import { fileURLToPath } from 'url';
+import webpush from 'web-push';
+
+const vapidPublicKey = 'BJBaNfrwFP_ZX_Awp6_rgOoWJt42KKagStsZfInoih_gZyK7dDDogJA_2cm0JCNDY0erJ7g7_WRr8Xe3m_wZjls';
+const vapidPrivateKey = 'aKHYYiUWorSmhB8bGJc8lTlBDeP-1bgOd1QHU-MMzxo';
+webpush.setVapidDetails('mailto:hello@joshuagen.org', vapidPublicKey, vapidPrivateKey);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,6 +15,28 @@ const __dirname = path.dirname(__filename);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
+
+async function sendPushNotification(title, body, url) {
+  try {
+    const subs = await pool.query('SELECT endpoint, keys FROM push_subscriptions');
+    if (subs.rowCount === 0) return;
+    
+    console.log(`Broadcasting push notification to ${subs.rowCount} subscribers...`);
+    const payload = JSON.stringify({ title, body, url });
+    
+    for (const sub of subs.rows) {
+      try {
+        await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to send push notification:', err);
+  }
+}
 
 async function syncData() {
   if (!process.env.DATABASE_URL) {
@@ -44,6 +71,7 @@ async function syncData() {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
             [p.id, p.title, p.author, p.date, p.readTime || p.read_time, p.excerpt, p.imageUrl || p.image_url, p.category, p.content, p.seoTitle || p.seo_title, p.seoDescription || p.seo_description, p.seoKeywords || p.seo_keywords, p.slug]
           );
+          await sendPushNotification('New Blog Post', p.title, `https://joshuasgeneration.com/blog/${p.id}`);
         } else {
           await pool.query(
             `UPDATE blog_posts SET title=$1, author=$2, date=$3, read_time=$4, excerpt=$5, image_url=$6, category=$7, content=$8, seo_title=$9, seo_description=$10, seo_keywords=$11, slug=$12 WHERE id=$13`,
@@ -81,6 +109,7 @@ async function syncData() {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
             [s.id, s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl || s.video_url, s.audioUrl || s.audio_url]
           );
+          await sendPushNotification('New Sermon', s.title, `https://joshuasgeneration.com/sermon/${s.id}`);
         } else {
           await pool.query(
             `UPDATE sermons SET title=$1, speaker=$2, duration=$3, thumbnail=$4, views=$5, downloads=$6, date=$7, description=$8, category=$9, video_url=$10, audio_url=$11 WHERE id=$12`,
@@ -155,6 +184,7 @@ async function syncData() {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
             [ev.id, ev.title, ev.date, ev.time, ev.location, ev.description, ev.imageUrl || ev.image_url, ev.type, ev.isFeatured || ev.is_featured || false, ev.registrationLink || ev.registration_link || '']
           );
+          await sendPushNotification('New Event', ev.title, `https://joshuasgeneration.com`);
         } else {
           await pool.query(
             `UPDATE events SET title=$1, date=$2, time=$3, location=$4, description=$5, image_url=$6, type=$7, is_featured=$8, registration_link=$9 WHERE id=$10`,
