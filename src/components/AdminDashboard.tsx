@@ -136,7 +136,9 @@ export default function AdminDashboard({
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const visibleSidebarItems = sidebarItems;
+  const visibleSidebarItems = userRole === 'superadmin' 
+    ? sidebarItems 
+    : sidebarItems.filter(item => item.id !== 'donations' && item.id !== 'settings');
 
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -373,7 +375,7 @@ interface DashboardTabProps {
 
 function DashboardTab({ posts, onTabChange, donations, events, sermons, users }: DashboardTabProps) {
   const userRole = api.getRole();
-  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>('donations');
+  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
 
   // Exact data from state / database
   const totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
@@ -404,9 +406,9 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
         {[
           { label: 'Total Users', value: totalUsersCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
           { label: 'Sermon Views', value: totalSermonViews.toLocaleString(), change: '+0.0%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
-          { label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true },
+          { label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true, superadminOnly: true },
           { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
-        ].map((stat) => (
+        ].filter(stat => !stat.superadminOnly || userRole === 'superadmin').map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-4">
               <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center', stat.color)}>
@@ -428,7 +430,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
         {/* Left Column (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart */}
-          {(userRole === 'superadmin' || userRole === 'admin') && (
+          {(userRole === 'superadmin') && (
             <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
@@ -452,7 +454,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
           <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
               <div className="flex gap-4">
-                {(userRole === 'superadmin' || userRole === 'admin') && (
+                {(userRole === 'superadmin') && (
                   <button
                     onClick={() => setActiveListTab('donations')}
                     className={cn(
@@ -588,7 +590,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
   // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'Member' | 'Partner' | 'Minister' | 'Admin'>('Member');
+  const [role, setRole] = useState<'Member' | 'Partner' | 'Minister' | 'Admin' | 'Superadmin'>('Member');
   const [status, setStatus] = useState<'active' | 'new' | 'inactive'>('new');
   const [joined, setJoined] = useState('');
   const [sermons, setSermons] = useState<number>(0);
@@ -883,12 +885,14 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                   <select 
                     value={role} 
                     onChange={(e) => setRole(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-semibold cursor-pointer"
+                    disabled={userRole !== 'superadmin'}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="Member">Member</option>
                     <option value="Partner">Partner</option>
                     <option value="Minister">Minister</option>
                     <option value="Admin">Admin</option>
+                    <option value="Superadmin">Superadmin</option>
                   </select>
                 </div>
 

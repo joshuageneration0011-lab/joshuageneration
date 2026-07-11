@@ -1523,10 +1523,34 @@ const server = http.createServer(async (req, res) => {
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
               [u.id, u.name, u.email, u.status, u.joined, u.sermons, u.donations, u.avatar, u.role]
             );
+            // Sync role to credentials
+            let credRole = 'member';
+            if (u.role === 'Admin') credRole = 'admin';
+            if (u.role === 'Superadmin') credRole = 'superadmin';
+            await pool.query(
+              `UPDATE credentials SET role = $1 WHERE LOWER(username) = LOWER($2)`,
+              [credRole, u.email]
+            );
           }
           await pool.query('COMMIT');
         } else {
           fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+          // Update credentials.json too
+          if (fs.existsSync(CREDENTIALS_FILE)) {
+            let creds = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
+            if (Array.isArray(creds)) {
+              for (const u of data) {
+                const idx = creds.findIndex(c => c.username.toLowerCase() === u.email.toLowerCase());
+                if (idx !== -1) {
+                  let credRole = 'member';
+                  if (u.role === 'Admin') credRole = 'admin';
+                  if (u.role === 'Superadmin') credRole = 'superadmin';
+                  creds[idx].role = credRole;
+                }
+              }
+              fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(creds, null, 2), 'utf-8');
+            }
+          }
         }
         sendJson(res, 200, { success: true });
       } else {
@@ -1540,8 +1564,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET Donations (Admin only)
+  // GET Donations (Superadmin only)
   if (pathname === '/api/donations' && method === 'GET') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Superadmin access required' });
+      return;
+    }
     try {
       if (pool) {
         const result = await pool.query('SELECT * FROM donations ORDER BY id DESC');
@@ -1968,8 +1996,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST Settings (Admin only)
+  // POST Settings (Superadmin only)
   if (pathname === '/api/settings' && method === 'POST') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Superadmin access required' });
+      return;
+    }
     try {
       const body = await getJsonBody(req);
       const {
