@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Menu, X, Search, User, Heart, BookOpen, Tv, Home, Library, Gift, Shield } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, X, Search, User, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
 
@@ -25,6 +25,7 @@ interface NavbarProps {
 export default function Navbar({ onLoginClick, onNavigate, onAdminClick, currentPage = 'home', isAuthenticated, onLogoutClick }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSermonDropdownOpen, setIsSermonDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,6 +76,9 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
       if (link.page === 'blog') {
         return currentPage === 'blog' || currentPage === 'blog-details';
       }
+      if (link.page === 'sermons') {
+        return currentPage === 'sermons' || currentPage === 'podcast';
+      }
       return currentPage === link.page;
     }
     return false;
@@ -118,6 +122,60 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
             <div className="hidden lg:flex items-center gap-1">
               {navLinks.map((link) => {
                 const active = isLinkActive(link);
+                if (link.name === 'Sermons') {
+                  return (
+                    <div
+                      key={link.name}
+                      className="relative"
+                      onMouseEnter={() => setIsSermonDropdownOpen(true)}
+                      onMouseLeave={() => setIsSermonDropdownOpen(false)}
+                    >
+                      <button
+                        onClick={(e) => handleLinkClick(link, e)}
+                        className={cn(
+                          'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 inline-flex items-center gap-1',
+                          active
+                            ? isScrolled || currentPage !== 'home'
+                              ? 'text-royal-blue-600 bg-royal-blue-50/50'
+                              : 'text-white bg-white/20'
+                            : isScrolled || currentPage !== 'home'
+                              ? 'text-gray-600 hover:text-royal-blue-600 hover:bg-royal-blue-50/30'
+                              : 'text-white/80 hover:text-white hover:bg-white/10'
+                        )}
+                      >
+                        Sermons
+                        <svg className={cn("w-4 h-4 transition-transform duration-200", isSermonDropdownOpen && "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      
+                      {isSermonDropdownOpen && (
+                        <div className="absolute left-0 mt-1 w-44 bg-white rounded-xl border border-gray-100 shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <button
+                            onClick={() => {
+                              setIsSermonDropdownOpen(false);
+                              if (onNavigate) onNavigate('sermons');
+                            }}
+                            className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-royal-blue-50 hover:text-royal-blue-600 transition-colors"
+                          >
+                            <Tv className="w-4 h-4 text-gray-400" />
+                            All Sermons
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsSermonDropdownOpen(false);
+                              if (onNavigate) onNavigate('podcast');
+                            }}
+                            className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-royal-blue-50 hover:text-royal-blue-600 transition-colors"
+                          >
+                            <Radio className="w-4 h-4 text-gray-400" />
+                            Podcasts
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
                 return (
                   <button
                     key={link.name}
@@ -224,6 +282,42 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
         >
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => {
+              if (link.name === 'Sermons') {
+                return (
+                  <React.Fragment key={link.name}>
+                    <a
+                      href={link.href}
+                      onClick={(e) => handleLinkClick(link, e)}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium',
+                        currentPage === 'sermons' || currentPage === 'sermon-player'
+                          ? 'text-royal-blue-600 bg-royal-blue-50'
+                          : 'text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50/50'
+                      )}
+                    >
+                      <link.icon className={cn('w-5 h-5', (currentPage === 'sermons' || currentPage === 'sermon-player') ? 'text-royal-blue-500' : 'text-gray-400')} />
+                      {link.name}
+                    </a>
+                    <a
+                      href="/podcast"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsOpen(false);
+                        if (onNavigate) onNavigate('podcast');
+                      }}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium',
+                        currentPage === 'podcast'
+                          ? 'text-royal-blue-600 bg-royal-blue-50'
+                          : 'text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50/50'
+                      )}
+                    >
+                      <Radio className={cn('w-5 h-5', currentPage === 'podcast' ? 'text-royal-blue-500' : 'text-gray-400')} />
+                      Podcasts
+                    </a>
+                  </React.Fragment>
+                );
+              }
               const active = isLinkActive(link);
               return (
                 <a

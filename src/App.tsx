@@ -29,6 +29,7 @@ const BlogPage = lazy(() => import('@/components/BlogPage'));
 const BlogPostReader = lazy(() => import('@/components/BlogPostReader'));
 const DonatePage = lazy(() => import('@/components/DonatePage'));
 const PartnershipPage = lazy(() => import('@/components/PartnershipPage'));
+const PodcastPage = lazy(() => import('@/components/PodcastPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -41,11 +42,11 @@ const PageLoader = () => (
 );
 
 
-export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate' | 'partnership';
+export type Page = 'home' | 'admin' | 'admin-login' | 'sermons' | 'sermon-player' | 'books' | 'book-details' | 'blog' | 'blog-details' | 'donate' | 'partnership' | 'podcast';
 
 const getPageFromPath = (): Page => {
   const path = window.location.pathname.replace(/^\//, '') as Page;
-  const validPages: Page[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership'];
+  const validPages: Page[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast'];
   if (validPages.includes(path)) {
     return path;
   }
@@ -626,6 +627,26 @@ export default function App() {
         />
         <Suspense fallback={<PageLoader />}>
           <DonatePage onBack={() => navigate('home')} initialCause={donateCause} />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+      </div>
+    );
+  }
+
+  if (currentPage === 'podcast') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onLoginClick={() => setIsLoginOpen(true)}
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <PodcastPage onBack={() => navigate('home')} />
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
