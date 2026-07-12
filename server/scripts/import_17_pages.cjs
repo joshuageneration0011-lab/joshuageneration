@@ -98,19 +98,23 @@ async function run() {
         
         // Download Audio
         const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const audioFileName = `${safeTitle}_${Date.now()}.mp3`;
+        const audioFileName = `${safeTitle}.mp3`;
         const localAudioPath = path.join(SERMONS_DIR, audioFileName);
         
-        console.log(`Downloading audio: ${audioUrl}`);
-        try {
-          execSync(`curl.exe -L -o "${localAudioPath}" "${audioUrl}"`);
-        } catch(e) {
+        if (!fs.existsSync(localAudioPath)) {
+          console.log(`Downloading audio: ${audioUrl}`);
           try {
-            execSync(`curl -L -o "${localAudioPath}" "${audioUrl}"`);
-          } catch(e2) {
-            console.error('Failed to download audio:', e2.message);
-            continue;
+            execSync(`curl.exe -L -o "${localAudioPath}" "${audioUrl}"`);
+          } catch(e) {
+            try {
+              execSync(`curl -L -o "${localAudioPath}" "${audioUrl}"`);
+            } catch(e2) {
+              console.error('Failed to download audio:', e2.message);
+              continue;
+            }
           }
+        } else {
+          console.log(`Audio already exists: ${audioFileName}`);
         }
         
         const duration = getDuration(localAudioPath);
@@ -121,32 +125,37 @@ async function run() {
         if (thumbUrl) {
           const thumbExt = path.extname(thumbUrl).split('?')[0] || '.jpg';
           const rawThumbPath = path.join(THUMBS_DIR, `raw_${safeTitle}${thumbExt}`);
-          const optimizedThumbName = `${safeTitle}_${Date.now()}.jpg`;
+          const optimizedThumbName = `${safeTitle}.jpg`;
           const optimizedThumbPath = path.join(THUMBS_DIR, optimizedThumbName);
           
-          console.log(`Downloading thumbnail: ${thumbUrl}`);
-          try {
+          if (!fs.existsSync(optimizedThumbPath)) {
+            console.log(`Downloading thumbnail: ${thumbUrl}`);
             try {
-              execSync(`curl.exe -L -o "${rawThumbPath}" "${thumbUrl}"`);
-            } catch(e) {
-              execSync(`curl -L -o "${rawThumbPath}" "${thumbUrl}"`);
+              try {
+                execSync(`curl.exe -L -o "${rawThumbPath}" "${thumbUrl}"`);
+              } catch(e) {
+                execSync(`curl -L -o "${rawThumbPath}" "${thumbUrl}"`);
+              }
+              
+              // Resize with ffmpeg
+              console.log('Optimizing thumbnail...');
+              const success = resizeImage(rawThumbPath, optimizedThumbPath);
+              if (success) {
+                localThumbRelPath = `/thumbnails/${optimizedThumbName}`;
+                try { fs.unlinkSync(rawThumbPath); } catch(e){} // Cleanup raw
+              } else {
+                // fallback to raw
+                const finalThumbName = `${safeTitle}${thumbExt}`;
+                const finalThumbPath = path.join(THUMBS_DIR, finalThumbName);
+                fs.renameSync(rawThumbPath, finalThumbPath);
+                localThumbRelPath = `/thumbnails/${finalThumbName}`;
+              }
+            } catch (e) {
+              console.error('Failed to download/process thumbnail:', e.message);
             }
-            
-            // Resize with ffmpeg
-            console.log('Optimizing thumbnail...');
-            const success = resizeImage(rawThumbPath, optimizedThumbPath);
-            if (success) {
-              localThumbRelPath = `/thumbnails/${optimizedThumbName}`;
-              try { fs.unlinkSync(rawThumbPath); } catch(e){} // Cleanup raw
-            } else {
-              // fallback to raw
-              const finalThumbName = `${safeTitle}_${Date.now()}${thumbExt}`;
-              const finalThumbPath = path.join(THUMBS_DIR, finalThumbName);
-              fs.renameSync(rawThumbPath, finalThumbPath);
-              localThumbRelPath = `/thumbnails/${finalThumbName}`;
-            }
-          } catch (e) {
-            console.error('Failed to download/process thumbnail:', e.message);
+          } else {
+            console.log(`Thumbnail already exists: ${optimizedThumbName}`);
+            localThumbRelPath = `/thumbnails/${optimizedThumbName}`;
           }
         }
         
@@ -154,20 +163,18 @@ async function run() {
         const sermonId = crypto.randomUUID();
         const description = content.replace(/<[^>]+>/g, '').substring(0, 500); // Strip HTML
         
-        await pool.query(
-          `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9)`,
-          [sermonId, title, 'Apostle Joshua Iyemifokhae', duration, localThumbRelPath || '', 0, 0, description, 'Sunday Service']
-        );
-        
-        const audioId = crypto.randomUUID();
-        await pool.query(
-          `INSERT INTO sermon_audios (id, sermon_id, title, audio_url, duration)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [audioId, sermonId, 'Full Sermon', `/sermons/${audioFileName}`, duration]
-        );
-        
-        console.log(`Successfully imported: ${title}`);
+        // Ensure no duplicates exist in case we rerun
+        const existCheck = await pool.query('SELECT id FROM sermons WHERE title = $1', [title]);
+        if (existCheck.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, audio_url) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10)`,
+            [sermonId, title, 'Apostle Joshua Iyemifokhae', duration, localThumbRelPath || '', 0, 0, description, 'Sunday Service', `/sermons/${audioFileName}`]
+          );
+          console.log(`Successfully imported: ${title}`);
+        } else {
+          console.log(`Sermon already exists in DB: ${title}`);
+        }
       }
     } catch (err) {
       console.error(`Error on page ${page}:`, err.message);
