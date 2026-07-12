@@ -177,8 +177,8 @@ export default function AdminDashboard({
 
   useEffect(() => {
     loadDonations();
-  }, []);
     refreshUnreadCount();
+  }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {
