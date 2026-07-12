@@ -21,6 +21,7 @@ import LoginModal from '@/components/LoginModal';
 import RadioPlayer from '@/components/RadioPlayer';
 
 const AdminDashboard = lazy(() => import('@/components/AdminDashboard'));
+const ContactPage = lazy(() => import('@/components/ContactPage'));
 const AdminLogin = lazy(() => import('@/components/AdminLogin'));
 const SermonsPage = lazy(() => import('@/components/SermonsPage'));
 const SermonPlayer = lazy(() => import('@/components/SermonPlayer'));
@@ -50,7 +51,7 @@ const getPageFromPath = (): Page => {
   if (path.startsWith('blog/')) return 'blog-details';
   if (path.startsWith('sermon/')) return 'sermon-player';
   if (path.startsWith('books/')) return 'book-details';
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast', 'contact'];
   if (validPages.includes(path)) {
     return path;
   }
@@ -622,6 +623,23 @@ export default function App() {
               window.scrollTo(0, 0);
             }}
           />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+      </div>
+    );
+  }
+
+  if (currentPage === 'contact') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onLoginClick={() => setIsLoginOpen(true)}
+          onNavigate={navigate}
+          currentPage={currentPage}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <ContactPage />
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />

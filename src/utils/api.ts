@@ -376,6 +376,44 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/api/stats`);
     if (!res.ok) throw new Error('Failed to fetch stats');
     return res.json();
+  },
+
+  // Messages
+  async submitMessage(data: { name: string; email: string; subject: string; message: string }): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to submit message');
+    return true;
+  },
+
+  async getMessages(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/messages`, {
+      headers: getHeaders()
+    });
+    await handleResponse(res, 'Failed to fetch messages');
+    return res.json();
+  },
+
+  async updateMessageStatus(id: string | number, status: 'read' | 'unread'): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/messages/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ status })
+    });
+    await handleResponse(res, 'Failed to update message status');
+    return true;
+  },
+
+  async deleteMessage(id: string | number): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/messages/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    await handleResponse(res, 'Failed to delete message');
+    return true;
   }
 };
 

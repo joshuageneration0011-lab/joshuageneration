@@ -8,8 +8,8 @@ const quickLinks = [
   { name: 'Blog', href: '/blog' },
   { name: 'Events', href: '#events' },
   { name: 'Prayer Requests', href: '#prayer' },
+  { name: 'Contact', href: '/contact' },
   { name: 'Donate', href: '/donate' },
-  { name: 'Careers', href: '#' },
 ];
 
 const branches = [

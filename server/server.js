@@ -449,6 +449,16 @@ async function initDb() {
           avatar TEXT,
           role VARCHAR NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS messages (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR NOT NULL,
+          email VARCHAR NOT NULL,
+          subject VARCHAR NOT NULL,
+          message TEXT NOT NULL,
+          status VARCHAR DEFAULT 'unread',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
       `);
 
       const userCheck = await pool.query('SELECT 1 FROM users LIMIT 1');
@@ -2220,6 +2230,127 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { success: true });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to delete event' });
+    }
+    return;
+  }
+
+  // --- MESSAGES API ---
+
+  // POST /api/messages (Public)
+  if (pathname === '/api/messages' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { name, email, subject, message } = body;
+      if (!name || !email || !message) {
+        sendJson(res, 400, { error: 'Name, email, and message are required' });
+        return;
+      }
+      
+      if (pool) {
+        await pool.query(
+          `INSERT INTO messages (name, email, subject, message) VALUES ($1, $2, $3, $4)`,
+          [name, email, subject || 'No Subject', message]
+        );
+      } else {
+        // Fallback for local JSON storage if needed
+        const messagesFile = path.join(DATA_DIR, 'messages.json');
+        let messages = [];
+        if (fs.existsSync(messagesFile)) {
+          messages = JSON.parse(fs.readFileSync(messagesFile, 'utf-8'));
+        }
+        messages.push({
+          id: Date.now(),
+          name, email, subject: subject || 'No Subject', message,
+          status: 'unread',
+          created_at: new Date().toISOString()
+        });
+        fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2));
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to submit message:', e);
+      sendJson(res, 500, { error: 'Failed to submit message' });
+    }
+    return;
+  }
+
+  // GET /api/admin/messages (Protected)
+  if (pathname === '/api/admin/messages' && method === 'GET') {
+    const session = await requireAdmin(req, res);
+    if (!session) return;
+    
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM messages ORDER BY created_at DESC');
+        sendJson(res, 200, result.rows);
+      } else {
+        const messagesFile = path.join(DATA_DIR, 'messages.json');
+        if (fs.existsSync(messagesFile)) {
+          const messages = JSON.parse(fs.readFileSync(messagesFile, 'utf-8'));
+          sendJson(res, 200, messages.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)));
+        } else {
+          sendJson(res, 200, []);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch messages:', e);
+      sendJson(res, 500, { error: 'Failed to fetch messages' });
+    }
+    return;
+  }
+
+  // PUT /api/admin/messages/:id (Protected) - Update status
+  if (pathname.startsWith('/api/admin/messages/') && method === 'PUT') {
+    const session = await requireAdmin(req, res);
+    if (!session) return;
+    
+    try {
+      const parts = pathname.split('/');
+      const id = parts[parts.length - 1];
+      const body = await getJsonBody(req);
+      const { status } = body;
+      
+      if (pool) {
+        await pool.query('UPDATE messages SET status = $1 WHERE id = $2', [status, id]);
+      } else {
+        const messagesFile = path.join(DATA_DIR, 'messages.json');
+        if (fs.existsSync(messagesFile)) {
+          let messages = JSON.parse(fs.readFileSync(messagesFile, 'utf-8'));
+          messages = messages.map(m => m.id == id ? { ...m, status } : m);
+          fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2));
+        }
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to update message:', e);
+      sendJson(res, 500, { error: 'Failed to update message' });
+    }
+    return;
+  }
+
+  // DELETE /api/admin/messages/:id (Protected)
+  if (pathname.startsWith('/api/admin/messages/') && method === 'DELETE') {
+    const session = await requireAdmin(req, res);
+    if (!session) return;
+    
+    try {
+      const parts = pathname.split('/');
+      const id = parts[parts.length - 1];
+      
+      if (pool) {
+        await pool.query('DELETE FROM messages WHERE id = $1', [id]);
+      } else {
+        const messagesFile = path.join(DATA_DIR, 'messages.json');
+        if (fs.existsSync(messagesFile)) {
+          let messages = JSON.parse(fs.readFileSync(messagesFile, 'utf-8'));
+          messages = messages.filter(m => m.id != id);
+          fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2));
+        }
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to delete message:', e);
+      sendJson(res, 500, { error: 'Failed to delete message' });
     }
     return;
   }
