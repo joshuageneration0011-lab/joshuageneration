@@ -311,13 +311,15 @@ export const api = {
   },
 
   async getSettings(): Promise<Settings> {
-    const res = await fetch(`${API_BASE_URL}/api/settings`);
+    const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
+      headers: getHeaders()
+    });
     if (!res.ok) throw new Error('Failed to fetch settings');
     return res.json();
   },
 
   async saveSettings(settings: Settings): Promise<boolean> {
-    const res = await fetch(`${API_BASE_URL}/api/settings`, {
+    const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(settings)

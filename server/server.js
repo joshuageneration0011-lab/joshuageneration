@@ -1370,7 +1370,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /api/initiate-payment — Flutterwave V4 payment initiation (public)
+  // POST /api/initiate-payment — Flutterwave V3 payment initiation (public)
   if (pathname === '/api/initiate-payment' && method === 'POST') {
     try {
       const { cause, amount, name, email, frequency, currency = 'NGN' } = await getJsonBody(req);
@@ -1400,81 +1400,46 @@ const server = http.createServer(async (req, res) => {
       const txRef = 'JG-TXN-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
       const callbackUrl = 'https://joshuasgeneration.com/#payment-callback';
 
-      // Detect if user configured a V3 Secret Key (starts with FLWSECK- or FLWSECK_TEST-)
-      const isV3Key = clientSecret.startsWith('FLWSECK-') || clientSecret.startsWith('FLWSECK_TEST-');
+      console.log(`Initiating Standard Checkout payment link via V3 API with currency ${currency}...`);
+      
+      const paymentRes = await fetch('https://api.flutterwave.com/v3/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${clientSecret}`
+        },
+        body: JSON.stringify({
+          amount: Number(amount),
+          currency: currency,
+          tx_ref: txRef,
+          redirect_url: callbackUrl,
+          customer: { email, name },
+          customizations: {
+            title: 'Joshua Generation',
+            description: `Donation: ${cause} (${frequency || 'one-time'})`,
+            logo: 'https://joshuasgeneration.com/api/uploads/logo.png'
+          }
+        })
+      });
 
-      if (isV3Key) {
-        console.log(`Detected V3 Secret Key. Initiating Standard Checkout payment link via V3 API with currency ${currency}...`);
-        // Standard V3 Payment Link Initiation
-        const paymentRes = await fetch('https://api.flutterwave.com/v3/payments', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${clientSecret}`
-          },
-          body: JSON.stringify({
-            amount: Number(amount),
-            currency: currency,
-            tx_ref: txRef,
-            redirect_url: callbackUrl,
-            customer: { email, name },
-            customizations: {
-              title: 'Joshua Generation',
-              description: `Donation: ${cause} (${frequency || 'one-time'})`,
-              logo: 'https://joshuasgeneration.com/api/uploads/logo.png'
-            }
-          })
-        });
-
-        const paymentRaw = await paymentRes.text();
-        let paymentData;
-        try { paymentData = JSON.parse(paymentRaw); } catch(e) {
-          console.error('Flutterwave payment non-JSON response:', paymentRaw.substring(0, 500));
-          sendJson(res, 502, { error: 'Payment provider returned unexpected response.' });
-          return;
-        }
-
-        console.log('Flutterwave V3 payment response:', JSON.stringify(paymentData));
-
-        const paymentLink = paymentData?.data?.link;
-        if (!paymentLink) {
-          console.error('No payment link in response:', paymentData);
-          sendJson(res, 502, { error: 'Failed to create payment link: ' + (paymentData?.message || JSON.stringify(paymentData)) });
-          return;
-        }
-
-        sendJson(res, 200, { payment_link: paymentLink, tx_ref: txRef });
-      } else {
-        // V4 OAuth2 authentication flow
-        console.log('Detected V4 credentials. Fetching access token...');
-        const tokenParams = new URLSearchParams();
-        tokenParams.append('client_id', clientId);
-        tokenParams.append('client_secret', clientSecret);
-        tokenParams.append('grant_type', 'client_credentials');
-
-        const tokenRes = await fetch('https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: tokenParams.toString()
-        });
-        const tokenRaw = await tokenRes.text();
-        let tokenData;
-        try { tokenData = JSON.parse(tokenRaw); } catch(e) {
-          console.error('Flutterwave IdP non-JSON response:', tokenRaw.substring(0, 500));
-          sendJson(res, 502, { error: 'Payment provider returned an unexpected response. Check your Client ID and Client Secret in Settings.' });
-          return;
-        }
-        if (!tokenData.access_token) {
-          console.error('Flutterwave token error:', tokenData);
-          sendJson(res, 502, { error: 'Payment provider rejected credentials: ' + (tokenData.error_description || tokenData.error || 'Invalid client credentials') });
-          return;
-        }
-
-        console.error('Flutterwave V4 does not support standard hosted payment checkout links. Guiding user to use V3 Secret Keys.');
-        sendJson(res, 400, {
-          error: 'Flutterwave V4 API does not support hosted redirect payment checkout links. Please input your V3 Secret Key (starts with "FLWSECK-") in the Client Secret field in your Settings.'
-        });
+      const paymentRaw = await paymentRes.text();
+      let paymentData;
+      try { paymentData = JSON.parse(paymentRaw); } catch(e) {
+        console.error('Flutterwave payment non-JSON response:', paymentRaw.substring(0, 500));
+        sendJson(res, 502, { error: 'Payment provider returned unexpected response.' });
+        return;
       }
+
+      console.log('Flutterwave V3 payment response:', JSON.stringify(paymentData));
+
+      const paymentLink = paymentData?.data?.link;
+      if (!paymentLink) {
+        console.error('No payment link in response:', paymentData);
+        sendJson(res, 502, { error: 'Failed to create payment link: ' + (paymentData?.message || JSON.stringify(paymentData)) });
+        return;
+      }
+
+      sendJson(res, 200, { payment_link: paymentLink, tx_ref: txRef });
     } catch (e) {
       console.error('Payment initiation error:', e);
       sendJson(res, 500, { error: 'Payment initiation failed: ' + e.message });
@@ -1634,6 +1599,56 @@ const server = http.createServer(async (req, res) => {
   const user = getAuthenticatedUser(req);
   if (!user) {
     sendJson(res, 401, { error: 'Unauthorized admin access' });
+    return;
+  }
+
+  // GET Settings (Admin only - returns full keys including secrets)
+  if (pathname === '/api/admin/settings' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret FROM settings WHERE id = 1');
+        sendJson(res, 200, result.rows[0] || { 
+          flutterwave_prophetic_client_id: '', flutterwave_prophetic_client_secret: '',
+          flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '' 
+        });
+      } else {
+        const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        sendJson(res, 200, data);
+      }
+    } catch (e) {
+      console.error('Failed to retrieve admin settings:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve admin settings' });
+    }
+    return;
+  }
+
+  // POST Settings (Admin only)
+  if (pathname === '/api/admin/settings' && method === 'POST') {
+    try {
+      const data = await getJsonBody(req);
+      if (pool) {
+        await pool.query(
+          `UPDATE settings SET 
+            flutterwave_prophetic_client_id = $1, 
+            flutterwave_prophetic_client_secret = $2,
+            flutterwave_mission_client_id = $3, 
+            flutterwave_mission_client_secret = $4 
+           WHERE id = 1`,
+          [
+            data.flutterwave_prophetic_client_id || '',
+            data.flutterwave_prophetic_client_secret || '',
+            data.flutterwave_mission_client_id || '',
+            data.flutterwave_mission_client_secret || ''
+          ]
+        );
+      } else {
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to save settings:', e);
+      sendJson(res, 500, { error: 'Failed to save settings' });
+    }
     return;
   }
 
