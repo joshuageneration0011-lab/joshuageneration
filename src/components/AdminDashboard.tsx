@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Users, Tv, BookOpen, FileText, Calendar,
   Video, DollarSign, BarChart3, MapPin, Shield,
@@ -121,6 +121,14 @@ export default function AdminDashboard({
     onUpdateUsers(newUsers);
   };
 
+  // ── State (must come BEFORE sidebarItems that reference them) ──
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [loadingDonations, setLoadingDonations] = useState(true);
+  const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
+
   const sidebarItems: { id: AdminTab; label: string; icon: any; badge?: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -140,13 +148,6 @@ export default function AdminDashboard({
   const visibleSidebarItems = userRole === 'superadmin' 
     ? sidebarItems 
     : sidebarItems.filter(item => item.id !== 'donations' && item.id !== 'settings');
-
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [donations, setDonations] = useState<Donation[]>([]);
-  const [loadingDonations, setLoadingDonations] = useState(true);
-  const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
 
   const handleLogout = () => {
     api.logout();
