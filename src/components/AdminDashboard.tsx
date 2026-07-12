@@ -2160,6 +2160,9 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const [category, setCategory] = useState('Purpose');
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
   const [amazonUrl, setAmazonUrl] = useState('');
   const [selarUrl, setSelarUrl] = useState('');
   const [pages, setPages] = useState('150');
@@ -2172,6 +2175,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setCategory('Purpose');
     setDescription('');
     setCoverUrl('');
+    setDownloadUrl('');
     setImageSourceMode('upload');
     setAmazonUrl('');
     setSelarUrl('');
@@ -2189,6 +2193,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setCategory(book.category);
     setDescription(book.description);
     setCoverUrl(book.coverUrl);
+    setDownloadUrl(book.downloadUrl || '');
     setImageSourceMode(book.coverUrl && book.coverUrl.startsWith('data:') ? 'upload' : 'url');
     setAmazonUrl(book.amazonUrl || '');
     setSelarUrl(book.selarUrl || '');
@@ -2227,6 +2232,31 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     reader.readAsDataURL(file);
   };
 
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a valid PDF file.');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      alert('File size exceeds 50MB limit.');
+      return;
+    }
+    
+    setIsUploadingPdf(true);
+    setPdfProgress(0);
+    try {
+      const url = await api.uploadFile(file, (pct) => setPdfProgress(pct));
+      setDownloadUrl(url);
+    } catch (err: any) {
+      alert('Failed to upload PDF: ' + err.message);
+    } finally {
+      setIsUploadingPdf(false);
+      setPdfProgress(0);
+    }
+  };
+
   const addChapter = () => {
     setChaptersInput([...chaptersInput, { title: `Chapter ${chaptersInput.length + 1}`, content: '' }]);
   };
@@ -2254,7 +2284,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       coverUrl: coverUrl.trim() || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80',
       description: description.trim(),
       category: category.trim(),
-      downloadUrl: '#',
+      downloadUrl: downloadUrl.trim() || '#',
       pages: Number(pages) || 150,
       downloads: editingBook ? (editingBook as any).downloads || 0 : 0,
       rating: editingBook ? (editingBook as any).rating || 4.8 : 4.8,
@@ -2503,6 +2533,32 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                   )}
                 </div>
 
+                {/* PDF Upload */}
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-gray-700">Book PDF File</label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePdfUpload}
+                      disabled={isUploadingPdf}
+                      className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer disabled:opacity-50"
+                    />
+                    {isUploadingPdf && (
+                      <span className="text-xs font-semibold text-royal-blue-600 animate-pulse">Uploading {pdfProgress}%...</span>
+                    )}
+                  </div>
+                  {downloadUrl && downloadUrl !== '#' && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs font-semibold flex items-center gap-2">
+                        <Check className="w-4 h-4" /> PDF Uploaded Successfully
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-400">PDF will be used for in-app reading and downloads.</p>
+                </div>
                 {/* Chapter Editor Sub-Section */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-2">
