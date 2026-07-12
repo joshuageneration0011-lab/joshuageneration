@@ -2160,7 +2160,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const [category, setCategory] = useState('Purpose');
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
-  const [downloadUrl, setDownloadUrl] = useState('');
+  const [pdfsInput, setPdfsInput] = useState<{ title: string; url: string }[]>([]);
   const [uploadingPdfIndex, setUploadingPdfIndex] = useState<number | null>(null);
   const [pdfProgress, setPdfProgress] = useState(0);
   const [amazonUrl, setAmazonUrl] = useState('');

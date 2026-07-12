@@ -255,7 +255,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'When life gets tough, our faith is tested. Here are five powerful ways to keep your faith strong...',
     imageUrl: 'https://images.unsplash.com/photo-1504052434561-5adf5a5c1a1e?w=800&q=80',
     category: 'Faith',
-    url: `When life gets tough, our faith is tested in ways we never anticipated. The storms of life have a way of revealing the foundations upon which we stand. If our foundation is weak, we will falter. But if our foundation is built upon the solid rock of Jesus Christ, we can withstand any trial.\n\nHere are five powerful ways to keep your faith strong when you face adversity:\n\n1. Immerse Yourself in the Word of God: Romans 10:17 reminds us that faith comes by hearing, and hearing by the word of God. When the noise of the world is loud, tune in to the whisper of Scripture. Declare the promises of God daily.\n\n2. Maintain a Lifestyle of Praise: Worship is a powerful weapon. Praising God in the midst of your struggle shifts your focus from the size of your giant to the size of your God. It changes the atmosphere of your heart.\n\n3. Stay Connected to Community: Do not isolate yourself. Find a group of believers who will lift you up in prayer, encourage your heart, and stand with you in faith. We are stronger together.\n\n4. Remember Past Victories: David defeated Goliath because he remembered how God had delivered him from the lion and the bear. Journal your testimonies; they will serve as anchors of hope in seasons of doubt.\n\n5. Pray without Ceasing: Keep the communication lines with heaven wide open. Pour out your heart to the Father and allow His peace, which surpasses all understanding, to guard your heart and mind.`
+    content: `When life gets tough, our faith is tested in ways we never anticipated. The storms of life have a way of revealing the foundations upon which we stand. If our foundation is weak, we will falter. But if our foundation is built upon the solid rock of Jesus Christ, we can withstand any trial.\n\nHere are five powerful ways to keep your faith strong when you face adversity:\n\n1. Immerse Yourself in the Word of God: Romans 10:17 reminds us that faith comes by hearing, and hearing by the word of God. When the noise of the world is loud, tune in to the whisper of Scripture. Declare the promises of God daily.\n\n2. Maintain a Lifestyle of Praise: Worship is a powerful weapon. Praising God in the midst of your struggle shifts your focus from the size of your giant to the size of your God. It changes the atmosphere of your heart.\n\n3. Stay Connected to Community: Do not isolate yourself. Find a group of believers who will lift you up in prayer, encourage your heart, and stand with you in faith. We are stronger together.\n\n4. Remember Past Victories: David defeated Goliath because he remembered how God had delivered him from the lion and the bear. Journal your testimonies; they will serve as anchors of hope in seasons of doubt.\n\n5. Pray without Ceasing: Keep the communication lines with heaven wide open. Pour out your heart to the Father and allow His peace, which surpasses all understanding, to guard your heart and mind.`
   },
   {
     id: 'p2',
@@ -266,7 +266,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'How establishing a daily devotional practice can transform your spiritual life and deepen your...',
     imageUrl: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=800&q=80',
     category: 'Devotion',
-    url: `In our fast-paced world, it is easy to get caught up in the hustle and bustle of daily activities. However, neglecting our spiritual health leads to exhaustion and dryness. Establishing a daily devotional practice is the key to maintaining a vibrant relationship with Jesus.\n\nA daily devotion is not a ritual to check off your to-do list; it is a vital connection to the Source of life. Here is how it can transform your walk:\n\nFirst, it aligns your perspective. Spending your first moments with God clears the mental clutter and prepares you to face the day with grace and patience. Second, it fills your spiritual tank. Just as physical food sustains the body, the Word sustains the spirit.\n\nStart small: set aside 15 minutes each morning. Read a chapter of Scripture, meditate on it, and pray. You will find that consistency yields deep spiritual growth, bringing peace and strength into every corner of your daily life.`
+    content: `In our fast-paced world, it is easy to get caught up in the hustle and bustle of daily activities. However, neglecting our spiritual health leads to exhaustion and dryness. Establishing a daily devotional practice is the key to maintaining a vibrant relationship with Jesus.\n\nA daily devotion is not a ritual to check off your to-do list; it is a vital connection to the Source of life. Here is how it can transform your walk:\n\nFirst, it aligns your perspective. Spending your first moments with God clears the mental clutter and prepares you to face the day with grace and patience. Second, it fills your spiritual tank. Just as physical food sustains the body, the Word sustains the spirit.\n\nStart small: set aside 15 minutes each morning. Read a chapter of Scripture, meditate on it, and pray. You will find that consistency yields deep spiritual growth, bringing peace and strength into every corner of your daily life.`
   },
   {
     id: 'p3',
@@ -277,7 +277,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'In a world that constantly demands more, understanding God\'s unearned favor brings true freedom...',
     imageUrl: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80',
     category: 'Grace',
-    url: `We live in a performance-driven culture that measures our worth by our achievements. From a young age, we are taught that to receive rewards, we must perform. Unfortunately, we often carry this performance mentality into our relationship with God.\n\nWe think we must earn His love, deserve His mercy, and work for His blessings. But the gospel tells a completely different story. The gospel is a story of grace—unearned, unmerited, and undeserved favor.\n\nGrace means that God loves you because of who He is, not because of what you have done. Ephesians 2:8-9 declares, "For by grace you have been saved through faith; and that not of yourselves, it is the gift of God; not as a result of works, so that no one may boast." When you embrace grace, the pressure is off. You no longer serve God to get Him to love you; you serve Him because He already does.`
+    content: `We live in a performance-driven culture that measures our worth by our achievements. From a young age, we are taught that to receive rewards, we must perform. Unfortunately, we often carry this performance mentality into our relationship with God.\n\nWe think we must earn His love, deserve His mercy, and work for His blessings. But the gospel tells a completely different story. The gospel is a story of grace—unearned, unmerited, and undeserved favor.\n\nGrace means that God loves you because of who He is, not because of what you have done. Ephesians 2:8-9 declares, "For by grace you have been saved through faith; and that not of yourselves, it is the gift of God; not as a result of works, so that no one may boast." When you embrace grace, the pressure is off. You no longer serve God to get Him to love you; you serve Him because He already does.`
   },
   {
     id: 'p4',
@@ -288,7 +288,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'Discover the secrets to a prayer life that produces results and brings heaven\'s power to earth...',
     imageUrl: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=800&q=80',
     category: 'Prayer',
-    url: `Prayer is one of the most powerful privileges given to believers, yet it is often one of the most underutilized. True prayer is not merely reciting a list of requests; it is partnering with heaven to release God's will on earth.\n\nIf you want to build a prayer life that moves mountains, keep these principles in mind:\n\n1. Pray in Alignment with God's Will: Effective prayer is rooted in the Word. When we pray the scriptures, we are praying the very heart of God, and we can be confident He hears us.\n\n2. Pray with Faith: Jesus said, "Whatever you ask for in prayer, believe that you have received it, and it will be yours." Faith is the spark that ignites our prayers.\n\n3. Pray with Persistence: Don't give up. Elijah prayed persistently for rain until a cloud appeared. Persistence builds spiritual muscle and demonstrates earnest trust.`
+    content: `Prayer is one of the most powerful privileges given to believers, yet it is often one of the most underutilized. True prayer is not merely reciting a list of requests; it is partnering with heaven to release God's will on earth.\n\nIf you want to build a prayer life that moves mountains, keep these principles in mind:\n\n1. Pray in Alignment with God's Will: Effective prayer is rooted in the Word. When we pray the scriptures, we are praying the very heart of God, and we can be confident He hears us.\n\n2. Pray with Faith: Jesus said, "Whatever you ask for in prayer, believe that you have received it, and it will be yours." Faith is the spark that ignites our prayers.\n\n3. Pray with Persistence: Don't give up. Elijah prayed persistently for rain until a cloud appeared. Persistence builds spiritual muscle and demonstrates earnest trust.`
   },
 ];
 
@@ -296,7 +296,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't1',
     name: 'Maria Gonzalez',
-    url: 'I came to JGen broken and hopeless. Through the teachings and the community, I found my purpose. Today I\'m a youth leader mentoring others!',
+    content: 'I came to JGen broken and hopeless. Through the teachings and the community, I found my purpose. Today I\'m a youth leader mentoring others!',
     imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80',
     type: 'written',
     date: '2025-11-25',
@@ -304,7 +304,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't2',
     name: 'James O\'Brien',
-    url: 'After 20 years of addiction, God set me free during a JGen conference. The prayer team never gave up on me. Now I\'m free indeed!',
+    content: 'After 20 years of addiction, God set me free during a JGen conference. The prayer team never gave up on me. Now I\'m free indeed!',
     imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80',
     type: 'written',
     date: '2025-11-20',
@@ -312,7 +312,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't3',
     name: 'Sarah & David Chen',
-    url: 'Our marriage was at the brink of divorce when we attended the Kingdom Marriage seminar. God restored what the enemy stole!',
+    content: 'Our marriage was at the brink of divorce when we attended the Kingdom Marriage seminar. God restored what the enemy stole!',
     imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80',
     type: 'written',
     date: '2025-11-15',
@@ -320,7 +320,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't4',
     name: 'Pastor Amos Kiprop',
-    url: 'The leadership training at JGen transformed how I pastor my church. The resources and mentorship are unparalleled.',
+    content: 'The leadership training at JGen transformed how I pastor my church. The resources and mentorship are unparalleled.',
     imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80',
     type: 'written',
     date: '2025-11-10',
@@ -328,7 +328,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't5',
     name: 'Emily Watson',
-    url: 'I was diagnosed with a chronic illness, but through the teachings on divine healing and the prayers of the saints, I am completely healed!',
+    content: 'I was diagnosed with a chronic illness, but through the teachings on divine healing and the prayers of the saints, I am completely healed!',
     imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80',
     type: 'written',
     date: '2025-11-05',
@@ -336,7 +336,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't6',
     name: 'Michael Adebayo',
-    url: 'God used JGen to teach me kingdom economics. I went from debt to financial freedom in one year. The principles work!',
+    content: 'God used JGen to teach me kingdom economics. I went from debt to financial freedom in one year. The principles work!',
     imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80',
     type: 'written',
     date: '2025-10-30',
