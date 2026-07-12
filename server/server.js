@@ -1597,6 +1597,29 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // --- PUBLIC: Submit Contact Message ---
+  if (pathname === '/api/messages' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { name, email, subject, message } = body;
+      if (!name || !email || !message) {
+        sendJson(res, 400, { error: 'Name, email, and message are required' });
+        return;
+      }
+      if (pool) {
+        await pool.query(
+          `INSERT INTO messages (name, email, subject, message) VALUES ($1, $2, $3, $4)`,
+          [name, email, subject || 'No Subject', message]
+        );
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to submit message:', e);
+      sendJson(res, 500, { error: 'Failed to submit message' });
+    }
+    return;
+  }
+
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
   const user = getAuthenticatedUser(req);
   if (!user) {
