@@ -518,7 +518,7 @@ async function initDb() {
           await pool.query(
             `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, downloads, pdfs)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-            [b.id, b.title, b.author, b.coverUrl, b.description, b.category, b.downloadUrl, b.rating || 4.8, b.amazonUrl || '', b.selarUrl || '', b.pages || 150, b.downloads || 0, JSON.stringify(b.pdfs || [])]
+            [b.id, b.title, b.author, b.coverUrl || '', b.description || '', b.category || '', b.downloadUrl || '', b.rating || 4.8, b.amazonUrl || '', b.selarUrl || '', b.pages || 150, b.downloads || 0, JSON.stringify(b.pdfs || [])]
           );
         }
         console.log('Seeded books table.');
@@ -2055,7 +2055,7 @@ const server = http.createServer(async (req, res) => {
              pages = EXCLUDED.pages,
              downloads = EXCLUDED.downloads,
              pdfs = EXCLUDED.pdfs`,
-          [item.id, item.title, item.author, item.coverUrl, item.description, item.category, item.downloadUrl, item.rating || 4.8, item.amazonUrl || '', item.selarUrl || '', item.pages || 150, item.downloads || 0, JSON.stringify(item.pdfs || [])]
+          [item.id, item.title, item.author, item.coverUrl || '', item.description || '', item.category || '', item.downloadUrl || '', item.rating || 4.8, item.amazonUrl || '', item.selarUrl || '', item.pages || 150, item.downloads || 0, JSON.stringify(item.pdfs || [])]
         );
       } else {
         const data = JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf-8'));
