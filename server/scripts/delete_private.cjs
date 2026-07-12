@@ -11,7 +11,7 @@ const pool = new Pool({
 
 async function run() {
   console.log('Finding Sons & Daughters Private category...');
-  const catRes = await fetch('https://joshuasgeneration.net/wp-json/wp/v2/sermon-category?slug=sons-daughters-private');
+  const catRes = await fetch('https://joshuasgeneration.net/wp-json/wp/v2/sermons-category?slug=sons-daughters-private');
   const cats = await catRes.json();
   
   if (!cats || cats.length === 0) {
@@ -22,7 +22,7 @@ async function run() {
   const catId = cats[0].id;
   console.log(`Category ID: ${catId}`);
   
-  const sermonRes = await fetch(`https://joshuasgeneration.net/wp-json/wp/v2/sermon?sermon-category=${catId}&per_page=100`);
+  const sermonRes = await fetch(`https://joshuasgeneration.net/wp-json/wp/v2/sermon?sermons-category=${catId}&per_page=100`);
   const sermons = await sermonRes.json();
   
   console.log(`Found ${sermons.length} private sermons. Deleting them from DB...`);
