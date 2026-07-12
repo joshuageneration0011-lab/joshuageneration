@@ -30,9 +30,9 @@ export interface Book {
   category: string;
   downloadUrl?: string;
   readUrl?: string;
-  chapters?: {
+  pdfs?: {
     title: string;
-    content: string;
+    url: string;
   }[];
   amazonUrl?: string;
   selarUrl?: string;

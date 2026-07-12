@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Type, ChevronLeft, ChevronRight, Menu, BookOpen, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, BookOpen, Download, ExternalLink } from 'lucide-react';
 import type { Book } from '@/types';
 import { cn } from '@/utils/cn';
 
@@ -8,383 +7,120 @@ interface BookReaderProps {
   onBack: () => void;
 }
 
-type ReaderTheme = 'light' | 'sepia' | 'dark';
-
 export default function BookReader({ book, onBack }: BookReaderProps) {
-  const [currentChapterIdx, setCurrentChapterIdx] = useState(0);
-  const [fontSize, setFontSize] = useState(18); // Default 18px font size
-  const [theme, setTheme] = useState<ReaderTheme>('light');
-  const [showConfig, setShowConfig] = useState(false);
-  const [showChaptersMenu, setShowChaptersMenu] = useState(false);
-
-  const chapters = book.chapters || [
-    {
-      title: 'Introduction',
-      content: 'This book has no chapters loaded yet. Please check back later.'
-    }
-  ];
-
-  const currentChapter = chapters[currentChapterIdx];
-
-  // Scroll to top of reading area when chapter changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentChapterIdx]);
-
-  // Adjust font size helpers
-  const increaseFont = () => setFontSize(prev => Math.min(prev + 2, 26));
-  const decreaseFont = () => setFontSize(prev => Math.max(prev - 2, 14));
-
-  const progressPercent = Math.round(((currentChapterIdx + 1) / chapters.length) * 100);
+  const pdfs = book.pdfs || [];
 
   return (
-    <div
-      className={cn(
-        'min-h-screen pt-20 transition-colors duration-500 pb-20 select-text',
-        theme === 'light' && 'bg-white text-gray-900',
-        theme === 'sepia' && 'bg-[#f7f1e3] text-[#5d4037]',
-        theme === 'dark' && 'bg-gray-950 text-gray-100'
-      )}
-    >
-      {/* Reader Controls Bar */}
-      <div
-        className={cn(
-          'fixed top-16 left-0 right-0 z-30 border-b transition-all duration-300 py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-sm',
-          theme === 'light' && 'bg-white/95 border-gray-100 backdrop-blur-md',
-          theme === 'sepia' && 'bg-[#f7f1e3]/95 border-[#e1d8c1] backdrop-blur-md',
-          theme === 'dark' && 'bg-gray-950/95 border-gray-800 backdrop-blur-md'
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className={cn(
-              'p-2 rounded-xl transition-colors',
-              theme === 'light' && 'hover:bg-gray-50',
-              theme === 'sepia' && 'hover:bg-[#ebdfc3]',
-              theme === 'dark' && 'hover:bg-gray-900 text-gray-300'
-            )}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="hidden sm:block">
-            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-[300px]">
-              {book.title}
-            </h2>
-            <p className={cn(
-              'text-[10px] mt-0.5',
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-            )}>
-              By {book.author}
-            </p>
-          </div>
-        </div>
-
-        {/* Reading Progress Indicator */}
-        <div className="flex-1 max-w-xs mx-4 hidden md:block">
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5 opacity-60">
-            <span>Progress</span>
-            <span>{progressPercent}%</span>
-          </div>
-          <div className={cn(
-            'w-full h-1.5 rounded-full overflow-hidden',
-            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
-          )}>
-            <div
-              className="h-full bg-gold-500 transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Display Settings Controls */}
-        <div className="flex items-center gap-2 relative">
-          {/* Chapter sidebar mobile toggle */}
-          <button
-            onClick={() => setShowChaptersMenu(!showChaptersMenu)}
-            className={cn(
-              'lg:hidden p-2.5 rounded-xl transition-colors',
-              theme === 'light' && 'hover:bg-gray-50',
-              theme === 'sepia' && 'hover:bg-[#ebdfc3]',
-              theme === 'dark' && 'hover:bg-gray-900'
-            )}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          {/* Reader settings popup toggle */}
-          <button
-            onClick={() => setShowConfig(!showConfig)}
-            className={cn(
-              'p-2.5 rounded-xl transition-colors',
-              theme === 'light' && 'hover:bg-gray-50',
-              theme === 'sepia' && 'hover:bg-[#ebdfc3]',
-              theme === 'dark' && 'hover:bg-gray-900'
-            )}
-          >
-            <Type className="w-5 h-5" />
-          </button>
-
-          {/* Font settings popup */}
-          {showConfig && (
-            <div
-              className={cn(
-                'absolute right-0 top-12 w-64 rounded-2xl shadow-xl border p-5 transition-all z-40',
-                theme === 'light' && 'bg-white border-gray-100 text-gray-800',
-                theme === 'sepia' && 'bg-[#ebdcb9] border-[#d7c49b] text-[#5d4037]',
-                theme === 'dark' && 'bg-gray-900 border-gray-800 text-gray-100'
-              )}
-            >
-              {/* Font Resizing */}
-              <div className="mb-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider mb-2.5 opacity-65">Text Size</h4>
-                <div className="flex items-center justify-between gap-3 bg-black/5 rounded-xl p-1.5">
-                  <button
-                    onClick={decreaseFont}
-                    className="flex-1 py-1.5 rounded-lg text-sm font-bold hover:bg-white/20 active:scale-95 transition-all"
-                  >
-                    A-
-                  </button>
-                  <span className="text-sm font-mono font-bold">{fontSize}px</span>
-                  <button
-                    onClick={increaseFont}
-                    className="flex-1 py-1.5 rounded-lg text-sm font-bold hover:bg-white/20 active:scale-95 transition-all"
-                  >
-                    A+
-                  </button>
-                </div>
-              </div>
-
-              {/* Theme Settings Selector */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider mb-2.5 opacity-65">Reading Theme</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { mode: 'light' as ReaderTheme, label: 'Light', icon: Sun, bg: 'bg-white text-gray-900 border-gray-200' },
-                    { mode: 'sepia' as ReaderTheme, label: 'Sepia', icon: BookOpen, bg: 'bg-[#f7f1e3] text-[#5d4037] border-[#e1d8c1]' },
-                    { mode: 'dark' as ReaderTheme, label: 'Dark', icon: Moon, bg: 'bg-gray-950 text-gray-200 border-gray-800' }
-                  ].map((t) => (
-                    <button
-                      key={t.mode}
-                      onClick={() => setTheme(t.mode)}
-                      className={cn(
-                        'flex flex-col items-center gap-1.5 py-2.5 rounded-xl border text-xs font-bold transition-all',
-                        t.bg,
-                        theme === t.mode && 'ring-2 ring-gold-500 scale-102'
-                      )}
-                    >
-                      <t.icon className="w-4 h-4" />
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+    <div className="min-h-screen pt-20 bg-gray-50 text-gray-900 pb-20">
+      {/* Top Bar */}
+      <div className="fixed top-16 left-0 right-0 z-30 border-b bg-white/95 border-gray-100 backdrop-blur-md py-3.5 px-4 sm:px-6 lg:px-8 flex items-center shadow-sm">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-xl transition-colors hover:bg-gray-100 mr-4 cursor-pointer border-none"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-[300px]">
+            {book.title}
+          </h2>
+          <p className="text-[10px] mt-0.5 text-gray-500">
+            By {book.author}
+          </p>
         </div>
       </div>
 
-      {/* Main Container Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
-        {/* Left Chapters Sidebar Index (Desktop) */}
-        <div className="hidden lg:block lg:col-span-1 space-y-3">
-          <div className="sticky top-32 p-1">
-            {/* Book Details & Buy Widget */}
-            <div className="mb-6 space-y-4 bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
-              <div className="aspect-[3/4] rounded-xl overflow-hidden shadow-md border border-black/10">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-200 flex flex-col md:flex-row gap-8 sm:gap-12">
+          
+          {/* Cover */}
+          <div className="w-full md:w-1/3 flex-shrink-0">
+            <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-xl border border-gray-100">
+              {book.coverUrl ? (
                 <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="space-y-2">
-                {book.amazonUrl && (
-                  <a
-                    href={book.amazonUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-center text-xs font-bold bg-[#FF9900]/10 hover:bg-[#FF9900]/25 text-[#CC6600] border border-[#FF9900]/20 transition-all hover:scale-[1.02] cursor-pointer no-underline"
-                  >
-                    🛒 Buy on Amazon
-                  </a>
-                )}
-                {book.selarUrl && (
-                  <a
-                    href={book.selarUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-center text-xs font-bold bg-[#E31C25]/10 hover:bg-[#E31C25]/25 text-[#E31C25] border border-[#E31C25]/20 transition-all hover:scale-[1.02] cursor-pointer no-underline"
-                  >
-                    🚀 Buy on Selar
-                  </a>
-                )}
-              </div>
-            </div>
-
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-4 opacity-50">Chapters Index</h3>
-            <div className="space-y-1 max-h-[40vh] overflow-y-auto pr-2">
-              {chapters.map((chapter, idx) => {
-                const active = idx === currentChapterIdx;
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentChapterIdx(idx)}
-                    className={cn(
-                      'w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border',
-                      active
-                        ? 'bg-gold-500 text-white border-gold-500 shadow-md shadow-gold-500/20'
-                        : theme === 'dark'
-                          ? 'bg-gray-900/40 border-gray-900 text-gray-300 hover:bg-gray-900 hover:text-white'
-                          : theme === 'sepia'
-                            ? 'bg-[#ebdfc3]/40 border-[#e1d8c1]/40 text-[#5d4037] hover:bg-[#ebdfc3]'
-                            : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    )}
-                  >
-                    {chapter.title}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Chapters Drawer Menu overlay */}
-        {showChaptersMenu && (
-          <div className="fixed inset-0 z-40 lg:hidden">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowChaptersMenu(false)} />
-            <div
-              className={cn(
-                'absolute top-0 right-0 bottom-0 w-72 p-6 transition-all duration-300 shadow-2xl flex flex-col',
-                theme === 'light' && 'bg-white text-gray-900',
-                theme === 'sepia' && 'bg-[#f7f1e3] text-[#5d4037]',
-                theme === 'dark' && 'bg-gray-950 text-gray-100'
+              ) : (
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <BookOpen className="w-12 h-12 text-gray-300" />
+                </div>
               )}
-            >
-              <h3 className="text-xs font-bold uppercase tracking-wider mb-6 opacity-60">Chapters Index</h3>
-              <div className="space-y-2 overflow-y-auto flex-1">
-                {chapters.map((chapter, idx) => {
-                  const active = idx === currentChapterIdx;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setCurrentChapterIdx(idx);
-                        setShowChaptersMenu(false);
-                      }}
-                      className={cn(
-                        'w-full text-left px-4 py-3.5 rounded-xl text-sm font-bold transition-all border',
-                        active
-                          ? 'bg-gold-500 text-white border-gold-500 shadow-lg'
-                          : theme === 'dark'
-                            ? 'bg-gray-900/40 border-gray-900'
-                            : theme === 'sepia'
-                              ? 'bg-[#ebdfc3]/40 border-[#e1d8c1]/40'
-                              : 'bg-gray-50 border-gray-150'
-                      )}
-                    >
-                      {chapter.title}
-                    </button>
-                  );
-                })}
-              </div>
+            </div>
+            
+            {/* Store Links */}
+            <div className="mt-6 space-y-3">
+              {book.amazonUrl && (
+                <a
+                  href={book.amazonUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-[#FF9900]/10 hover:bg-[#FF9900]/25 text-[#CC6600] border border-[#FF9900]/20 transition-all cursor-pointer no-underline"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buy on Amazon
+                </a>
+              )}
+              {book.selarUrl && (
+                <a
+                  href={book.selarUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-[#E31C25]/10 hover:bg-[#E31C25]/25 text-[#E31C25] border border-[#E31C25]/20 transition-all cursor-pointer no-underline"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buy on Selar
+                </a>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Right Reader Text Field */}
-        <div className="lg:col-span-3">
-          <div className="max-w-2xl mx-auto py-6">
+          {/* Details & PDFs */}
+          <div className="flex-1">
+            <div className="inline-block px-3 py-1 rounded-full bg-royal-blue-50 text-royal-blue-600 text-xs font-bold mb-4">
+              {book.category}
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold font-serif leading-tight mb-2">
+              {book.title}
+            </h1>
+            <p className="text-gray-500 font-medium mb-6 text-sm">By {book.author}</p>
             
-            {/* Mobile/Tablet Book Header & Purchase section */}
-            {currentChapterIdx === 0 && (
-              <div className="lg:hidden mb-8 p-5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                <div className="w-24 h-32 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
-                  <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h2 className="text-xl font-bold font-sans leading-tight">{book.title}</h2>
-                    <p className="text-xs opacity-75 font-semibold mt-0.5">By {book.author}</p>
-                  </div>
-                  <p className="text-xs opacity-80 leading-relaxed font-sans">{book.description}</p>
-                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                    {book.amazonUrl && (
-                      <a
-                        href={book.amazonUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold bg-[#FF9900]/10 hover:bg-[#FF9900]/25 text-[#CC6600] border border-[#FF9900]/20 transition-all cursor-pointer no-underline"
-                      >
-                        🛒 Amazon
-                      </a>
-                    )}
-                    {book.selarUrl && (
-                      <a
-                        href={book.selarUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold bg-[#E31C25]/10 hover:bg-[#E31C25]/25 text-[#E31C25] border border-[#E31C25]/20 transition-all cursor-pointer no-underline"
-                      >
-                        🚀 Selar
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Header info */}
-            <div className="border-b border-black/10 pb-6 mb-8">
-              <h1 className="text-2xl sm:text-3xl font-extrabold font-serif mb-2 leading-tight">
-                {currentChapter.title}
-              </h1>
-              <div className="flex items-center gap-2 text-xs font-medium opacity-65">
-                <span>{book.title}</span>
-                <span>•</span>
-                <span>By {book.author}</span>
-              </div>
+            <div className="prose prose-sm text-gray-600 leading-relaxed mb-10 max-w-none">
+              {book.description}
             </div>
 
-            {/* Reading Content Area */}
-            <article
-              className="font-serif leading-relaxed text-justify break-words whitespace-pre-wrap select-text selection:bg-gold-200"
-              style={{ fontSize: `${fontSize}px` }}
-            >
-              {currentChapter.content}
-            </article>
-
-            {/* Bottom Chapter Pagination Controls */}
-            <div className="border-t border-black/10 mt-16 pt-8 flex items-center justify-between gap-4">
-              <button
-                onClick={() => setCurrentChapterIdx(prev => Math.max(0, prev - 1))}
-                disabled={currentChapterIdx === 0}
-                className={cn(
-                  'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border disabled:opacity-40 disabled:pointer-events-none',
-                  theme === 'dark' ? 'border-gray-800 bg-gray-900 text-white' : 'border-gray-200 bg-gray-50 text-gray-700'
-                )}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Prev Chapter
-              </button>
-
-              <div className="text-xs font-bold uppercase tracking-widest opacity-60">
-                Chapter {currentChapterIdx + 1} of {chapters.length}
-              </div>
-
-              <button
-                onClick={() => setCurrentChapterIdx(prev => Math.min(chapters.length - 1, prev + 1))}
-                disabled={currentChapterIdx === chapters.length - 1}
-                className={cn(
-                  'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border disabled:opacity-40 disabled:pointer-events-none',
-                  theme === 'dark' ? 'border-gray-800 bg-gray-900 text-white' : 'border-gray-200 bg-gray-50 text-gray-700'
-                )}
-              >
-                Next Chapter
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            {/* PDFs Section */}
+            <div className="border-t border-gray-100 pt-8">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-4">
+                Available Downloads
+              </h3>
+              
+              {pdfs.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {pdfs.map((pdf, idx) => (
+                    <a
+                      key={idx}
+                      href={pdf.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-4 p-4 rounded-2xl border border-gray-200 hover:border-royal-blue-200 hover:shadow-md transition-all bg-white group no-underline"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                        <Download className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-gray-900 truncate m-0 leading-none">{pdf.title}</h4>
+                        <p className="text-xs text-gray-500 mt-1 m-0 leading-none">PDF Document</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-center">
+                  <p className="text-sm text-gray-500 font-medium">
+                    No PDF downloads available for this book yet.
+                  </p>
+                </div>
+              )}
             </div>
 
           </div>
         </div>
-
       </div>
     </div>
   );

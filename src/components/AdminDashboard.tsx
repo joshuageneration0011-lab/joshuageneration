@@ -2161,12 +2161,12 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
-  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [uploadingPdfIndex, setUploadingPdfIndex] = useState<number | null>(null);
   const [pdfProgress, setPdfProgress] = useState(0);
   const [amazonUrl, setAmazonUrl] = useState('');
   const [selarUrl, setSelarUrl] = useState('');
   const [pages, setPages] = useState('150');
-  const [chaptersInput, setChaptersInput] = useState<{ title: string; content: string }[]>([]);
+  
 
   const openNewForm = () => {
     setEditingBook(null);
@@ -2175,14 +2175,12 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setCategory('Purpose');
     setDescription('');
     setCoverUrl('');
-    setDownloadUrl('');
+    setPdfsInput([]);
     setImageSourceMode('upload');
     setAmazonUrl('');
     setSelarUrl('');
     setPages('150');
-    setChaptersInput([
-      { title: 'Chapter 1: The Sovereign Plan', content: 'Type your chapter content here...' }
-    ]);
+    setPdfsInput([{ title: 'Main Book PDF', url: '' }]);
     setIsFormOpen(true);
   };
 
@@ -2193,12 +2191,12 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setCategory(book.category);
     setDescription(book.description);
     setCoverUrl(book.coverUrl);
-    setDownloadUrl(book.downloadUrl || '');
+    
     setImageSourceMode(book.coverUrl && book.coverUrl.startsWith('data:') ? 'upload' : 'url');
     setAmazonUrl(book.amazonUrl || '');
     setSelarUrl(book.selarUrl || '');
     setPages(String(book.pages || '150'));
-    setChaptersInput(book.chapters || []);
+    setPdfsInput(book.pdfs || []);
     setIsFormOpen(true);
   };
 
@@ -2232,7 +2230,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     reader.readAsDataURL(file);
   };
 
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type !== 'application/pdf') {
@@ -2244,30 +2242,31 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       return;
     }
     
-    setIsUploadingPdf(true);
+    setUploadingPdfIndex(index);
     setPdfProgress(0);
     try {
       const url = await api.uploadFile(file, (pct) => setPdfProgress(pct));
-      setDownloadUrl(url);
+      const updated = pdfsInput.map((p, i) => i === index ? { ...p, url } : p);
+      setPdfsInput(updated);
     } catch (err: any) {
       alert('Failed to upload PDF: ' + err.message);
     } finally {
-      setIsUploadingPdf(false);
+      setUploadingPdfIndex(null);
       setPdfProgress(0);
     }
   };
 
-  const addChapter = () => {
-    setChaptersInput([...chaptersInput, { title: `Chapter ${chaptersInput.length + 1}`, content: '' }]);
+  const addPdf = () => {
+    setPdfsInput([...pdfsInput, { title: `PDF ${pdfsInput.length + 1}`, url: '' }]);
   };
 
-  const removeChapter = (index: number) => {
-    setChaptersInput(chaptersInput.filter((_, i) => i !== index));
+  const removePdf = (index: number) => {
+    setPdfsInput(pdfsInput.filter((_, i) => i !== index));
   };
 
-  const updateChapter = (index: number, key: 'title' | 'content', value: string) => {
-    const updated = chaptersInput.map((c, i) => i === index ? { ...c, [key]: value } : c);
-    setChaptersInput(updated);
+  const updatePdfTitle = (index: number, title: string) => {
+    const updated = pdfsInput.map((p, i) => i === index ? { ...p, title } : p);
+    setPdfsInput(updated);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -2284,13 +2283,13 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       coverUrl: coverUrl.trim() || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80',
       description: description.trim(),
       category: category.trim(),
-      downloadUrl: downloadUrl.trim() || '#',
+      
       pages: Number(pages) || 150,
       downloads: editingBook ? (editingBook as any).downloads || 0 : 0,
       rating: editingBook ? (editingBook as any).rating || 4.8 : 4.8,
       amazonUrl: amazonUrl.trim() || 'https://amazon.com',
       selarUrl: selarUrl.trim() || 'https://selar.co',
-      chapters: chaptersInput
+      pdfs: pdfsInput
     };
 
     let newBooks: Book[];
@@ -2533,51 +2532,25 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                   )}
                 </div>
 
-                {/* PDF Upload */}
-                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-700">Book PDF File</label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      onChange={handlePdfUpload}
-                      disabled={isUploadingPdf}
-                      className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer disabled:opacity-50"
-                    />
-                    {isUploadingPdf && (
-                      <span className="text-xs font-semibold text-royal-blue-600 animate-pulse">Uploading {pdfProgress}%...</span>
-                    )}
-                  </div>
-                  {downloadUrl && downloadUrl !== '#' && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs font-semibold flex items-center gap-2">
-                        <Check className="w-4 h-4" /> PDF Uploaded Successfully
-                      </span>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-gray-400">PDF will be used for in-app reading and downloads.</p>
-                </div>
-                {/* Chapter Editor Sub-Section */}
+                {/* Multiple PDF Upload */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Book E-Book Chapters</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Book PDFs</label>
                     <button
                       type="button"
-                      onClick={addChapter}
+                      onClick={addPdf}
                       className="px-3 py-1 rounded-lg bg-royal-blue-50 hover:bg-royal-blue-100 text-royal-blue-700 text-[10px] font-semibold transition-all cursor-pointer border-none"
                     >
-                      + Add Chapter
+                      + Add PDF
                     </button>
                   </div>
 
                   <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
-                    {chaptersInput.map((chap, idx) => (
+                    {pdfsInput.map((pdf, idx) => (
                       <div key={idx} className="p-3 rounded-xl border border-gray-200 bg-white space-y-2 relative">
                         <button
                           type="button"
-                          onClick={() => removeChapter(idx)}
+                          onClick={() => removePdf(idx)}
                           className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer border-none bg-transparent"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -2585,19 +2558,28 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                         <input
                           type="text"
                           required
-                          value={chap.title}
-                          onChange={(e) => updateChapter(idx, 'title', e.target.value)}
-                          placeholder="Chapter title (e.g. Chapter 1: sovereign plan)"
+                          value={pdf.title}
+                          onChange={(e) => updatePdfTitle(idx, e.target.value)}
+                          placeholder="PDF title (e.g. Volume 1)"
                           className="w-11/12 px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none font-bold"
                         />
-                        <textarea
-                          required
-                          value={chap.content}
-                          onChange={(e) => updateChapter(idx, 'content', e.target.value)}
-                          placeholder="Write chapter content text here..."
-                          rows={2}
-                          className="w-full px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none"
-                        />
+                        <div className="flex items-center gap-3 mt-1">
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e) => handlePdfUpload(idx, e)}
+                            disabled={uploadingPdfIndex === idx}
+                            className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer disabled:opacity-50"
+                          />
+                          {uploadingPdfIndex === idx && (
+                            <span className="text-[10px] font-semibold text-royal-blue-600 animate-pulse">Uploading {pdfProgress}%...</span>
+                          )}
+                          {pdf.url && pdf.url !== '#' && (
+                            <span className="text-emerald-600 text-[10px] font-semibold flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Uploaded
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

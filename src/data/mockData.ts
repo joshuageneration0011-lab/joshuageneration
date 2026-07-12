@@ -90,18 +90,18 @@ export const books: Book[] = [
     description: 'Discover God\'s unique purpose for your life and walk boldly in your destiny.',
     category: 'Purpose',
     downloadUrl: '#',
-    chapters: [
+    pdfs: [
       {
         title: 'Chapter 1: The Sovereign Plan',
-        content: 'Before you were formed in the womb, God knew you and set you apart. Your life is not an accident or a product of chance. There is a divine blueprint written in heaven specifically for you. The sovereign plan of God is the foundation of all true purpose. When you align with His will, your path becomes clear, and your steps are ordered by His grace. Step forward in the confidence that He who began a good work in you will carry it on to completion.'
+        url: 'Before you were formed in the womb, God knew you and set you apart. Your life is not an accident or a product of chance. There is a divine blueprint written in heaven specifically for you. The sovereign plan of God is the foundation of all true purpose. When you align with His will, your path becomes clear, and your steps are ordered by His grace. Step forward in the confidence that He who began a good work in you will carry it on to completion.'
       },
       {
         title: 'Chapter 2: Uncovering Your Divine Gifts',
-        content: 'Every individual has been uniquely equipped by God with talents, spiritual gifts, and capabilities designed to serve the Kingdom. Understanding your gifts is a vital step toward fulfilling your destiny. Take time to pray, self-reflect, and seek counsel to recognize what comes naturally to you and where God\'s power amplifies your efforts. Use your gifts to lift others, build the church, and display His glory.'
+        url: 'Every individual has been uniquely equipped by God with talents, spiritual gifts, and capabilities designed to serve the Kingdom. Understanding your gifts is a vital step toward fulfilling your destiny. Take time to pray, self-reflect, and seek counsel to recognize what comes naturally to you and where God\'s power amplifies your efforts. Use your gifts to lift others, build the church, and display His glory.'
       },
       {
         title: 'Chapter 3: Standing Firm in Trials',
-        content: 'A strong destiny is forged in the fire of testing. Trials are not meant to destroy you; they are designed to refine you. Keep your eyes fixed on Jesus, the author and finisher of our faith. When storms arise, hold fast to His promises and remember that the trials of today are preparing you for the victories of tomorrow.'
+        url: 'A strong destiny is forged in the fire of testing. Trials are not meant to destroy you; they are designed to refine you. Keep your eyes fixed on Jesus, the author and finisher of our faith. When storms arise, hold fast to His promises and remember that the trials of today are preparing you for the victories of tomorrow.'
       }
     ]
   },
@@ -113,14 +113,14 @@ export const books: Book[] = [
     description: 'A comprehensive guide to developing a powerful and effective prayer life.',
     category: 'Prayer',
     downloadUrl: '#',
-    chapters: [
+    pdfs: [
       {
         title: 'Chapter 1: The Language of Heaven',
-        content: 'Prayer is not a religious duty; it is a relationship. It is the language of communication between heaven and earth. To pray effectively is to communicate from the heart of a child to the ears of a loving Father. When you enter your secret closet and close the door, you enter a realm of limitless power and deep communion.'
+        url: 'Prayer is not a religious duty; it is a relationship. It is the language of communication between heaven and earth. To pray effectively is to communicate from the heart of a child to the ears of a loving Father. When you enter your secret closet and close the door, you enter a realm of limitless power and deep communion.'
       },
       {
         title: 'Chapter 2: Persistent Faith',
-        content: 'Persistence in prayer is the key to breakthroughs. Do not grow weary in asking, seeking, and knocking. The answers are on the way. Continue to stand in faith, declaring the scriptures, and praise God even before you see the physical manifestation of your prayers.'
+        url: 'Persistence in prayer is the key to breakthroughs. Do not grow weary in asking, seeking, and knocking. The answers are on the way. Continue to stand in faith, declaring the scriptures, and praise God even before you see the physical manifestation of your prayers.'
       }
     ]
   },
@@ -132,14 +132,14 @@ export const books: Book[] = [
     description: 'Biblical principles for financial freedom and kingdom stewardship.',
     category: 'Finance',
     downloadUrl: '#',
-    chapters: [
+    pdfs: [
       {
         title: 'Chapter 1: The Principle of Ownership',
-        content: 'Everything belongs to God. Once we realize we are not owners but stewards, our relationship with wealth changes. Wealth is a tool to advance the kingdom and bless others, not a treasure to hoard.'
+        url: 'Everything belongs to God. Once we realize we are not owners but stewards, our relationship with wealth changes. Wealth is a tool to advance the kingdom and bless others, not a treasure to hoard.'
       },
       {
         title: 'Chapter 2: The Sowing and Reaping Cycle',
-        content: 'Generosity is the currency of the kingdom. As you sow seed, God multiplies your harvest. Give cheerfully and trust that He will provide all your needs according to His riches in glory.'
+        url: 'Generosity is the currency of the kingdom. As you sow seed, God multiplies your harvest. Give cheerfully and trust that He will provide all your needs according to His riches in glory.'
       }
     ]
   },
@@ -151,14 +151,14 @@ export const books: Book[] = [
     description: 'Learn to live a Spirit-led life in every area of your daily walk.',
     category: 'Spiritual Growth',
     downloadUrl: '#',
-    chapters: [
+    pdfs: [
       {
         title: 'Chapter 1: Cultivating Sensitivity',
-        content: 'The Holy Spirit speaks in a still, small voice. To hear Him, we must quiet the noise of the world. Set aside time each morning to listen and surrender your day to His guidance.'
+        url: 'The Holy Spirit speaks in a still, small voice. To hear Him, we must quiet the noise of the world. Set aside time each morning to listen and surrender your day to His guidance.'
       },
       {
         title: 'Chapter 2: Fruits of the Spirit',
-        content: 'A spirit-led life is evidenced by the character of Christ. Love, joy, peace, patience, kindness, goodness, faithfulness, gentleness, and self-control should flow naturally from a heart rooted in Him.'
+        url: 'A spirit-led life is evidenced by the character of Christ. Love, joy, peace, patience, kindness, goodness, faithfulness, gentleness, and self-control should flow naturally from a heart rooted in Him.'
       }
     ]
   },
@@ -170,14 +170,14 @@ export const books: Book[] = [
     description: 'Find emotional and spiritual healing through God\'s restoring power.',
     category: 'Healing',
     downloadUrl: '#',
-    chapters: [
+    pdfs: [
       {
         title: 'Chapter 1: Binding Up the Wounds',
-        content: 'God is close to the brokenhearted and saves those who are crushed in spirit. Bring your pain to the altar. Jesus took our stripes, and by His wounds, we are healed, both physically and emotionally.'
+        url: 'God is close to the brokenhearted and saves those who are crushed in spirit. Bring your pain to the altar. Jesus took our stripes, and by His wounds, we are healed, both physically and emotionally.'
       },
       {
         title: 'Chapter 2: The Freedom of Forgiveness',
-        content: 'Unforgiveness is a prison that blocks your healing. Release the offenses and trust God to vindicate you. When you forgive, you release yourself from the burden of the past.'
+        url: 'Unforgiveness is a prison that blocks your healing. Release the offenses and trust God to vindicate you. When you forgive, you release yourself from the burden of the past.'
       }
     ]
   },
@@ -189,14 +189,14 @@ export const books: Book[] = [
     description: 'Building a strong spiritual foundation for your family through daily devotion.',
     category: 'Family',
     downloadUrl: '#',
-    chapters: [
+    pdfs: [
       {
         title: 'Chapter 1: The Devoted Home',
-        content: 'A home built on prayer stands strong. Establish a daily family altar where you worship, read the word, and pray together. It seals the hearts of your children and invites God\'s peace into your household.'
+        url: 'A home built on prayer stands strong. Establish a daily family altar where you worship, read the word, and pray together. It seals the hearts of your children and invites God\'s peace into your household.'
       },
       {
         title: 'Chapter 2: Legacy of Faith',
-        content: 'What you model in the home will outlive you. Pass down a legacy of scripture reading, integrity, and faith that will guide generations to come.'
+        url: 'What you model in the home will outlive you. Pass down a legacy of scripture reading, integrity, and faith that will guide generations to come.'
       }
     ]
   },
@@ -255,7 +255,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'When life gets tough, our faith is tested. Here are five powerful ways to keep your faith strong...',
     imageUrl: 'https://images.unsplash.com/photo-1504052434561-5adf5a5c1a1e?w=800&q=80',
     category: 'Faith',
-    content: `When life gets tough, our faith is tested in ways we never anticipated. The storms of life have a way of revealing the foundations upon which we stand. If our foundation is weak, we will falter. But if our foundation is built upon the solid rock of Jesus Christ, we can withstand any trial.\n\nHere are five powerful ways to keep your faith strong when you face adversity:\n\n1. Immerse Yourself in the Word of God: Romans 10:17 reminds us that faith comes by hearing, and hearing by the word of God. When the noise of the world is loud, tune in to the whisper of Scripture. Declare the promises of God daily.\n\n2. Maintain a Lifestyle of Praise: Worship is a powerful weapon. Praising God in the midst of your struggle shifts your focus from the size of your giant to the size of your God. It changes the atmosphere of your heart.\n\n3. Stay Connected to Community: Do not isolate yourself. Find a group of believers who will lift you up in prayer, encourage your heart, and stand with you in faith. We are stronger together.\n\n4. Remember Past Victories: David defeated Goliath because he remembered how God had delivered him from the lion and the bear. Journal your testimonies; they will serve as anchors of hope in seasons of doubt.\n\n5. Pray without Ceasing: Keep the communication lines with heaven wide open. Pour out your heart to the Father and allow His peace, which surpasses all understanding, to guard your heart and mind.`
+    url: `When life gets tough, our faith is tested in ways we never anticipated. The storms of life have a way of revealing the foundations upon which we stand. If our foundation is weak, we will falter. But if our foundation is built upon the solid rock of Jesus Christ, we can withstand any trial.\n\nHere are five powerful ways to keep your faith strong when you face adversity:\n\n1. Immerse Yourself in the Word of God: Romans 10:17 reminds us that faith comes by hearing, and hearing by the word of God. When the noise of the world is loud, tune in to the whisper of Scripture. Declare the promises of God daily.\n\n2. Maintain a Lifestyle of Praise: Worship is a powerful weapon. Praising God in the midst of your struggle shifts your focus from the size of your giant to the size of your God. It changes the atmosphere of your heart.\n\n3. Stay Connected to Community: Do not isolate yourself. Find a group of believers who will lift you up in prayer, encourage your heart, and stand with you in faith. We are stronger together.\n\n4. Remember Past Victories: David defeated Goliath because he remembered how God had delivered him from the lion and the bear. Journal your testimonies; they will serve as anchors of hope in seasons of doubt.\n\n5. Pray without Ceasing: Keep the communication lines with heaven wide open. Pour out your heart to the Father and allow His peace, which surpasses all understanding, to guard your heart and mind.`
   },
   {
     id: 'p2',
@@ -266,7 +266,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'How establishing a daily devotional practice can transform your spiritual life and deepen your...',
     imageUrl: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=800&q=80',
     category: 'Devotion',
-    content: `In our fast-paced world, it is easy to get caught up in the hustle and bustle of daily activities. However, neglecting our spiritual health leads to exhaustion and dryness. Establishing a daily devotional practice is the key to maintaining a vibrant relationship with Jesus.\n\nA daily devotion is not a ritual to check off your to-do list; it is a vital connection to the Source of life. Here is how it can transform your walk:\n\nFirst, it aligns your perspective. Spending your first moments with God clears the mental clutter and prepares you to face the day with grace and patience. Second, it fills your spiritual tank. Just as physical food sustains the body, the Word sustains the spirit.\n\nStart small: set aside 15 minutes each morning. Read a chapter of Scripture, meditate on it, and pray. You will find that consistency yields deep spiritual growth, bringing peace and strength into every corner of your daily life.`
+    url: `In our fast-paced world, it is easy to get caught up in the hustle and bustle of daily activities. However, neglecting our spiritual health leads to exhaustion and dryness. Establishing a daily devotional practice is the key to maintaining a vibrant relationship with Jesus.\n\nA daily devotion is not a ritual to check off your to-do list; it is a vital connection to the Source of life. Here is how it can transform your walk:\n\nFirst, it aligns your perspective. Spending your first moments with God clears the mental clutter and prepares you to face the day with grace and patience. Second, it fills your spiritual tank. Just as physical food sustains the body, the Word sustains the spirit.\n\nStart small: set aside 15 minutes each morning. Read a chapter of Scripture, meditate on it, and pray. You will find that consistency yields deep spiritual growth, bringing peace and strength into every corner of your daily life.`
   },
   {
     id: 'p3',
@@ -277,7 +277,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'In a world that constantly demands more, understanding God\'s unearned favor brings true freedom...',
     imageUrl: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80',
     category: 'Grace',
-    content: `We live in a performance-driven culture that measures our worth by our achievements. From a young age, we are taught that to receive rewards, we must perform. Unfortunately, we often carry this performance mentality into our relationship with God.\n\nWe think we must earn His love, deserve His mercy, and work for His blessings. But the gospel tells a completely different story. The gospel is a story of grace—unearned, unmerited, and undeserved favor.\n\nGrace means that God loves you because of who He is, not because of what you have done. Ephesians 2:8-9 declares, "For by grace you have been saved through faith; and that not of yourselves, it is the gift of God; not as a result of works, so that no one may boast." When you embrace grace, the pressure is off. You no longer serve God to get Him to love you; you serve Him because He already does.`
+    url: `We live in a performance-driven culture that measures our worth by our achievements. From a young age, we are taught that to receive rewards, we must perform. Unfortunately, we often carry this performance mentality into our relationship with God.\n\nWe think we must earn His love, deserve His mercy, and work for His blessings. But the gospel tells a completely different story. The gospel is a story of grace—unearned, unmerited, and undeserved favor.\n\nGrace means that God loves you because of who He is, not because of what you have done. Ephesians 2:8-9 declares, "For by grace you have been saved through faith; and that not of yourselves, it is the gift of God; not as a result of works, so that no one may boast." When you embrace grace, the pressure is off. You no longer serve God to get Him to love you; you serve Him because He already does.`
   },
   {
     id: 'p4',
@@ -288,7 +288,7 @@ export const blogPosts: BlogPost[] = [
     excerpt: 'Discover the secrets to a prayer life that produces results and brings heaven\'s power to earth...',
     imageUrl: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=800&q=80',
     category: 'Prayer',
-    content: `Prayer is one of the most powerful privileges given to believers, yet it is often one of the most underutilized. True prayer is not merely reciting a list of requests; it is partnering with heaven to release God's will on earth.\n\nIf you want to build a prayer life that moves mountains, keep these principles in mind:\n\n1. Pray in Alignment with God's Will: Effective prayer is rooted in the Word. When we pray the scriptures, we are praying the very heart of God, and we can be confident He hears us.\n\n2. Pray with Faith: Jesus said, "Whatever you ask for in prayer, believe that you have received it, and it will be yours." Faith is the spark that ignites our prayers.\n\n3. Pray with Persistence: Don't give up. Elijah prayed persistently for rain until a cloud appeared. Persistence builds spiritual muscle and demonstrates earnest trust.`
+    url: `Prayer is one of the most powerful privileges given to believers, yet it is often one of the most underutilized. True prayer is not merely reciting a list of requests; it is partnering with heaven to release God's will on earth.\n\nIf you want to build a prayer life that moves mountains, keep these principles in mind:\n\n1. Pray in Alignment with God's Will: Effective prayer is rooted in the Word. When we pray the scriptures, we are praying the very heart of God, and we can be confident He hears us.\n\n2. Pray with Faith: Jesus said, "Whatever you ask for in prayer, believe that you have received it, and it will be yours." Faith is the spark that ignites our prayers.\n\n3. Pray with Persistence: Don't give up. Elijah prayed persistently for rain until a cloud appeared. Persistence builds spiritual muscle and demonstrates earnest trust.`
   },
 ];
 
@@ -296,7 +296,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't1',
     name: 'Maria Gonzalez',
-    content: 'I came to JGen broken and hopeless. Through the teachings and the community, I found my purpose. Today I\'m a youth leader mentoring others!',
+    url: 'I came to JGen broken and hopeless. Through the teachings and the community, I found my purpose. Today I\'m a youth leader mentoring others!',
     imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80',
     type: 'written',
     date: '2025-11-25',
@@ -304,7 +304,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't2',
     name: 'James O\'Brien',
-    content: 'After 20 years of addiction, God set me free during a JGen conference. The prayer team never gave up on me. Now I\'m free indeed!',
+    url: 'After 20 years of addiction, God set me free during a JGen conference. The prayer team never gave up on me. Now I\'m free indeed!',
     imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80',
     type: 'written',
     date: '2025-11-20',
@@ -312,7 +312,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't3',
     name: 'Sarah & David Chen',
-    content: 'Our marriage was at the brink of divorce when we attended the Kingdom Marriage seminar. God restored what the enemy stole!',
+    url: 'Our marriage was at the brink of divorce when we attended the Kingdom Marriage seminar. God restored what the enemy stole!',
     imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80',
     type: 'written',
     date: '2025-11-15',
@@ -320,7 +320,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't4',
     name: 'Pastor Amos Kiprop',
-    content: 'The leadership training at JGen transformed how I pastor my church. The resources and mentorship are unparalleled.',
+    url: 'The leadership training at JGen transformed how I pastor my church. The resources and mentorship are unparalleled.',
     imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80',
     type: 'written',
     date: '2025-11-10',
@@ -328,7 +328,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't5',
     name: 'Emily Watson',
-    content: 'I was diagnosed with a chronic illness, but through the teachings on divine healing and the prayers of the saints, I am completely healed!',
+    url: 'I was diagnosed with a chronic illness, but through the teachings on divine healing and the prayers of the saints, I am completely healed!',
     imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80',
     type: 'written',
     date: '2025-11-05',
@@ -336,7 +336,7 @@ export const testimonies: Testimony[] = [
   {
     id: 't6',
     name: 'Michael Adebayo',
-    content: 'God used JGen to teach me kingdom economics. I went from debt to financial freedom in one year. The principles work!',
+    url: 'God used JGen to teach me kingdom economics. I went from debt to financial freedom in one year. The principles work!',
     imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80',
     type: 'written',
     date: '2025-10-30',
