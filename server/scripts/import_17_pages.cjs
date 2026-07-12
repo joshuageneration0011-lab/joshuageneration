@@ -169,7 +169,7 @@ async function run() {
           await pool.query(
             `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, audio_url) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10)`,
-            [sermonId, title, 'Apostle Joshua Iyemifokhae', duration, localThumbRelPath || '', 0, 0, description, 'Sunday Service', `/sermons/${audioFileName}`]
+            [sermonId, title, 'Apostle Joshua Iyemifokhae', duration, localThumbRelPath || '', 0, 0, description, 'Sermons', `/sermons/${audioFileName}`]
           );
           console.log(`Successfully imported: ${title}`);
         } else {
