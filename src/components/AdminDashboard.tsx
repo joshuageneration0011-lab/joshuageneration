@@ -2163,9 +2163,12 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const [pdfsInput, setPdfsInput] = useState<{ title: string; url: string }[]>([]);
   const [uploadingPdfIndex, setUploadingPdfIndex] = useState<number | null>(null);
   const [pdfProgress, setPdfProgress] = useState(0);
+  const [enableAmazon, setEnableAmazon] = useState(false);
   const [amazonUrl, setAmazonUrl] = useState('');
+  const [enableSelar, setEnableSelar] = useState(false);
   const [selarUrl, setSelarUrl] = useState('');
   const [pages, setPages] = useState('150');
+  const [downloads, setDownloads] = useState('0');
   
 
   const openNewForm = () => {
@@ -2177,9 +2180,12 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setCoverUrl('');
     setPdfsInput([]);
     setImageSourceMode('upload');
+    setEnableAmazon(false);
     setAmazonUrl('');
+    setEnableSelar(false);
     setSelarUrl('');
     setPages('150');
+    setDownloads('0');
     setPdfsInput([{ title: 'Main Book PDF', url: '' }]);
     setIsFormOpen(true);
   };
@@ -2193,9 +2199,12 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setCoverUrl(book.coverUrl);
     
     setImageSourceMode(book.coverUrl && book.coverUrl.startsWith('data:') ? 'upload' : 'url');
+    setEnableAmazon(!!book.amazonUrl && book.amazonUrl.trim() !== '');
     setAmazonUrl(book.amazonUrl || '');
+    setEnableSelar(!!book.selarUrl && book.selarUrl.trim() !== '');
     setSelarUrl(book.selarUrl || '');
     setPages(String(book.pages || '150'));
+    setDownloads(String(book.downloads || '0'));
     setPdfsInput(book.pdfs || []);
     setIsFormOpen(true);
   };
@@ -2285,10 +2294,10 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       category: category.trim(),
       
       pages: Number(pages) || 150,
-      downloads: editingBook ? (editingBook as any).downloads || 0 : 0,
+      downloads: Number(downloads) || 0,
       rating: editingBook ? (editingBook as any).rating || 4.8 : 4.8,
-      amazonUrl: amazonUrl.trim() || 'https://amazon.com',
-      selarUrl: selarUrl.trim() || 'https://selar.co',
+      amazonUrl: enableAmazon ? amazonUrl.trim() : undefined,
+      selarUrl: enableSelar ? selarUrl.trim() : undefined,
       pdfs: pdfsInput
     };
 
@@ -2418,7 +2427,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</label>
                     <select
@@ -2445,6 +2454,17 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none"
                     />
                   </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Downloads Count</label>
+                    <input
+                      type="number"
+                      value={downloads}
+                      onChange={(e) => setDownloads(e.target.value)}
+                      placeholder="e.g. 1500"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -2461,25 +2481,47 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Amazon Purchase Link</label>
-                    <input
-                      type="url"
-                      value={amazonUrl}
-                      onChange={(e) => setAmazonUrl(e.target.value)}
-                      placeholder="https://amazon.com/..."
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none"
-                    />
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Amazon Link</label>
+                      <button
+                        type="button"
+                        onClick={() => setEnableAmazon(!enableAmazon)}
+                        className={`w-8 h-4 rounded-full transition-colors ${enableAmazon ? 'bg-royal-blue-600' : 'bg-gray-300'} relative cursor-pointer border-none`}
+                      >
+                        <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${enableAmazon ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </div>
+                    {enableAmazon && (
+                      <input
+                        type="url"
+                        value={amazonUrl}
+                        onChange={(e) => setAmazonUrl(e.target.value)}
+                        placeholder="https://amazon.com/..."
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none mt-2"
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Selar Purchase Link</label>
-                    <input
-                      type="url"
-                      value={selarUrl}
-                      onChange={(e) => setSelarUrl(e.target.value)}
-                      placeholder="https://selar.co/..."
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none"
-                    />
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Selar Link</label>
+                      <button
+                        type="button"
+                        onClick={() => setEnableSelar(!enableSelar)}
+                        className={`w-8 h-4 rounded-full transition-colors ${enableSelar ? 'bg-royal-blue-600' : 'bg-gray-300'} relative cursor-pointer border-none`}
+                      >
+                        <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${enableSelar ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </div>
+                    {enableSelar && (
+                      <input
+                        type="url"
+                        value={selarUrl}
+                        onChange={(e) => setSelarUrl(e.target.value)}
+                        placeholder="https://selar.co/..."
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none mt-2"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -2563,22 +2605,35 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                           placeholder="PDF title (e.g. Volume 1)"
                           className="w-11/12 px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none font-bold"
                         />
-                        <div className="flex items-center gap-3 mt-1">
+                        <div className="space-y-2 mt-1">
                           <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={(e) => handlePdfUpload(idx, e)}
-                            disabled={uploadingPdfIndex === idx}
-                            className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer disabled:opacity-50"
+                            type="url"
+                            value={pdf.url}
+                            onChange={(e) => {
+                              const newPdfs = [...pdfsInput];
+                              newPdfs[idx].url = e.target.value;
+                              setPdfsInput(newPdfs);
+                            }}
+                            placeholder="Paste external PDF link or upload file below..."
+                            className="w-11/12 px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none"
                           />
-                          {uploadingPdfIndex === idx && (
-                            <span className="text-[10px] font-semibold text-royal-blue-600 animate-pulse">Uploading {pdfProgress}%...</span>
-                          )}
-                          {pdf.url && pdf.url !== '#' && (
-                            <span className="text-emerald-600 text-[10px] font-semibold flex items-center gap-1">
-                              <Check className="w-3 h-3" /> Uploaded
-                            </span>
-                          )}
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={(e) => handlePdfUpload(idx, e)}
+                              disabled={uploadingPdfIndex === idx}
+                              className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer disabled:opacity-50"
+                            />
+                            {uploadingPdfIndex === idx && (
+                              <span className="text-[10px] font-semibold text-royal-blue-600 animate-pulse">Uploading {pdfProgress}%...</span>
+                            )}
+                            {pdf.url && pdf.url !== '#' && pdf.url.startsWith('http') && !uploadingPdfIndex && (
+                              <span className="text-emerald-600 text-[10px] font-semibold flex items-center gap-1">
+                                <Check className="w-3 h-3" /> Valid Link Ready
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

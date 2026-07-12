@@ -72,8 +72,16 @@ export default function BookReader({ book, onBack }: BookReaderProps) {
 
           {/* Details & PDFs */}
           <div className="flex-1">
-            <div className="inline-block px-3 py-1 rounded-full bg-royal-blue-50 text-royal-blue-600 text-xs font-bold mb-4">
-              {book.category}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div className="inline-block px-3 py-1 rounded-full bg-royal-blue-50 text-royal-blue-600 text-xs font-bold">
+                {book.category}
+              </div>
+              {Number(book.downloads) > 0 && (
+                <div className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold flex items-center gap-1.5">
+                  <Download className="w-3.5 h-3.5" />
+                  {Number(book.downloads).toLocaleString()} Downloads
+                </div>
+              )}
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold font-serif leading-tight mb-2">
               {book.title}
