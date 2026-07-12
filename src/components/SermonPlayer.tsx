@@ -189,7 +189,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
   // Copy Link
   const copyLink = () => {
-    navigator.clipboard.writeText(window.location.origin + `/#sermon/${sermon.id}`);
+    navigator.clipboard.writeText(window.location.origin + `/sermon/${sermon.id}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -553,7 +553,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 <input
                   type="text"
                   readOnly
-                  value={window.location.origin + `/#sermon/${sermon.id}`}
+                  value={window.location.origin + `/sermon/${sermon.id}`}
                   className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 focus:outline-none outline-none select-all"
                 />
                 <button
@@ -564,9 +564,9 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent('Check out this sermon: ' + sermon.title + ' ' + window.location.origin + '/#sermon/' + sermon.id)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent('Check out this sermon: ' + sermon.title + ' ' + window.location.origin + '/sermon/' + sermon.id)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-150 hover:bg-emerald-50 hover:border-emerald-200 text-xs font-semibold text-gray-600 hover:text-emerald-700 transition-colors"
@@ -574,20 +574,29 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Watch ' + sermon.title + ' by ' + sermon.speaker)}&url=${encodeURIComponent(window.location.origin + '/#sermon/' + sermon.id)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Watch ' + sermon.title + ' by ' + sermon.speaker)}&url=${encodeURIComponent(window.location.origin + '/sermon/' + sermon.id)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-150 hover:bg-sky-50 hover:border-sky-200 text-xs font-semibold text-gray-600 hover:text-sky-700 transition-colors"
                 >
                   Twitter
                 </a>
-                <button
-                  onClick={copyLink}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-150 hover:bg-royal-blue-50 hover:border-royal-blue-200 text-xs font-semibold text-gray-600 hover:text-royal-blue-700 transition-colors"
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + '/sermon/' + sermon.id)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-150 hover:bg-blue-50 hover:border-blue-200 text-xs font-semibold text-gray-600 hover:text-blue-700 transition-colors"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
-                  Link
-                </button>
+                  Facebook
+                </a>
+                <a
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin + '/sermon/' + sermon.id)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-150 hover:bg-blue-50 hover:border-blue-200 text-xs font-semibold text-gray-600 hover:text-blue-800 transition-colors"
+                >
+                  LinkedIn
+                </a>
               </div>
             </div>
 
