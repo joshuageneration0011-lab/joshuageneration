@@ -313,6 +313,13 @@ async function initDb() {
         );
       `);
 
+      try {
+        await pool.query("ALTER TABLE books ADD COLUMN IF NOT EXISTS downloads INT DEFAULT 0");
+        await pool.query("ALTER TABLE books ADD COLUMN IF NOT EXISTS pdfs JSONB DEFAULT '[]'::jsonb");
+      } catch (err) {
+        console.warn("Failed to migrate books table:", err.message);
+      }
+
       await pool.query(`
         CREATE TABLE IF NOT EXISTS blog_posts (
           id VARCHAR PRIMARY KEY,
@@ -509,9 +516,9 @@ async function initDb() {
       if (bookCheck.rowCount === 0) {
         for (const b of defaults.books) {
           await pool.query(
-            `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, chapters)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-            [b.id, b.title, b.author, b.coverUrl, b.description, b.category, b.downloadUrl, b.rating || 4.8, b.amazonUrl || '', b.selarUrl || '', b.pages || 150, JSON.stringify(b.chapters || [])]
+            `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, downloads, pdfs)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+            [b.id, b.title, b.author, b.coverUrl, b.description, b.category, b.downloadUrl, b.rating || 4.8, b.amazonUrl || '', b.selarUrl || '', b.pages || 150, b.downloads || 0, JSON.stringify(b.pdfs || [])]
           );
         }
         console.log('Seeded books table.');
@@ -1290,7 +1297,8 @@ const server = http.createServer(async (req, res) => {
           amazonUrl: row.amazon_url,
           selarUrl: row.selar_url,
           pages: row.pages,
-          chapters: typeof row.chapters === 'string' ? JSON.parse(row.chapters) : row.chapters
+          downloads: row.downloads || 0,
+          pdfs: row.pdfs ? (typeof row.pdfs === 'string' ? JSON.parse(row.pdfs) : row.pdfs) : (typeof row.chapters === 'string' ? JSON.parse(row.chapters) : row.chapters)
         }));
         sendJson(res, 200, books);
       } else {
@@ -2032,8 +2040,8 @@ const server = http.createServer(async (req, res) => {
 
       if (pool) {
         await pool.query(
-          `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, chapters)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, downloads, pdfs)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
            ON CONFLICT (id) DO UPDATE SET
              title = EXCLUDED.title,
              author = EXCLUDED.author,
@@ -2045,8 +2053,9 @@ const server = http.createServer(async (req, res) => {
              amazon_url = EXCLUDED.amazon_url,
              selar_url = EXCLUDED.selar_url,
              pages = EXCLUDED.pages,
-             chapters = EXCLUDED.chapters`,
-          [item.id, item.title, item.author, item.coverUrl, item.description, item.category, item.downloadUrl, item.rating || 4.8, item.amazonUrl || '', item.selarUrl || '', item.pages || 150, JSON.stringify(item.chapters || [])]
+             downloads = EXCLUDED.downloads,
+             pdfs = EXCLUDED.pdfs`,
+          [item.id, item.title, item.author, item.coverUrl, item.description, item.category, item.downloadUrl, item.rating || 4.8, item.amazonUrl || '', item.selarUrl || '', item.pages || 150, item.downloads || 0, JSON.stringify(item.pdfs || [])]
         );
       } else {
         const data = JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf-8'));
