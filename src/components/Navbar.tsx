@@ -10,7 +10,6 @@ const navLinks = [
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
   { name: 'Partnership', href: '/partnership', icon: Heart, page: 'partnership' as Page },
   { name: 'Events', href: '#events', icon: Gift },
-  { name: 'Contact', href: '/contact', icon: Mail, page: 'contact' as Page },
   // { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
 ];
 
@@ -250,6 +249,18 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
               >
                 <Gift className="w-4 h-4" />
                 Donate
+              </button>
+              <button
+                onClick={() => onNavigate && onNavigate('contact')}
+                className={cn(
+                  'hidden lg:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm border transition-all duration-200',
+                  isScrolled || currentPage !== 'home'
+                    ? 'border-royal-blue-200 text-royal-blue-600 hover:bg-royal-blue-50'
+                    : 'border-white/30 text-white hover:bg-white/10'
+                )}
+              >
+                <Mail className="w-4 h-4" />
+                Contact
               </button>
               <button
                 onClick={() => setIsOpen(!isOpen)}
