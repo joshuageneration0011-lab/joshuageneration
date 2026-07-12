@@ -100,6 +100,8 @@ export interface Donation {
 }
 
 export interface Settings {
-  flutterwave_prophetic_key: string;
-  flutterwave_mission_key: string;
+  flutterwave_prophetic_client_id: string;
+  flutterwave_prophetic_client_secret: string;
+  flutterwave_mission_client_id: string;
+  flutterwave_mission_client_secret: string;
 }
