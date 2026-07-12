@@ -5372,7 +5372,7 @@ function MessagesTab() {
                       <span className="font-medium text-gray-700">{msg.name}</span>
                       <span>&bull;</span>
                       <a
-                        href={mailto:}
+                        href={`mailto:${msg.email}`}
                         className="hover:text-royal-blue-600 transition-colors"
                         onClick={e => e.stopPropagation()}
                       >
@@ -5414,7 +5414,7 @@ function MessagesTab() {
                     <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{msg.message}</p>
                     <div className="mt-4">
                       <a
-                        href={mailto:?subject=Re: }
+                        href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-royal-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors"
                       >
                         <Mail className="w-3.5 h-3.5" />
