@@ -6,7 +6,13 @@ import urllib.request
 import urllib.parse
 import random
 import time
+import getpass
+import ssl
 from datetime import datetime
+
+SSL_CTX = ssl.create_default_context()
+SSL_CTX.check_hostname = False
+SSL_CTX.verify_mode = ssl.CERT_NONE
 
 def show_progress(block_num, block_size, total_size):
     if total_size <= 0:
@@ -28,6 +34,58 @@ def main():
     api_base = host_input if host_input else default_host
     if api_base.endswith('/'):
         api_base = api_base[:-1]
+
+    # 1b. Authenticate
+    print("\n--- Server Authentication ---")
+    default_email = "admin@joshuagen.org"
+    default_password = "admin123"
+    
+    print(f"Trying default admin credentials ({default_email})...")
+    token = None
+    
+    try:
+        login_url = f"{api_base}/api/auth/login"
+        payload = json.dumps({"email": default_email, "password": default_password}).encode('utf-8')
+        req = urllib.request.Request(
+            login_url,
+            data=payload,
+            headers={'Content-Type': 'application/json', 'User-Agent': 'SermonImporter/1.0'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, context=SSL_CTX, timeout=15) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            token = res_data.get('token')
+            if token:
+                print(f"Successfully authenticated as {default_email}!")
+    except Exception as e:
+        print(f"Default credentials failed: {e}")
+        
+    if not token:
+        print("Please enter credentials manually:")
+        for attempt in range(3):
+            email = input(f"Admin email [{default_email}]: ").strip() or default_email
+            password = getpass.getpass("Admin password: ")
+            try:
+                login_url = f"{api_base}/api/auth/login"
+                payload = json.dumps({"email": email, "password": password}).encode('utf-8')
+                req = urllib.request.Request(
+                    login_url,
+                    data=payload,
+                    headers={'Content-Type': 'application/json', 'User-Agent': 'SermonImporter/1.0'},
+                    method='POST'
+                )
+                with urllib.request.urlopen(req, context=SSL_CTX, timeout=15) as response:
+                    res_data = json.loads(response.read().decode('utf-8'))
+                    token = res_data.get('token')
+                    if token:
+                        print(f"Successfully authenticated as {email}!")
+                        break
+            except Exception as e:
+                print(f"Login failed (attempt {attempt+1}/3): {e}")
+                
+    if not token:
+        print("Authentication failed. Cannot proceed without authentication.")
+        return
 
     # 2. Input Audio URL
     audio_url = ""
@@ -83,10 +141,13 @@ def main():
             req = urllib.request.Request(
                 img_upload_url,
                 data=img_data,
-                headers={'Content-Type': 'application/octet-stream'},
+                headers={
+                    'Content-Type': 'application/octet-stream',
+                    'Authorization': f'Bearer {token}'
+                },
                 method='POST'
             )
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, context=SSL_CTX) as response:
                 res_data = json.loads(response.read().decode('utf-8'))
                 uploaded_thumbnail_path = res_data.get('url')
                 print(f"Image upload complete! URL: {uploaded_thumbnail_path}")
@@ -124,11 +185,14 @@ def main():
         req = urllib.request.Request(
             upload_url,
             data=file_data,
-            headers={'Content-Type': 'application/octet-stream'},
+            headers={
+                'Content-Type': 'application/octet-stream',
+                'Authorization': f'Bearer {token}'
+            },
             method='POST'
         )
 
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, context=SSL_CTX) as response:
             res_data = json.loads(response.read().decode('utf-8'))
             uploaded_audio_path = res_data.get('url')
             if not uploaded_audio_path:
@@ -173,10 +237,13 @@ def main():
         req = urllib.request.Request(
             sermon_url,
             data=json.dumps(sermon_payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {token}'
+            },
             method='POST'
         )
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, context=SSL_CTX) as response:
             res_body = response.read().decode('utf-8')
             print("Sermon entry created successfully on the server!")
             print(f"\nSermon details:")

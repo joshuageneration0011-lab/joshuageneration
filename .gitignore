@@ -24,3 +24,20 @@ server/data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Scratch debug/dev files
+scratch/
+
+# Deploy output logs
+*.txt
+
+# Extra debug scripts
+scripts/check_*.js
+scripts/test_*.js
+scripts/find_*.js
+scripts/list_*.js
+scripts/ingest_*.js
+scripts/read_*.js
+scripts/remote_*.js
+scripts/show_*.js
+scripts/view_*.js
