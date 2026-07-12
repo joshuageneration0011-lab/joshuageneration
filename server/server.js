@@ -384,13 +384,23 @@ async function initDb() {
           flutterwave_mission_client_secret TEXT DEFAULT ''
         );
       `);
-      // Migrate old column names if they exist
-      for (const col of ['flutterwave_prophetic_key', 'flutterwave_mission_key']) {
-        try { await pool.query(`ALTER TABLE settings DROP COLUMN IF EXISTS ${col}`); } catch (e) {}
-      }
-      // Add new columns if missing (idempotent)
+
+      // Safe migration: add new columns first (idempotent), THEN remove old ones
       for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret']) {
         try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS ${col} TEXT DEFAULT ''`); } catch (e) {}
+      }
+
+      // Copy data from old column names into new ones (if old columns still exist)
+      try {
+        await pool.query(`UPDATE settings SET flutterwave_prophetic_client_id = flutterwave_prophetic_key WHERE flutterwave_prophetic_key IS NOT NULL AND flutterwave_prophetic_key != '' AND (flutterwave_prophetic_client_id IS NULL OR flutterwave_prophetic_client_id = '')`);
+      } catch (e) { /* old column already gone - OK */ }
+      try {
+        await pool.query(`UPDATE settings SET flutterwave_mission_client_id = flutterwave_mission_key WHERE flutterwave_mission_key IS NOT NULL AND flutterwave_mission_key != '' AND (flutterwave_mission_client_id IS NULL OR flutterwave_mission_client_id = '')`);
+      } catch (e) { /* old column already gone - OK */ }
+
+      // Now safely drop old columns (data already copied above)
+      for (const col of ['flutterwave_prophetic_key', 'flutterwave_mission_key']) {
+        try { await pool.query(`ALTER TABLE settings DROP COLUMN IF EXISTS ${col}`); } catch (e) {}
       }
 
       const settingsCheck = await pool.query('SELECT 1 FROM settings WHERE id = 1');
