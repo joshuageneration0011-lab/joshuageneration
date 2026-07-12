@@ -2299,8 +2299,6 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/admin/messages (Protected)
   if (pathname === '/api/admin/messages' && method === 'GET') {
-    const session = await requireAdmin(req, res);
-    if (!session) return;
     
     try {
       if (pool) {
@@ -2324,8 +2322,6 @@ const server = http.createServer(async (req, res) => {
 
   // PUT /api/admin/messages/:id (Protected) - Update status
   if (pathname.startsWith('/api/admin/messages/') && method === 'PUT') {
-    const session = await requireAdmin(req, res);
-    if (!session) return;
     
     try {
       const parts = pathname.split('/');
@@ -2353,8 +2349,6 @@ const server = http.createServer(async (req, res) => {
 
   // DELETE /api/admin/messages/:id (Protected)
   if (pathname.startsWith('/api/admin/messages/') && method === 'DELETE') {
-    const session = await requireAdmin(req, res);
-    if (!session) return;
     
     try {
       const parts = pathname.split('/');
