@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Search, User, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio } from 'lucide-react';
+import { Menu, X, Search, User, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
 
@@ -10,7 +10,7 @@ const navLinks = [
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
   { name: 'Partnership', href: '/partnership', icon: Heart, page: 'partnership' as Page },
   { name: 'Events', href: '#events', icon: Gift },
-  { name: 'Contact', href: '/contact', icon: Home, page: 'contact' as Page },
+  { name: 'Contact', href: '/contact', icon: Mail, page: 'contact' as Page },
   // { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
 ];
 
