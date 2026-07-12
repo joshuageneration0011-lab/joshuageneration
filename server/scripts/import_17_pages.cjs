@@ -14,8 +14,8 @@ const pool = new Pool({
 
 const MAX_PAGES = 17;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const SERMONS_DIR = path.join(PUBLIC_DIR, 'sermons');
-const THUMBS_DIR = path.join(PUBLIC_DIR, 'thumbnails');
+const SERMONS_DIR = path.join(__dirname, '..', '..', 'public', 'sermons');
+const THUMBS_DIR = path.join(__dirname, '..', '..', 'public', 'thumbnails');
 
 // Ensure directories exist
 if (!fs.existsSync(SERMONS_DIR)) fs.mkdirSync(SERMONS_DIR, { recursive: true });
