@@ -1,15 +1,12 @@
-import fetch from 'node-fetch';
-import { Pool } from 'pg';
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
+// Native fetch is available in Node 24
+const { Pool } = require('pg');
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const dotenv = require('dotenv');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const pool = new Pool({
   user: process.env.DB_USER || 'joshuagen',
