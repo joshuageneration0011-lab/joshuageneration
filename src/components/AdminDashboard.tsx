@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Users, Tv, BookOpen, FileText, Calendar,
   Video, DollarSign, BarChart3, MapPin, Shield,
@@ -129,7 +129,7 @@ export default function AdminDashboard({
     { id: 'books', label: 'Books', icon: BookOpen, badge: books.length.toString() },
     { id: 'blog', label: 'Blog', icon: FileText, badge: posts.length.toString() },
     { id: 'events', label: 'Events', icon: Calendar, badge: events.length.toString() },
-    { id: 'messages', label: 'Messages', icon: Mail },
+    { id: 'messages', label: 'Messages', icon: Mail, badge: unreadMsgCount > 0 ? String(unreadMsgCount) : undefined },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
     { id: 'donations', label: 'Donations', icon: DollarSign },
     { id: 'prayer', label: 'Prayer', icon: Heart },
@@ -146,6 +146,7 @@ export default function AdminDashboard({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loadingDonations, setLoadingDonations] = useState(true);
+  const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
 
   const handleLogout = () => {
     api.logout();
@@ -167,9 +168,17 @@ export default function AdminDashboard({
     }
   };
 
+  const refreshUnreadCount = async () => {
+    try {
+      const msgs = await api.getMessages();
+      setUnreadMsgCount(msgs.filter((m: any) => m.status === 'unread').length);
+    } catch { /* silent */ }
+  };
+
   useEffect(() => {
     loadDonations();
   }, []);
+    refreshUnreadCount();
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -179,7 +188,7 @@ export default function AdminDashboard({
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
-      case 'messages': return <MessagesTab />;
+      case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
         return <DonationsTab donations={donations} loading={loadingDonations} onRefresh={loadDonations} />;
@@ -394,12 +403,12 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
         <div className="absolute inset-0 bg-grid opacity-10" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-500/10 rounded-full blur-[80px]" />
         <div className="relative">
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome back, {displayName} 👋</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome back, {displayName} ðŸ‘‹</h1>
           <p className="text-white/80 text-sm mt-1 max-w-lg">The Lord is doing great things. Here's your ministry overview for today.</p>
           <div className="flex flex-wrap gap-2 mt-4">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">🕊️ {newMembersCount} new members</span>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">🔥 {sermons.length} sermons uploaded</span>
-            <span className="px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 text-xs font-medium">📖 {posts.length} blog posts</span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">ðŸ•Šï¸ {newMembersCount} new members</span>
+            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">ðŸ”¥ {sermons.length} sermons uploaded</span>
+            <span className="px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 text-xs font-medium">ðŸ“– {posts.length} blog posts</span>
           </div>
         </div>
       </div>
@@ -500,7 +509,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
                         </div>
                         <div>
                           <p className="text-gray-900 text-sm font-medium">{d.donor}</p>
-                          <p className="text-gray-500 text-[10px]">{d.purpose} • {d.date}</p>
+                          <p className="text-gray-500 text-[10px]">{d.purpose} â€¢ {d.date}</p>
                         </div>
                       </div>
                       <span className="text-emerald-600 font-bold text-sm">+${d.amount.toLocaleString()}</span>
@@ -514,7 +523,7 @@ function DashboardTab({ posts, onTabChange, donations, events, sermons, users }:
                       <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover shadow-sm" />
                       <div>
                         <p className="text-gray-900 text-sm font-medium">{user.name}</p>
-                        <p className="text-gray-500 text-[10px]">{user.email} • {user.joined}</p>
+                        <p className="text-gray-500 text-[10px]">{user.email} â€¢ {user.joined}</p>
                       </div>
                     </div>
                     <span className={cn(
@@ -811,7 +820,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
           <p className="text-gray-505 text-xs">
-            Showing {filtered.length === 0 ? 0 : (userPage - 1) * USERS_PER_PAGE + 1}–{Math.min(userPage * USERS_PER_PAGE, filtered.length)} of {filtered.length} users
+            Showing {filtered.length === 0 ? 0 : (userPage - 1) * USERS_PER_PAGE + 1}â€“{Math.min(userPage * USERS_PER_PAGE, filtered.length)} of {filtered.length} users
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -1568,7 +1577,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         {/* Pagination Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
           <p className="text-gray-500 text-xs">
-            Showing {filtered.length === 0 ? 0 : (sermonPage - 1) * ADMIN_SERMONS_PER_PAGE + 1}–{Math.min(sermonPage * ADMIN_SERMONS_PER_PAGE, filtered.length)} of {filtered.length} sermons
+            Showing {filtered.length === 0 ? 0 : (sermonPage - 1) * ADMIN_SERMONS_PER_PAGE + 1}â€“{Math.min(sermonPage * ADMIN_SERMONS_PER_PAGE, filtered.length)} of {filtered.length} sermons
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -1817,7 +1826,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
 
                   {audioUploadWarning && (
                     <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium leading-relaxed">
-                      ⚠️ {audioUploadWarning}
+                      âš ï¸ {audioUploadWarning}
                     </div>
                   )}
 
@@ -1907,7 +1916,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                                 onClick={() => moveSeriesTrack(index, 'up')}
                                 className="p-1 rounded hover:bg-gray-100 text-gray-400 disabled:opacity-30"
                               >
-                                ▲
+                                â–²
                               </button>
                               <button
                                 type="button"
@@ -1915,7 +1924,7 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
                                 onClick={() => moveSeriesTrack(index, 'down')}
                                 className="p-1 rounded hover:bg-gray-100 text-gray-400 disabled:opacity-30"
                               >
-                                ▼
+                                â–¼
                               </button>
                               <button
                                 type="button"
@@ -2270,7 +2279,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Books</h2>
-          <p className="text-gray-500 text-sm">Digital book library — {books.length} titles</p>
+          <p className="text-gray-500 text-sm">Digital book library â€” {books.length} titles</p>
         </div>
         <button
           onClick={openNewForm}
@@ -2782,8 +2791,8 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
           <h2 className="text-xl font-bold text-gray-900">{showTrash ? 'Trash Bin' : 'Blog Posts'}</h2>
           <p className="text-gray-500 text-sm">
             {showTrash 
-              ? `Restore or permanently destroy deleted articles — ${deletedPosts.length} posts` 
-              : `Manage your articles — ${activePosts.length} posts`
+              ? `Restore or permanently destroy deleted articles â€” ${deletedPosts.length} posts` 
+              : `Manage your articles â€” ${activePosts.length} posts`
             }
           </p>
         </div>
@@ -2793,7 +2802,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
               onClick={() => setShowTrash(false)}
               className="px-4 py-2 border border-gray-200 hover:border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-2"
             >
-              ← Active Posts
+              â† Active Posts
             </button>
           ) : (
             <>
@@ -3229,14 +3238,14 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                       <span className="bg-[#f1f3f4] w-5 h-5 rounded-full flex items-center justify-center font-bold text-[8px]">JG</span>
                       <div>
                         <span className="text-xs">joshuagen.org</span>
-                        <span className="text-gray-400 text-[10px]"> › blog › {slug || 'slug'}</span>
+                        <span className="text-gray-400 text-[10px]"> â€º blog â€º {slug || 'slug'}</span>
                       </div>
                     </div>
                     <h4 className="text-[18px] text-[#1a0dab] hover:underline cursor-pointer leading-tight mt-1 font-medium font-sans">
                       {seoTitle || title || 'Faith-Building Article Headline'}
                     </h4>
                     <p className="text-[13px] text-[#4d5156] leading-relaxed mt-1 font-sans">
-                      <span className="text-[#70757a]">Dec 8, 2025 — </span>
+                      <span className="text-[#70757a]">Dec 8, 2025 â€” </span>
                       {seoDescription || excerpt || 'Enter meta description to preview how your organic search snippet will appear on Google crawler result lists.'}
                     </p>
                   </div>
@@ -3517,7 +3526,7 @@ function EventsTab({ events, onUpdateEvents }: EventsTabProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Events</h2>
-          <p className="text-gray-500 text-sm">Manage programs and conferences — {events.length} events</p>
+          <p className="text-gray-500 text-sm">Manage programs and conferences â€” {events.length} events</p>
         </div>
         <button 
           onClick={openNewForm}
@@ -3610,7 +3619,7 @@ function EventsTab({ events, onUpdateEvents }: EventsTabProps) {
                   {event.speakers && event.speakers.length > 0 && (
                     <div className="pt-2 border-t border-gray-50">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Speakers</p>
-                      <p className="text-xs text-gray-650 font-medium truncate">{event.speakers.join(' • ')}</p>
+                      <p className="text-xs text-gray-650 font-medium truncate">{event.speakers.join(' â€¢ ')}</p>
                     </div>
                   )}
 
@@ -4215,7 +4224,7 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
         {/* Pagination Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
           <p className="text-gray-555 text-xs">
-            Showing {filteredDonations.length === 0 ? 0 : (donationPage - 1) * DONATIONS_PER_PAGE + 1}–{Math.min(donationPage * DONATIONS_PER_PAGE, filteredDonations.length)} of {filteredDonations.length} payments
+            Showing {filteredDonations.length === 0 ? 0 : (donationPage - 1) * DONATIONS_PER_PAGE + 1}â€“{Math.min(donationPage * DONATIONS_PER_PAGE, filteredDonations.length)} of {filteredDonations.length} payments
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -4542,7 +4551,7 @@ function AnalyticsTab({ sermons, books, users }: AnalyticsTabProps) {
                       </span>
                     </td>
                     <td className="py-3 text-right font-semibold text-gray-900">{item.views}</td>
-                    <td className="py-3 text-right text-gold-600 font-semibold">★ {item.rating}</td>
+                    <td className="py-3 text-right text-gold-600 font-semibold">â˜… {item.rating}</td>
                   </tr>
                 ))}
               </tbody>
@@ -4627,7 +4636,7 @@ function PrayerTab() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Prayer Requests</h2>
-          <p className="text-gray-500 text-sm">Community prayer wall management — {allPrayerRequests.length} requests</p>
+          <p className="text-gray-500 text-sm">Community prayer wall management â€” {allPrayerRequests.length} requests</p>
         </div>
         <button className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2 border border-gray-200 shadow-sm font-medium text-sm">
           <Filter className="w-4 h-4 text-gray-550" /> Filter
@@ -4727,7 +4736,7 @@ function ModerationTab() {
               </div>
               <div>
                 <p className="text-gray-900 text-sm font-semibold">{report.reason}</p>
-                <p className="text-gray-500 text-[10px]">{report.type} reported by {report.from} • {report.date}</p>
+                <p className="text-gray-500 text-[10px]">{report.type} reported by {report.from} â€¢ {report.date}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -5080,9 +5089,9 @@ function SettingsTab() {
               <div className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
                 <p className="text-gray-900 text-sm font-semibold mb-2">Active Sessions</p>
                 {[
-                  { device: 'MacBook Pro • Chrome', location: 'Jerusalem, IL', active: true },
-                  { device: 'iPhone 15 • Safari', location: 'Jerusalem, IL', active: true },
-                  { device: 'Windows PC • Firefox', location: 'Tel Aviv, IL', active: false },
+                  { device: 'MacBook Pro â€¢ Chrome', location: 'Jerusalem, IL', active: true },
+                  { device: 'iPhone 15 â€¢ Safari', location: 'Jerusalem, IL', active: true },
+                  { device: 'Windows PC â€¢ Firefox', location: 'Tel Aviv, IL', active: false },
                 ].map((session, i) => (
                   <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                     <div className="flex items-center gap-3">
@@ -5259,17 +5268,24 @@ function SettingsTab() {
   );
 }
 
+
 // ====== MESSAGES TAB ======
-function MessagesTab() {
+const MSGS_PER_PAGE = 10;
+
+function MessagesTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const fetchMessages = async () => {
     try {
       setLoading(true);
       const data = await api.getMessages();
       setMessages(data);
+      const unread = data.filter((m: any) => m.status === 'unread').length;
+      if (onCountChange) onCountChange(unread);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     } finally {
@@ -5277,30 +5293,40 @@ function MessagesTab() {
     }
   };
 
-  useEffect(() => {
-    fetchMessages();
-  }, []);
+  useEffect(() => { fetchMessages(); }, []);
 
   const handleToggleStatus = async (id: number, currentStatus: string) => {
+    const newStatus = currentStatus === 'unread' ? 'read' : 'unread';
     try {
-      const newStatus = currentStatus === 'unread' ? 'read' : 'unread';
       await api.updateMessageStatus(id, newStatus);
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
+      const updated = messages.map(m => m.id === id ? { ...m, status: newStatus } : m);
+      setMessages(updated);
+      if (onCountChange) onCountChange(updated.filter((m: any) => m.status === 'unread').length);
     } catch (err) {
       console.error('Failed to update status', err);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this message?')) return;
+    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    setDeletingId(id);
     try {
       await api.deleteMessage(id);
-      setMessages(prev => prev.filter(m => m.id !== id));
+      const updated = messages.filter(m => m.id !== id);
+      setMessages(updated);
+      if (onCountChange) onCountChange(updated.filter((m: any) => m.status === 'unread').length);
+      // Adjust page if needed
+      const totalPages = Math.max(1, Math.ceil(updated.length / MSGS_PER_PAGE));
+      if (page > totalPages) setPage(totalPages);
     } catch (err) {
       console.error('Failed to delete message', err);
+    } finally {
+      setDeletingId(null);
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(messages.length / MSGS_PER_PAGE));
+  const paginated = messages.slice((page - 1) * MSGS_PER_PAGE, page * MSGS_PER_PAGE);
   const unreadCount = messages.filter(m => m.status === 'unread').length;
 
   if (loading) {
@@ -5313,114 +5339,126 @@ function MessagesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
             Messages
             {unreadCount > 0 && (
-              <span className="ml-3 px-2.5 py-0.5 rounded-full bg-royal-blue-100 text-royal-blue-700 text-sm font-bold">
+              <span className="px-2.5 py-0.5 rounded-full bg-royal-blue-600 text-white text-sm font-bold">
                 {unreadCount} new
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Manage contact form submissions from your website visitors.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {messages.length} total message{messages.length !== 1 ? 's' : ''} &mdash; showing {Math.min((page - 1) * MSGS_PER_PAGE + 1, messages.length)}&ndash;{Math.min(page * MSGS_PER_PAGE, messages.length)}
+          </p>
         </div>
         <button
           onClick={fetchMessages}
-          className="px-4 py-2 bg-white border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 bg-white border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm"
         >
           Refresh
         </button>
       </div>
 
+      {/* Messages list */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
         {messages.length === 0 ? (
           <div className="py-16 text-center">
             <Mail className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-gray-600 font-semibold">No messages yet</h3>
-            <p className="text-sm text-gray-400 mt-1">When someone submits the contact form, messages will appear here.</p>
+            <p className="text-sm text-gray-400 mt-1">Messages from the Contact page will appear here.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {messages.map(msg => (
+            {paginated.map(msg => (
               <div
                 key={msg.id}
                 className={cn(
-                  'p-6 transition-colors',
+                  'p-5 transition-colors',
                   msg.status === 'unread' ? 'bg-royal-blue-50/40' : 'bg-white'
                 )}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  {/* Avatar */}
+                  <div className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0',
+                    msg.status === 'unread' ? 'bg-royal-blue-600' : 'bg-gray-300'
+                  )}>
+                    {msg.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+
+                  {/* Content */}
                   <div
-                    className="flex-1 cursor-pointer min-w-0"
-                    onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => {
+                      setExpandedId(expandedId === msg.id ? null : msg.id);
+                      if (msg.status === 'unread') handleToggleStatus(msg.id, msg.status);
+                    }}
                   >
-                    <div className="flex items-center gap-3 mb-1 flex-wrap">
-                      <h3 className={cn(
-                        'text-base text-gray-900 truncate',
-                        msg.status === 'unread' ? 'font-bold' : 'font-semibold'
-                      )}>
-                        {msg.subject}
-                      </h3>
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className={cn('text-sm text-gray-900', msg.status === 'unread' ? 'font-bold' : 'font-semibold')}>
+                        {msg.name}
+                      </span>
                       {msg.status === 'unread' && (
-                        <span className="px-2 py-0.5 rounded-full bg-royal-blue-100 text-royal-blue-700 text-[10px] font-bold uppercase tracking-wide shrink-0">
+                        <span className="px-1.5 py-px rounded bg-royal-blue-100 text-royal-blue-700 text-[10px] font-bold uppercase tracking-wide">
                           New
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
-                      <span className="font-medium text-gray-700">{msg.name}</span>
-                      <span>&bull;</span>
-                      <a
-                        href={`mailto:${msg.email}`}
-                        className="hover:text-royal-blue-600 transition-colors"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        {msg.email}
-                      </a>
+                    <p className={cn('text-sm font-medium truncate', msg.status === 'unread' ? 'text-gray-900' : 'text-gray-700')}>
+                      {msg.subject}
+                    </p>
+                    {expandedId !== msg.id && (
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{msg.message}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-400 flex-wrap">
+                      <a href={`mailto:${msg.email}`} className="hover:text-royal-blue-600 transition-colors" onClick={e => e.stopPropagation()}>{msg.email}</a>
                       <span>&bull;</span>
                       <span>{new Date(msg.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    {!(expandedId === msg.id) && (
-                      <p className="mt-2 text-sm text-gray-500 line-clamp-1">{msg.message}</p>
-                    )}
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => handleToggleStatus(msg.id, msg.status)}
+                      title={msg.status === 'unread' ? 'Mark as Read' : 'Mark as Unread'}
                       className={cn(
                         'p-2 rounded-xl border transition-colors',
                         msg.status === 'unread'
                           ? 'border-royal-blue-200 text-royal-blue-600 bg-royal-blue-50 hover:bg-royal-blue-100'
                           : 'border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'
                       )}
-                      title={msg.status === 'unread' ? 'Mark as Read' : 'Mark as Unread'}
                     >
                       <CheckCircle className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(msg.id)}
-                      className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                      disabled={deletingId === msg.id}
                       title="Delete message"
+                      className="p-2 rounded-xl border border-red-200 text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-700 transition-colors disabled:opacity-50"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {deletingId === msg.id
+                        ? <span className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin inline-block" />
+                        : <Trash2 className="w-4 h-4" />
+                      }
                     </button>
                   </div>
                 </div>
 
+                {/* Expanded body */}
                 {expandedId === msg.id && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{msg.message}</p>
-                    <div className="mt-4">
-                      <a
-                        href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-royal-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors"
-                      >
-                        <Mail className="w-3.5 h-3.5" />
-                        Reply via Email
-                      </a>
-                    </div>
+                  <div className="mt-4 pt-4 border-t border-gray-100 ml-14">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.message}</p>
+                    <a
+                      href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
+                      className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-royal-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      Reply via Email
+                    </a>
                   </div>
                 )}
               </div>
@@ -5428,6 +5466,45 @@ function MessagesTab() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-6 py-4 shadow-sm">
+          <p className="text-sm text-gray-500">
+            Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              &larr; Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={cn(
+                  'w-9 h-9 text-sm font-semibold rounded-xl border transition-colors',
+                  p === page
+                    ? 'bg-royal-blue-600 text-white border-royal-blue-600'
+                    : 'text-gray-600 bg-white border-gray-200 hover:bg-gray-50'
+                )}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next &rarr;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
