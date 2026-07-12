@@ -9,11 +9,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const pool = new Pool({
-  user: process.env.DB_USER || 'joshuagen',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'joshuagen',
-  password: process.env.DB_PASSWORD || 'password',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  connectionString: process.env.DATABASE_URL,
 });
 
 const MAX_PAGES = 17;
