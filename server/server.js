@@ -775,8 +775,7 @@ const server = http.createServer(async (req, res) => {
         const name = data.name?.trim() || '';
         
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: false, error: 'Invalid email address' }));
+          return sendJson(res, 400, { success: false, error: 'Invalid email address' });
         }
 
         const id = crypto.randomUUID();
@@ -788,12 +787,10 @@ const server = http.createServer(async (req, res) => {
           ON CONFLICT (email) DO UPDATE SET is_active = true, name = EXCLUDED.name
         `, [id, email, name]);
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, message: 'Subscribed successfully!' }));
+        return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
       } catch (err) {
         console.error('Subscription error:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: 'Internal Server Error' }));
+        return sendJson(res, 500, { success: false, error: 'Internal Server Error' });
       }
     });
     return;
@@ -803,12 +800,10 @@ const server = http.createServer(async (req, res) => {
     if (!authMiddleware(req, res)) return;
     try {
       const result = await pool.query('SELECT * FROM subscribers ORDER BY created_at DESC');
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result.rows));
+      return sendJson(res, 200, result.rows);
     } catch (err) {
       console.error('Fetch subscribers error:', err);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Internal Server Error' }));
+      return sendJson(res, 500, { error: 'Internal Server Error' });
     }
     return;
   }
