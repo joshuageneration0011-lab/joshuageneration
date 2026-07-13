@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import {
+import { Home, useState, useEffect } from 'react';
+import { Home,
   LayoutDashboard, Users, Tv, BookOpen, FileText, Calendar,
   Video, DollarSign, BarChart3, MapPin, Shield,
   Settings, LogOut, Bell, Search, Menu, X,
@@ -4904,8 +4904,6 @@ function SettingsTab() {
   const [socialTwitter, setSocialTwitter] = useState('');
   const [socialInstagram, setSocialInstagram] = useState('');
   const [socialYoutube, setSocialYoutube] = useState('');
-  
-  // Homepage Settings State
   const [homeHeadlinePrefix, setHomeHeadlinePrefix] = useState('');
   const [homeHeadlineHighlight, setHomeHeadlineHighlight] = useState('');
   const [homeHeadlineSuffix, setHomeHeadlineSuffix] = useState('');
@@ -4957,13 +4955,7 @@ function SettingsTab() {
         socialFacebook,
         socialTwitter,
         socialInstagram,
-        socialYoutube,
-        homeHeadlinePrefix,
-        homeHeadlineHighlight,
-        homeHeadlineSuffix,
-        homeSubheading,
-        homeBibleVerse,
-        homeBibleReference,
+        socialYoutube, homeHeadlinePrefix, homeHeadlineHighlight, homeHeadlineSuffix, homeSubheading, homeBibleVerse, homeBibleReference,
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -5136,6 +5128,115 @@ function SettingsTab() {
               </form>
             </div>
           </>
+        )}
+
+                {activeSetting === 'home' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-6">Homepage Editor</h3>
+            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-2xl">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 border-b pb-2">Hero Headline</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Prefix Text</label>
+                    <input type="text" value={homeHeadlinePrefix} onChange={(e) => setHomeHeadlinePrefix(e.target.value)} placeholder="Experience the " className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold text-gold-600">Highlighted Word</label>
+                    <input type="text" value={homeHeadlineHighlight} onChange={(e) => setHomeHeadlineHighlight(e.target.value)} placeholder="Presence" className="w-full px-4 py-2 rounded-xl border border-gold-200 text-sm focus:ring-2 focus:ring-gold-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Suffix Text</label>
+                    <input type="text" value={homeHeadlineSuffix} onChange={(e) => setHomeHeadlineSuffix(e.target.value)} placeholder=" of God" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 border-b pb-2">Hero Subheading</h4>
+                <div className="space-y-1.5">
+                  <textarea value={homeSubheading} onChange={(e) => setHomeSubheading(e.target.value)} rows={3} placeholder="A digital ministry where faith comes alive..." className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 border-b pb-2">Bible Verse Display</h4>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Verse Text</label>
+                    <textarea value={homeBibleVerse} onChange={(e) => setHomeBibleVerse(e.target.value)} rows={2} placeholder="Be strong and courageous..." className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Reference</label>
+                    <input type="text" value={homeBibleReference} onChange={(e) => setHomeBibleReference(e.target.value)} placeholder="Joshua 1:9" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+                <button type="submit" disabled={isSaving} className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
+                  {isSaving ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</> : 'Save Homepage Settings'}
+                </button>
+                {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved</span>}
+                {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
+              </div>
+            </form>
+          </div>
+        )}
+
+        {activeSetting === 'contact' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-6">Contact & Social Media</h3>
+            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-2xl">
+              {/* Contact Info */}
+                <div className="space-y-4 pt-6 border-t border-gray-100">
+                  <h4 className="font-semibold text-gray-800 border-b pb-2">Contact Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Email</label>
+                      <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Phone</label>
+                      <input type="text" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Address (use \n for new lines)</label>
+                      <textarea value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-800 border-b pb-2">Social Media Links</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Facebook URL</label>
+                      <input type="text" value={socialFacebook} onChange={(e) => setSocialFacebook(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Twitter URL</label>
+                      <input type="text" value={socialTwitter} onChange={(e) => setSocialTwitter(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Instagram URL</label>
+                      <input type="text" value={socialInstagram} onChange={(e) => setSocialInstagram(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">YouTube URL</label>
+                      <input type="text" value={socialYoutube} onChange={(e) => setSocialYoutube(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                  </div>
+                </div>
+
+
+              <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+                <button type="submit" disabled={isSaving} className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
+                  {isSaving ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</> : 'Save Contact Info'}
+                </button>
+                {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved</span>}
+                {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
+              </div>
+            </form>
+          </div>
         )}
 
         {activeSetting === 'notifications' && (
@@ -5462,138 +5563,6 @@ function MessagesTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 )}
               </div>
             ))}
-          </div>
-        )}
-
-                {activeSetting === 'home' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">Homepage Editor</h3>
-            
-            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-2xl">
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-800 border-b pb-2">Hero Headline</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold">Prefix Text</label>
-                    <input type="text" value={homeHeadlinePrefix} onChange={(e) => setHomeHeadlinePrefix(e.target.value)} placeholder="Experience the " className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold text-gold-600">Highlighted Word</label>
-                    <input type="text" value={homeHeadlineHighlight} onChange={(e) => setHomeHeadlineHighlight(e.target.value)} placeholder="Presence" className="w-full px-4 py-2 rounded-xl border border-gold-200 text-sm focus:ring-2 focus:ring-gold-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold">Suffix Text</label>
-                    <input type="text" value={homeHeadlineSuffix} onChange={(e) => setHomeHeadlineSuffix(e.target.value)} placeholder=" of God" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-800 border-b pb-2">Hero Subheading</h4>
-                <div className="space-y-1.5">
-                  <textarea value={homeSubheading} onChange={(e) => setHomeSubheading(e.target.value)} rows={3} placeholder="A digital ministry where faith comes alive..." className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-800 border-b pb-2">Bible Verse Display</h4>
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold">Verse Text</label>
-                    <textarea value={homeBibleVerse} onChange={(e) => setHomeBibleVerse(e.target.value)} rows={2} placeholder="Be strong and courageous..." className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-gray-700 text-xs font-semibold">Reference</label>
-                    <input type="text" value={homeBibleReference} onChange={(e) => setHomeBibleReference(e.target.value)} placeholder="Joshua 1:9" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isSaving ? (
-                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</>
-                  ) : (
-                    'Save Homepage Settings'
-                  )}
-                </button>
-                {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved</span>}
-                {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
-              </div>
-            </form>
-          </div>
-        )}
-
-        {activeSetting === 'contact' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">Contact & Social Media</h3>
-            
-            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-2xl">
-
-
-                {/* Contact Info */}
-                <div className="space-y-4 ">
-                  <h4 className="font-semibold text-gray-800 border-b pb-2">Contact Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Contact Email</label>
-                      <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Contact Phone</label>
-                      <input type="text" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Contact Address (use \n for new lines)</label>
-                      <textarea value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Social Media */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-gray-800 border-b pb-2">Social Media Links</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Facebook URL</label>
-                      <input type="text" value={socialFacebook} onChange={(e) => setSocialFacebook(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Twitter URL</label>
-                      <input type="text" value={socialTwitter} onChange={(e) => setSocialTwitter(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Instagram URL</label>
-                      <input type="text" value={socialInstagram} onChange={(e) => setSocialInstagram(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">YouTube URL</label>
-                      <input type="text" value={socialYoutube} onChange={(e) => setSocialYoutube(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                  </div>
-                </div>
-              <div className="flex items-center gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isSaving ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...
-                      </>
-                    ) : (
-                      'Save Contact Info'
-                    )}
-                  </button>
-                  {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved</span>}
-                  {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
-                </div>
-            </form>
           </div>
         )}
       </div>
