@@ -178,27 +178,58 @@ export default function App() {
 
   // Fetch initial data from Backend
   useEffect(() => {
-    setIsLoadingSermons(true);
+    // 1. Instantly load cached data for "Speed of Light" rendering
+    const cachedSermons = localStorage.getItem('jg_cache_sermons');
+    if (cachedSermons) setSermons(JSON.parse(cachedSermons));
+    else setIsLoadingSermons(true);
 
+    const cachedStats = localStorage.getItem('jg_cache_stats');
+    if (cachedStats) setStats(JSON.parse(cachedStats));
+
+    const cachedBooks = localStorage.getItem('jg_cache_books');
+    if (cachedBooks) setBooks(JSON.parse(cachedBooks));
+
+    const cachedPosts = localStorage.getItem('jg_cache_posts');
+    if (cachedPosts) setPosts(JSON.parse(cachedPosts));
+
+    const cachedEvents = localStorage.getItem('jg_cache_events');
+    if (cachedEvents) setEvents(JSON.parse(cachedEvents));
+
+    // 2. Fetch fresh data in the background and update UI + Cache
     getSavedSermons()
-      .then(loadedSermons => setSermons(loadedSermons))
+      .then(loadedSermons => {
+        setSermons(loadedSermons);
+        localStorage.setItem('jg_cache_sermons', JSON.stringify(loadedSermons));
+      })
       .catch(err => console.error('Failed to load sermons:', err))
       .finally(() => setIsLoadingSermons(false));
 
     api.getStats()
-      .then(loadedStats => setStats(loadedStats))
+      .then(loadedStats => {
+        setStats(loadedStats);
+        localStorage.setItem('jg_cache_stats', JSON.stringify(loadedStats));
+      })
       .catch(err => console.error('Failed to load stats:', err));
 
     getSavedBooks()
-      .then(loadedBooks => setBooks(loadedBooks))
+      .then(loadedBooks => {
+        setBooks(loadedBooks);
+        localStorage.setItem('jg_cache_books', JSON.stringify(loadedBooks));
+      })
       .catch(err => console.error('Failed to load books:', err));
 
     getSavedBlogPosts()
-      .then(loadedPosts => setPosts(loadedPosts))
+      .then(loadedPosts => {
+        setPosts(loadedPosts);
+        localStorage.setItem('jg_cache_posts', JSON.stringify(loadedPosts));
+      })
       .catch(err => console.error('Failed to load posts:', err));
 
     getSavedEvents()
-      .then(loadedEvents => setEvents(loadedEvents))
+      .then(loadedEvents => {
+        setEvents(loadedEvents);
+        localStorage.setItem('jg_cache_events', JSON.stringify(loadedEvents));
+      })
       .catch(err => console.error('Failed to load events:', err));
 
     api.getRadio()
