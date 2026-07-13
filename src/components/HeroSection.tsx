@@ -1,4 +1,7 @@
 import { Play, BookOpen, ArrowRight, Headphones, Users, BookMarked, Radio } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { api } from '@/utils/api';
+import type { Settings } from '@/types';
 
 interface HeroSectionProps {
   onSermonsClick?: () => void;
