@@ -797,7 +797,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/api/admin/subscribers' && method === 'GET') {
-    if (!authMiddleware(req, res)) return;
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
     try {
       const result = await pool.query('SELECT * FROM subscribers ORDER BY created_at DESC');
       return sendJson(res, 200, result.rows);
