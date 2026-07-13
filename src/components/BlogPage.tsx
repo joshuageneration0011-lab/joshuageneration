@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Clock, ArrowRight, Tag, Bookmark, TrendingUp, Feather } from 'lucide-react';
 import type { BlogPost } from '@/types';
@@ -154,8 +155,8 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                           style={{ boxShadow: hoveredId === post.id ? `0 20px 60px ${accent}25, 0 4px 16px rgba(0,0,0,0.1)` : '0 4px 16px rgba(0,0,0,0.06)' }}
                         >
                           {/* Full-bleed image */}
-                          <img
-                            src={post.imageUrl}
+                          <img loading="lazy" decoding="async"
+                            src={resolveApiUrl(post.imageUrl)}
                             alt={post.title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                           />
@@ -229,8 +230,8 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                           >
                             {/* Thumb */}
                             <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
-                              <img
-                                src={post.imageUrl}
+                              <img loading="lazy" decoding="async"
+                                src={resolveApiUrl(post.imageUrl)}
                                 alt={post.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"
@@ -379,7 +380,7 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                     className="group cursor-pointer flex gap-3 items-start"
                   >
                     <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
-                      <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img loading="lazy" decoding="async" src={resolveApiUrl(post.imageUrl)} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-bold text-[#1a1208] group-hover:text-royal-blue-600 transition-colors line-clamp-2 leading-snug">

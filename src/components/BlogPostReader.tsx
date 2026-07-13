@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, Calendar, Clock, Share2, Link, Check, MessageSquare } from 'lucide-react';
 import type { BlogPost } from '@/types';
@@ -148,8 +149,8 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
 
             {/* Cover Image */}
             <div className="rounded-2xl overflow-hidden aspect-[16/9] mb-8 bg-gray-100">
-              <img
-                src={post.imageUrl}
+              <img loading="lazy" decoding="async"
+                src={resolveApiUrl(post.imageUrl)}
                 alt={post.title}
                 className="w-full h-full object-cover"
               />
@@ -310,8 +311,8 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
                     className="group cursor-pointer flex gap-4 p-3 rounded-xl border border-transparent hover:border-gray-100 hover:bg-gray-50/50 transition-colors"
                   >
                     <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-100">
-                      <img
-                        src={rPost.imageUrl}
+                      <img loading="lazy" decoding="async"
+                        src={resolveApiUrl(rPost.imageUrl)}
                         alt={rPost.title}
                         className="w-full h-full object-cover"
                       />

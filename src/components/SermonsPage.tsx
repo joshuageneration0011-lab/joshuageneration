@@ -227,7 +227,7 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
                 {/* Right Side: Thumbnail */}
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-900 flex-shrink-0 relative">
                   {sermon.thumbnail ? (
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={resolveApiUrl(sermon.thumbnail)}
                       alt={sermon.title}
                       className="w-full h-full object-cover"
@@ -254,7 +254,7 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
                 {/* Audio Card Visual */}
                 <div className="relative aspect-[16/10] bg-gray-900 overflow-hidden">
                   {sermon.thumbnail ? (
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={resolveApiUrl(sermon.thumbnail)}
                       alt={sermon.title}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

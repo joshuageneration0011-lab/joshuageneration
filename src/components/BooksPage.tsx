@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo } from 'react';
 import { Search, Download, BookOpen, SlidersHorizontal } from 'lucide-react';
 import type { Book } from '@/types';
@@ -108,8 +109,8 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
               >
                 {/* Cover Frame */}
                 <div className="relative aspect-[3/4] bg-gray-100 overflow-hidden">
-                  <img
-                    src={book.coverUrl}
+                  <img loading="lazy" decoding="async"
+                    src={resolveApiUrl(book.coverUrl)}
                     alt={book.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     loading="lazy"
