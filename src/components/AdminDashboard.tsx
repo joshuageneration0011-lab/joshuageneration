@@ -92,7 +92,6 @@ interface AdminDashboardProps {
   mixlrUrl: string;
   isRadioActive: boolean;
   onUpdateRadio: (url: string, active: boolean) => void;
-  events: Event[];
   onUpdateEvents: (events: Event[]) => void;
   users: any[];
   onUpdateUsers: (newUsers: any[]) => void;
@@ -136,7 +135,6 @@ export default function AdminDashboard({
     { id: 'sermons', label: 'Sermons', icon: Tv, badge: sermons.length.toString() },
     { id: 'books', label: 'Books', icon: BookOpen, badge: books.length.toString() },
     { id: 'blog', label: 'Blog', icon: FileText, badge: posts.length.toString() },
-    { id: 'events', label: 'Events', icon: Calendar, badge: events.length.toString() },
     { id: 'messages', label: 'Messages', icon: Mail, badge: unreadMsgCount > 0 ? String(unreadMsgCount) : undefined },
     { id: 'subscribers', label: 'Subscribers', icon: UserPlus },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
@@ -184,12 +182,11 @@ export default function AdminDashboard({
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
+      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} />;
       case 'users': return <UsersTab users={users} onUpdateUsers={handleUpdateUsers} />;
       case 'sermons': return <SermonsTab sermons={sermons} onUpdateSermons={onUpdateSermons} />;
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
-      case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
       case 'subscribers': return <SubscribersTab />;
       case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
@@ -200,7 +197,7 @@ export default function AdminDashboard({
       case 'moderation': return <ModerationTab />;
       case 'settings': 
         return <SettingsTab />;
-      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} events={events} sermons={sermons} users={users} />;
+      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} />;
     }
   };
 
@@ -382,7 +379,6 @@ interface DashboardTabProps {
   posts: BlogPost[];
   onTabChange: (tab: AdminTab) => void;
   donations: Donation[];
-  events: Event[];
   sermons: Sermon[];
   users: any[];
 }
@@ -489,7 +485,7 @@ function SubscribersTab() {
   );
 }
 
-function DashboardTab({ posts, onTabChange, donations, events, sermons, users }: DashboardTabProps) {
+function DashboardTab({ posts, onTabChange, donations, sermons, users }: DashboardTabProps) {
   const userRole = api.getRole();
   const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
 
@@ -3551,7 +3547,6 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
 
 // ====== EVENTS TAB ======
 interface EventsTabProps {
-  events: Event[];
   onUpdateEvents: (events: Event[]) => void;
 }
 

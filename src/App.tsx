@@ -2,13 +2,12 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { getSavedBlogPosts, saveBlogPost, deleteBlogPost } from '@/data/blogStore';
 import { getSavedBooks, saveBook, deleteBook } from '@/data/bookStore';
 import { getSavedSermons, saveSermon, deleteSermon } from '@/data/sermonStore';
-import { getSavedEvents, saveEvent, deleteEvent } from '@/data/eventStore';
 import { api } from '@/utils/api';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 const FeaturedSermons = lazy(() => import('@/components/FeaturedSermons'));
 const BooksSection = lazy(() => import('@/components/BooksSection'));
-const EventsSection = lazy(() => import('@/components/EventsSection'));
+
 const BlogSection = lazy(() => import('@/components/BlogSection'));
 const PrayerRequestSection = lazy(() => import('@/components/PrayerRequestSection'));
 const DonationBanner = lazy(() => import('@/components/DonationBanner'));
@@ -31,7 +30,7 @@ const BlogPostReader = lazy(() => import('@/components/BlogPostReader'));
 const DonatePage = lazy(() => import('@/components/DonatePage'));
 const PartnershipPage = lazy(() => import('@/components/PartnershipPage'));
 const PodcastPage = lazy(() => import('@/components/PodcastPage'));
-import type { Sermon, Book, BlogPost, Event } from '@/types';
+import type { Sermon, Book, BlogPost } from '@/types';
 
 const PageLoader = () => (
   <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white">
@@ -75,9 +74,7 @@ export default function App() {
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [isLoadingSermons, setIsLoadingSermons] = useState(true);
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [donateCause, setDonateCause] = useState<string | undefined>(undefined);
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);  const [donateCause, setDonateCause] = useState<string | undefined>(undefined);
 
   const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
   const [isRadioActive, setIsRadioActive] = useState(false);
@@ -106,17 +103,7 @@ export default function App() {
 
   // Listen to events update triggers
   useEffect(() => {
-    const handleEventsUpdated = async () => {
-      try {
-        const loadedEvents = await getSavedEvents();
-        setEvents(loadedEvents);
-      } catch (err) {
-        console.error('Failed to reload events:', err);
-      }
-    };
-    window.addEventListener('events_updated', handleEventsUpdated);
     return () => {
-      window.removeEventListener('events_updated', handleEventsUpdated);
     };
   }, []);
 
@@ -191,9 +178,6 @@ export default function App() {
     const cachedPosts = localStorage.getItem('jg_cache_posts');
     if (cachedPosts) setPosts(JSON.parse(cachedPosts));
 
-    const cachedEvents = localStorage.getItem('jg_cache_events');
-    if (cachedEvents) setEvents(JSON.parse(cachedEvents));
-
     // 2. Fetch fresh data in the background and update UI + Cache
     getSavedSermons()
       .then(loadedSermons => {
@@ -223,13 +207,6 @@ export default function App() {
         localStorage.setItem('jg_cache_posts', JSON.stringify(loadedPosts));
       })
       .catch(err => console.error('Failed to load posts:', err));
-
-    getSavedEvents()
-      .then(loadedEvents => {
-        setEvents(loadedEvents);
-        localStorage.setItem('jg_cache_events', JSON.stringify(loadedEvents));
-      })
-      .catch(err => console.error('Failed to load events:', err));
 
     api.getRadio()
       .then(radio => {
@@ -441,7 +418,7 @@ export default function App() {
             setSermons(newSermons);
             await reloadStats();
           }}
-          events={events}
+         
           onUpdateEvents={async (newEvents) => {
             if (newEvents.length < events.length) {
               const deleted = events.find(ev => !newEvents.some(x => x.id === ev.id));
@@ -768,7 +745,6 @@ export default function App() {
             }}
             onViewAll={() => navigate('books')}
           />
-          <EventsSection events={events} />
           <BlogSection
             posts={posts}
             onPostSelect={(post) => {
