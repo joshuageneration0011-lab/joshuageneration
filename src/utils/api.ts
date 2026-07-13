@@ -421,6 +421,27 @@ export const api = {
     });
     await handleResponse(res, 'Failed to delete message');
     return true;
+  },
+
+  // Newsletter
+  async subscribeNewsletter(email: string, name?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, error: 'Cannot connect to server' };
+    }
+  },
+
+  admin: {
+    async getSubscribers(): Promise<Subscriber[]> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/subscribers`, { headers: getHeaders() });
+      return (await handleResponse(res, 'Failed to fetch subscribers')).json();
+    }
   }
 };
 
