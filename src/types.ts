@@ -111,4 +111,10 @@ export interface Settings {
   socialTwitter?: string;
   socialInstagram?: string;
   socialYoutube?: string;
+  homeHeadlinePrefix?: string;
+  homeHeadlineHighlight?: string;
+  homeHeadlineSuffix?: string;
+  homeSubheading?: string;
+  homeBibleVerse?: string;
+  homeBibleReference?: string;
 }

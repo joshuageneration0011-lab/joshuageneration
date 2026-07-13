@@ -27,6 +27,30 @@ const STATS = [
 ];
 
 export default function HeroSection({ onSermonsClick, onBooksClick, onBlogClick }: HeroSectionProps) {
+  const [settings, setSettings] = useState<Partial<Settings>>({
+    homeHeadlinePrefix: 'Experience the ',
+    homeHeadlineHighlight: 'Presence',
+    homeHeadlineSuffix: ' of God',
+    homeSubheading: 'A digital ministry where faith comes alive — through powerful audio sermons, life-changing books, and a growing global community of believers.',
+    homeBibleVerse: 'Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.',
+    homeBibleReference: 'Joshua 1:9'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const cached = localStorage.getItem('jg_cache_public_settings');
+        if (cached) setSettings(JSON.parse(cached));
+        
+        const data = await api.getPublicSettings();
+        setSettings(data);
+        localStorage.setItem('jg_cache_public_settings', JSON.stringify(data));
+      } catch (err) {
+        console.error('Failed to load public settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
   return (
     <section id="home" className="relative min-h-[80vh] flex flex-col items-center justify-center overflow-hidden">
 
@@ -115,7 +139,7 @@ export default function HeroSection({ onSermonsClick, onBooksClick, onBlogClick 
           className="animate-slide-up opacity-0 text-4xl sm:text-5xl md:text-6xl lg:text-[64px] font-extrabold text-white leading-[1.05] tracking-tight mb-4"
           style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}
         >
-          Experience the{' '}
+          {settings.homeHeadlinePrefix}
           <span
             className="relative inline-block"
             style={{
@@ -125,14 +149,14 @@ export default function HeroSection({ onSermonsClick, onBooksClick, onBlogClick 
               backgroundClip: 'text',
             }}
           >
-            Presence
+            {settings.homeHeadlineHighlight}
             {/* Underline accent */}
             <span
               className="absolute -bottom-1.5 left-0 right-0 h-[2px] rounded-full"
               style={{ background: 'linear-gradient(90deg, transparent, #d4af37, transparent)' }}
             />
           </span>
-          {' '}of God
+          {settings.homeHeadlineSuffix}
         </h1>
 
         {/* Subheading */}
@@ -140,8 +164,7 @@ export default function HeroSection({ onSermonsClick, onBooksClick, onBlogClick 
           className="animate-slide-up opacity-0 text-base sm:text-lg text-white/55 max-w-xl mx-auto mb-7 leading-relaxed"
           style={{ animationDelay: '0.22s', animationFillMode: 'forwards' }}
         >
-          A digital ministry where faith comes alive — through powerful audio sermons,
-          life-changing books, and a growing global community of believers.
+          {settings.homeSubheading}
         </p>
 
         {/* CTA Buttons */}
@@ -241,15 +264,14 @@ export default function HeroSection({ onSermonsClick, onBooksClick, onBlogClick 
               "
             </div>
             <p className="font-cormorant text-base sm:text-lg italic text-white/85 leading-relaxed">
-              Be strong and courageous. Do not be frightened, and do not be dismayed,
-              for the Lord your God is with you wherever you go.
+              {settings.homeBibleVerse}
             </p>
             <div className="mt-3 flex items-center gap-3">
               <div
                 className="h-px flex-1"
                 style={{ background: 'linear-gradient(90deg, rgba(212,175,55,0.5), transparent)' }}
               />
-              <span className="text-gold-400 font-bold text-[10px] tracking-widest uppercase">Joshua 1:9</span>
+              <span className="text-gold-400 font-bold text-[10px] tracking-widest uppercase">{settings.homeBibleReference}</span>
               <div
                 className="h-px flex-1"
                 style={{ background: 'linear-gradient(270deg, rgba(212,175,55,0.5), transparent)' }}

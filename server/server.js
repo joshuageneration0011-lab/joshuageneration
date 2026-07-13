@@ -412,7 +412,7 @@ async function initDb() {
       `);
 
       // Safe migration: add new columns first (idempotent), THEN remove old ones
-      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube']) {
+      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference']) {
         try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS ${col} TEXT DEFAULT ''`); } catch (e) {}
       }
 
@@ -1409,7 +1409,7 @@ const server = http.createServer(async (req, res) => {
       // Load full settings (including secrets) server-side
       let clientId, clientSecret;
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube" FROM settings WHERE id = 1');
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
         const row = result.rows[0] || {};
         clientId = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_id : row.flutterwave_mission_client_id;
         clientSecret = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_secret : row.flutterwave_mission_client_secret;
@@ -1632,7 +1632,7 @@ const server = http.createServer(async (req, res) => {
   // GET Settings (Admin only - returns full keys including secrets)
   if (pathname === '/api/admin/settings/public' && method === 'GET') {
     try {
-      const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube" FROM settings WHERE id = 1');
+      const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
       if (rows.length > 0) {
         sendJson(res, 200, rows[0]);
       } else {
@@ -1643,7 +1643,13 @@ const server = http.createServer(async (req, res) => {
           socialFacebook: '#',
           socialTwitter: '#',
           socialInstagram: '#',
-          socialYoutube: '#'
+          socialYoutube: '#',
+          homeHeadlinePrefix: 'Experience the ',
+          homeHeadlineHighlight: 'Presence',
+          homeHeadlineSuffix: ' of God',
+          homeSubheading: 'A digital ministry where faith comes alive — through powerful audio sermons, life-changing books, and a growing global community of believers.',
+          homeBibleVerse: 'Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.',
+          homeBibleReference: 'Joshua 1:9'
         });
       }
     } catch (e) {
@@ -1656,7 +1662,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/admin/settings' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube" FROM settings WHERE id = 1');
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
         sendJson(res, 200, result.rows[0] || { 
           flutterwave_prophetic_client_id: '', flutterwave_prophetic_client_secret: '',
           flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '' 

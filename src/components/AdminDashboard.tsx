@@ -4886,7 +4886,7 @@ function ModerationTab() {
 
 // ====== SETTINGS TAB ======
 function SettingsTab() {
-  const [activeSetting, setActiveSetting] = useState<'general' | 'contact' | 'notifications' | 'appearance' | 'security' | 'integrations'>('general');
+  const [activeSetting, setActiveSetting] = useState<'general' | 'home' | 'contact' | 'notifications' | 'appearance' | 'security' | 'integrations'>('general');
   
   // Flutterwave V4 Settings State
   const [propheticClientId, setPropheticClientId] = useState('');
@@ -4904,6 +4904,14 @@ function SettingsTab() {
   const [socialTwitter, setSocialTwitter] = useState('');
   const [socialInstagram, setSocialInstagram] = useState('');
   const [socialYoutube, setSocialYoutube] = useState('');
+  
+  // Homepage Settings State
+  const [homeHeadlinePrefix, setHomeHeadlinePrefix] = useState('');
+  const [homeHeadlineHighlight, setHomeHeadlineHighlight] = useState('');
+  const [homeHeadlineSuffix, setHomeHeadlineSuffix] = useState('');
+  const [homeSubheading, setHomeSubheading] = useState('');
+  const [homeBibleVerse, setHomeBibleVerse] = useState('');
+  const [homeBibleReference, setHomeBibleReference] = useState('');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -4920,6 +4928,12 @@ function SettingsTab() {
         setSocialTwitter(data.socialTwitter || '');
         setSocialInstagram(data.socialInstagram || '');
         setSocialYoutube(data.socialYoutube || '');
+        setHomeHeadlinePrefix(data.homeHeadlinePrefix || '');
+        setHomeHeadlineHighlight(data.homeHeadlineHighlight || '');
+        setHomeHeadlineSuffix(data.homeHeadlineSuffix || '');
+        setHomeSubheading(data.homeSubheading || '');
+        setHomeBibleVerse(data.homeBibleVerse || '');
+        setHomeBibleReference(data.homeBibleReference || '');
       } catch (err) {
         console.error('Failed to fetch settings:', err);
       }
@@ -4944,6 +4958,12 @@ function SettingsTab() {
         socialTwitter,
         socialInstagram,
         socialYoutube,
+        homeHeadlinePrefix,
+        homeHeadlineHighlight,
+        homeHeadlineSuffix,
+        homeSubheading,
+        homeBibleVerse,
+        homeBibleReference,
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -4957,6 +4977,7 @@ function SettingsTab() {
 
   const settings = [
     { id: 'general', label: 'General', icon: Settings },
+    { id: 'home', label: 'Homepage Edit', icon: Home },
     { id: 'contact', label: 'Contact Info', icon: Mail },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Sun },
@@ -5441,6 +5462,69 @@ function MessagesTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+                {activeSetting === 'home' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-6">Homepage Editor</h3>
+            
+            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-2xl">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 border-b pb-2">Hero Headline</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Prefix Text</label>
+                    <input type="text" value={homeHeadlinePrefix} onChange={(e) => setHomeHeadlinePrefix(e.target.value)} placeholder="Experience the " className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold text-gold-600">Highlighted Word</label>
+                    <input type="text" value={homeHeadlineHighlight} onChange={(e) => setHomeHeadlineHighlight(e.target.value)} placeholder="Presence" className="w-full px-4 py-2 rounded-xl border border-gold-200 text-sm focus:ring-2 focus:ring-gold-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Suffix Text</label>
+                    <input type="text" value={homeHeadlineSuffix} onChange={(e) => setHomeHeadlineSuffix(e.target.value)} placeholder=" of God" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 border-b pb-2">Hero Subheading</h4>
+                <div className="space-y-1.5">
+                  <textarea value={homeSubheading} onChange={(e) => setHomeSubheading(e.target.value)} rows={3} placeholder="A digital ministry where faith comes alive..." className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 border-b pb-2">Bible Verse Display</h4>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Verse Text</label>
+                    <textarea value={homeBibleVerse} onChange={(e) => setHomeBibleVerse(e.target.value)} rows={2} placeholder="Be strong and courageous..." className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-gray-700 text-xs font-semibold">Reference</label>
+                    <input type="text" value={homeBibleReference} onChange={(e) => setHomeBibleReference(e.target.value)} placeholder="Joshua 1:9" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isSaving ? (
+                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</>
+                  ) : (
+                    'Save Homepage Settings'
+                  )}
+                </button>
+                {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved</span>}
+                {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
+              </div>
+            </form>
           </div>
         )}
 
