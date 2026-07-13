@@ -178,53 +178,35 @@ export default function App() {
 
   // Fetch initial data from Backend
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoadingSermons(true);
-        const loadedSermons = await getSavedSermons();
-        setSermons(loadedSermons);
-      } catch (err) {
-        console.error('Failed to load sermons:', err);
-      }
+    setIsLoadingSermons(true);
 
-      try {
-        const loadedStats = await api.getStats();
-        setStats(loadedStats);
-      } catch (err) {
-        console.error('Failed to load stats:', err);
-      }
+    getSavedSermons()
+      .then(loadedSermons => setSermons(loadedSermons))
+      .catch(err => console.error('Failed to load sermons:', err))
+      .finally(() => setIsLoadingSermons(false));
 
-      try {
-        const loadedBooks = await getSavedBooks();
-        setBooks(loadedBooks);
-      } catch (err) {
-        console.error('Failed to load books:', err);
-      }
+    api.getStats()
+      .then(loadedStats => setStats(loadedStats))
+      .catch(err => console.error('Failed to load stats:', err));
 
-      try {
-        const loadedPosts = await getSavedBlogPosts();
-        setPosts(loadedPosts);
-      } catch (err) {
-        console.error('Failed to load posts:', err);
-      }
+    getSavedBooks()
+      .then(loadedBooks => setBooks(loadedBooks))
+      .catch(err => console.error('Failed to load books:', err));
 
-      try {
-        const loadedEvents = await getSavedEvents();
-        setEvents(loadedEvents);
-      } catch (err) {
-        console.error('Failed to load events:', err);
-      }
+    getSavedBlogPosts()
+      .then(loadedPosts => setPosts(loadedPosts))
+      .catch(err => console.error('Failed to load posts:', err));
 
-      try {
-        const radio = await api.getRadio();
+    getSavedEvents()
+      .then(loadedEvents => setEvents(loadedEvents))
+      .catch(err => console.error('Failed to load events:', err));
+
+    api.getRadio()
+      .then(radio => {
         setMixlrUrl(radio.url);
         setIsRadioActive(radio.active);
-      } catch (err) {
-        console.error('Failed to load radio settings:', err);
-      }
-      setIsLoadingSermons(false);
-    };
-    fetchData();
+      })
+      .catch(err => console.error('Failed to load radio settings:', err));
   }, []);
 
   // Fetch users when authenticated
