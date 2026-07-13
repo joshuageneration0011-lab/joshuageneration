@@ -98,7 +98,7 @@ export default function NewsletterPopup() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="First Name (optional)"
+                placeholder="Full Name"
                 disabled={status === 'loading' || status === 'success'}
                 className="w-full px-5 py-3.5 rounded-xl bg-black/20 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner disabled:opacity-50"
               />

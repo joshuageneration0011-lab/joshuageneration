@@ -124,7 +124,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="First Name (optional)"
+                placeholder="Full Name"
                 disabled={status === 'loading' || status === 'success'}
                 className="w-full px-5 py-3.5 rounded-xl bg-royal-blue-950/50 border border-royal-blue-400/30 text-white placeholder-royal-blue-200/50 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner disabled:opacity-50"
               />
