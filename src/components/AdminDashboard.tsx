@@ -5085,7 +5085,49 @@ function SettingsTab() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 pt-2">
+                {/* Contact Info */}
+                <div className="space-y-4 pt-6 border-t border-gray-100">
+                  <h4 className="font-semibold text-gray-800 border-b pb-2">Contact Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Email</label>
+                      <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Phone</label>
+                      <input type="text" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Address (use \n for new lines)</label>
+                      <textarea value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-800 border-b pb-2">Social Media Links</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Facebook URL</label>
+                      <input type="text" value={socialFacebook} onChange={(e) => setSocialFacebook(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Twitter URL</label>
+                      <input type="text" value={socialTwitter} onChange={(e) => setSocialTwitter(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Instagram URL</label>
+                      <input type="text" value={socialInstagram} onChange={(e) => setSocialInstagram(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">YouTube URL</label>
+                      <input type="text" value={socialYoutube} onChange={(e) => setSocialYoutube(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
                   <button
                     type="submit"
                     disabled={isSaving}
