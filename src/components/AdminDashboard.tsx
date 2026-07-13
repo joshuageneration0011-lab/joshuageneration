@@ -2611,7 +2611,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                             value={pdf.url}
                             onChange={(e) => {
                               const newPdfs = [...pdfsInput];
-                              newPdfs[idx].url = e.target.value;
+                              newPdfs[idx] = { ...newPdfs[idx], url: e.target.value };
                               setPdfsInput(newPdfs);
                             }}
                             placeholder="Paste external PDF link or upload file below..."
