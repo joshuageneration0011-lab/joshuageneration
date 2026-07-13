@@ -1,5 +1,6 @@
 import { Clock, ChevronRight, ArrowRight } from 'lucide-react';
 import type { BlogPost } from '@/types';
+import { resolveApiUrl } from '@/utils/api';
 
 interface BlogSectionProps {
   posts: BlogPost[];
@@ -56,7 +57,7 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
               >
                 <div className="aspect-[16/10]">
                   <img loading="lazy" decoding="async"
-                    src={featured.imageUrl}
+                    src={resolveApiUrl(featured.imageUrl)}
                     alt={featured.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
@@ -105,7 +106,7 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
                 {/* Thumb */}
                 <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
                   <img loading="lazy" decoding="async"
-                    src={post.imageUrl}
+                    src={resolveApiUrl(post.imageUrl)}
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

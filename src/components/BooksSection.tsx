@@ -1,5 +1,6 @@
 import { Download, BookOpen, ChevronRight } from 'lucide-react';
 import type { Book } from '@/types';
+import { resolveApiUrl } from '@/utils/api';
 
 interface BooksSectionProps {
   books: Book[];
@@ -69,7 +70,7 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
                 }}
               >
                 <img loading="lazy" decoding="async"
-                  src={book.coverUrl}
+                  src={resolveApiUrl(book.coverUrl)}
                   alt={book.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
