@@ -5,6 +5,8 @@ import "./index.css";
 import App from "./App";
 import { registerSW } from 'virtual:pwa-register';
 
+import ErrorBoundary from "./components/ErrorBoundary";
+
 const updateSW = registerSW({
   onNeedRefresh() {},
   onOfflineReady() {},
@@ -12,6 +14,8 @@ const updateSW = registerSW({
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 );
