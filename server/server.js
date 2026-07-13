@@ -411,9 +411,14 @@ async function initDb() {
         );
       `);
 
+      // Clean up accidental lowercase columns
+      for (const col of ['contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference']) {
+        try { await pool.query(`ALTER TABLE settings DROP COLUMN IF EXISTS ${col.toLowerCase()}`); } catch (e) {}
+      }
+
       // Safe migration: add new columns first (idempotent), THEN remove old ones
       for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference']) {
-        try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS ${col} TEXT DEFAULT ''`); } catch (e) {}
+        try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS "${col}" TEXT DEFAULT ''`); } catch (e) { console.error('Migration error:', e); }
       }
 
       // Copy data from old column names into new ones (if old columns still exist)
