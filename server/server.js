@@ -314,6 +314,12 @@ async function initDb() {
         );
       `);
       try {
+
+      try {
+        await pool.query("ALTER TABLE subscribers ADD COLUMN IF NOT EXISTS name VARCHAR");
+      } catch (err) {
+        console.warn("Failed to check/add name column to subscribers table:", err.message);
+      }
         await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS audios JSONB DEFAULT '[]'::jsonb");
       } catch (err) {
         console.warn("Failed to check/add audios column to sermons table:", err.message);
@@ -766,6 +772,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const data = JSON.parse(body);
         const email = data.email?.trim().toLowerCase();
+        const name = data.name?.trim() || '';
         
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -776,10 +783,10 @@ const server = http.createServer(async (req, res) => {
         
         // Use ON CONFLICT to handle duplicates gracefully
         await pool.query(`
-          INSERT INTO subscribers (id, email, is_active) 
-          VALUES ($1, $2, true)
-          ON CONFLICT (email) DO UPDATE SET is_active = true
-        `, [id, email]);
+          INSERT INTO subscribers (id, email, name, is_active) 
+          VALUES ($1, $2, $3, true)
+          ON CONFLICT (email) DO UPDATE SET is_active = true, name = EXCLUDED.name
+        `, [id, email, name]);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, message: 'Subscribed successfully!' }));

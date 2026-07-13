@@ -86,7 +86,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password-request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, name }),
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));

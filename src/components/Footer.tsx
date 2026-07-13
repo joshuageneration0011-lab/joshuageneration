@@ -27,6 +27,7 @@ interface FooterProps {
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -35,11 +36,12 @@ export default function Footer({ onNavigate }: FooterProps) {
     e.preventDefault();
     if (!email) return;
     setStatus('loading');
-    const res = await api.subscribeNewsletter(email);
+    const res = await api.subscribeNewsletter(email, name);
     if (res.success) {
       setStatus('success');
       setMessage(res.message || 'Subscribed!');
       setEmail('');
+      setName('');
       setTimeout(() => setStatus('idle'), 5000);
     } else {
       setStatus('error');
@@ -118,6 +120,14 @@ export default function Footer({ onNavigate }: FooterProps) {
           </div>
           <form onSubmit={handleSubscribe} className="w-full md:w-auto flex-1 max-w-md">
             <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="First Name (optional)"
+                disabled={status === 'loading' || status === 'success'}
+                className="w-full sm:w-1/3 px-4 py-3.5 rounded-xl bg-royal-blue-950/50 border border-royal-blue-400/30 text-white placeholder-royal-blue-200/50 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner disabled:opacity-50"
+              />
               <input
                 type="email"
                 required

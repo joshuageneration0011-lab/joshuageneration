@@ -190,6 +190,7 @@ export default function AdminDashboard({
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
+      case 'subscribers': return <SubscribersTab />;
       case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
@@ -409,8 +410,8 @@ function SubscribersTab() {
 
   const handleDownloadCSV = () => {
     if (subscribers.length === 0) return;
-    const header = "Email,Subscribed At,Status\n";
-    const csvContent = subscribers.map(s => `${s.email},${new Date(s.created_at).toISOString()},${s.is_active ? 'Active' : 'Inactive'}`).join('\n');
+    const header = "Name,Email,Subscribed At,Status\n";
+    const csvContent = subscribers.map(s => `${s.name || ''},${s.email},${new Date(s.created_at).toISOString()},${s.is_active ? 'Active' : 'Inactive'}`).join('\n');
     const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -452,6 +453,7 @@ function SubscribersTab() {
             <table className="w-full text-left text-sm text-gray-600">
               <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
                 <tr>
+                  <th className="px-6 py-4">Name</th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Subscribed At</th>
@@ -460,7 +462,8 @@ function SubscribersTab() {
               <tbody className="divide-y divide-gray-100">
                 {subscribers.map((sub) => (
                   <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">{sub.email}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900">{sub.name || '-'}</td>
+                    <td className="px-6 py-4 text-gray-600">{sub.email}</td>
                     <td className="px-6 py-4">
                       {sub.is_active ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">

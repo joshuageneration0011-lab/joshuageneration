@@ -92,6 +92,7 @@ export interface Donation {
   id: string;
   donor: string;
   email: string;
+  name?: string;
   amount: number;
   purpose: string;
   date: string;
@@ -123,6 +124,7 @@ export interface Settings {
 export interface Subscriber {
   id: string;
   email: string;
+  name?: string;
   is_active: boolean;
   created_at: string;
 }
