@@ -12,15 +12,6 @@ const quickLinks = [
   { name: 'Donate', href: '/donate' },
 ];
 
-const branches = [
-  'Jerusalem Headquarters',
-  'Nairobi, Kenya',
-  'London, UK',
-  'New York, USA',
-  'Lagos, Nigeria',
-  'Sydney, Australia',
-];
-
 const socialLinks = [
   { name: 'Facebook', url: '#' },
   { name: 'Twitter', url: '#' },
@@ -94,7 +85,7 @@ export default function Footer({ onNavigate }: FooterProps) {
 
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16 z-10 relative">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Brand & Socials */}
           <div className="sm:col-span-2 lg:col-span-1">
             <a
@@ -147,24 +138,6 @@ export default function Footer({ onNavigate }: FooterProps) {
                     <span className="w-1 h-1 rounded-full bg-gold-500/0 group-hover:bg-gold-500 transition-colors"></span>
                     <span className="group-hover:translate-x-1 transition-transform">{link.name}</span>
                   </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Branches */}
-          <div>
-            <h4 className="font-bold text-sm uppercase tracking-widest text-gold-500 mb-6 flex items-center gap-2">
-              <span className="w-8 h-px bg-gold-500/50"></span>
-              Our Branches
-            </h4>
-            <ul className="space-y-3">
-              {branches.map((branch) => (
-                <li key={branch} className="flex items-start gap-3 text-royal-blue-100/80 text-sm group">
-                  <div className="mt-1 p-1 rounded-full bg-royal-blue-800/40 group-hover:bg-gold-500/20 transition-colors">
-                    <MapPin className="w-3 h-3 text-gold-500" />
-                  </div>
-                  <span className="group-hover:text-white transition-colors">{branch}</span>
                 </li>
               ))}
             </ul>
