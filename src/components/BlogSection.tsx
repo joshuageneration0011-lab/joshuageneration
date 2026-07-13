@@ -55,7 +55,7 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
                 className="group cursor-pointer relative rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-500 hover:-translate-y-0.5"
               >
                 <div className="aspect-[16/10]">
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={featured.imageUrl}
                     alt={featured.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
@@ -104,7 +104,7 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
               >
                 {/* Thumb */}
                 <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={post.imageUrl}
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

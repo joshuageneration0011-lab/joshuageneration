@@ -421,8 +421,15 @@ export const api = {
 
 export function resolveApiUrl(url: string | undefined): string {
   if (!url) return '';
+  let finalUrl = url;
   if (url.startsWith('/') && !url.startsWith('//')) {
-    return `${API_BASE_URL}${url}`;
+    finalUrl = `${API_BASE_URL}${url}`;
   }
-  return url;
+  
+  // Automatically compress massive Unsplash placeholder images
+  if (finalUrl.includes('images.unsplash.com') && !finalUrl.includes('w=')) {
+    return finalUrl.includes('?') ? `${finalUrl}&w=800&q=80&fm=webp` : `${finalUrl}?w=800&q=80&fm=webp`;
+  }
+  
+  return finalUrl;
 }

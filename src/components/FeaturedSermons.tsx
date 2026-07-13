@@ -81,7 +81,7 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll, is
                 {/* Audio card visual */}
                 <div className="relative h-44 flex flex-col items-center justify-center overflow-hidden bg-gray-900">
                   {sermon.thumbnail ? (
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={resolveApiUrl(sermon.thumbnail)}
                       alt={sermon.title}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

@@ -68,7 +68,7 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
                   boxShadow: '4px 6px 24px rgba(0,0,0,0.12), -1px 0 0 rgba(0,0,0,0.06)',
                 }}
               >
-                <img
+                <img loading="lazy" decoding="async"
                   src={book.coverUrl}
                   alt={book.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
