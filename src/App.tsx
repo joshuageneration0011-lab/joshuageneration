@@ -19,11 +19,10 @@ import Footer from '@/components/Footer';
 import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
 import LoginModal from '@/components/LoginModal';
 import RadioPlayer from '@/components/RadioPlayer';
+import NewsletterPopup from '@/components/NewsletterPopup';
 
 const AdminDashboard = lazy(() => import('@/components/AdminDashboard'));
-const ContactPage = lazy(() => import('@/components/ContactPage'));
 const AdminLogin = lazy(() => import('@/components/AdminLogin'));
-const SermonsPage = lazy(() => import('@/components/SermonsPage'));
 const SermonPlayer = lazy(() => import('@/components/SermonPlayer'));
 const BooksPage = lazy(() => import('@/components/BooksPage'));
 const BookReader = lazy(() => import('@/components/BookReader'));
@@ -505,6 +504,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -532,6 +532,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -558,6 +559,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -581,6 +583,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -607,6 +610,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -639,6 +643,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -656,6 +661,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -676,6 +682,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -696,6 +703,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -716,6 +724,7 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
       </div>
     );
   }
@@ -776,6 +785,7 @@ export default function App() {
       <PushNotificationPrompt />
       <RadioPlayer mixlrUrl={mixlrUrl} isActive={isRadioActive} />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
     </div>
   );
 }
