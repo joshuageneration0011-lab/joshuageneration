@@ -4886,7 +4886,7 @@ function ModerationTab() {
 
 // ====== SETTINGS TAB ======
 function SettingsTab() {
-  const [activeSetting, setActiveSetting] = useState<'general' | 'notifications' | 'appearance' | 'security' | 'integrations'>('general');
+  const [activeSetting, setActiveSetting] = useState<'general' | 'contact' | 'notifications' | 'appearance' | 'security' | 'integrations'>('general');
   
   // Flutterwave V4 Settings State
   const [propheticClientId, setPropheticClientId] = useState('');
@@ -4957,6 +4957,7 @@ function SettingsTab() {
 
   const settings = [
     { id: 'general', label: 'General', icon: Settings },
+    { id: 'contact', label: 'Contact Info', icon: Mail },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Sun },
     { id: 'security', label: 'Security', icon: Shield },
@@ -5085,49 +5086,7 @@ function SettingsTab() {
                   </div>
                 </div>
 
-                {/* Contact Info */}
-                <div className="space-y-4 pt-6 border-t border-gray-100">
-                  <h4 className="font-semibold text-gray-800 border-b pb-2">Contact Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Contact Email</label>
-                      <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Contact Phone</label>
-                      <input type="text" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Contact Address (use \n for new lines)</label>
-                      <textarea value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Social Media */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-gray-800 border-b pb-2">Social Media Links</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Facebook URL</label>
-                      <input type="text" value={socialFacebook} onChange={(e) => setSocialFacebook(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Twitter URL</label>
-                      <input type="text" value={socialTwitter} onChange={(e) => setSocialTwitter(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">Instagram URL</label>
-                      <input type="text" value={socialInstagram} onChange={(e) => setSocialInstagram(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-gray-700 text-xs font-semibold">YouTube URL</label>
-                      <input type="text" value={socialYoutube} onChange={(e) => setSocialYoutube(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-3 pt-2">
                   <button
                     type="submit"
                     disabled={isSaving}
@@ -5482,6 +5441,75 @@ function MessagesTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {activeSetting === 'contact' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-6">Contact & Social Media</h3>
+            
+            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-2xl">
+
+
+                {/* Contact Info */}
+                <div className="space-y-4 ">
+                  <h4 className="font-semibold text-gray-800 border-b pb-2">Contact Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Email</label>
+                      <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Phone</label>
+                      <input type="text" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Contact Address (use \n for new lines)</label>
+                      <textarea value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-800 border-b pb-2">Social Media Links</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Facebook URL</label>
+                      <input type="text" value={socialFacebook} onChange={(e) => setSocialFacebook(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Twitter URL</label>
+                      <input type="text" value={socialTwitter} onChange={(e) => setSocialTwitter(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">Instagram URL</label>
+                      <input type="text" value={socialInstagram} onChange={(e) => setSocialInstagram(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-gray-700 text-xs font-semibold">YouTube URL</label>
+                      <input type="text" value={socialYoutube} onChange={(e) => setSocialYoutube(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500" />
+                    </div>
+                  </div>
+                </div>
+              <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...
+                      </>
+                    ) : (
+                      'Save Contact Info'
+                    )}
+                  </button>
+                  {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved</span>}
+                  {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
+                </div>
+            </form>
           </div>
         )}
       </div>
