@@ -6,14 +6,14 @@ import { getSavedEvents, saveEvent, deleteEvent } from '@/data/eventStore';
 import { api } from '@/utils/api';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
-import FeaturedSermons from '@/components/FeaturedSermons';
-import BooksSection from '@/components/BooksSection';
-import EventsSection from '@/components/EventsSection';
-import BlogSection from '@/components/BlogSection';
-import PrayerRequestSection from '@/components/PrayerRequestSection';
-import DonationBanner from '@/components/DonationBanner';
-import TestimonialsSection from '@/components/TestimonialsSection';
-import StatsSection from '@/components/StatsSection';
+const FeaturedSermons = lazy(() => import('@/components/FeaturedSermons'));
+const BooksSection = lazy(() => import('@/components/BooksSection'));
+const EventsSection = lazy(() => import('@/components/EventsSection'));
+const BlogSection = lazy(() => import('@/components/BlogSection'));
+const PrayerRequestSection = lazy(() => import('@/components/PrayerRequestSection'));
+const DonationBanner = lazy(() => import('@/components/DonationBanner'));
+const TestimonialsSection = lazy(() => import('@/components/TestimonialsSection'));
+const StatsSection = lazy(() => import('@/components/StatsSection'));
 
 import Footer from '@/components/Footer';
 import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
@@ -723,40 +723,41 @@ export default function App() {
           onBooksClick={() => navigate('books')}
           onBlogClick={() => navigate('blog')}
         />
-        <StatsSection
-          sermonsCount={stats?.sermons}
-          booksCount={stats?.books}
-          membersCount={stats?.members}
-        />
-        <FeaturedSermons
-          sermons={sermons}
-          isLoading={isLoadingSermons}
-          onSermonSelect={(sermon) => {
-            setSelectedSermon(sermon);
-            navigate('sermon-player', sermon.id);
-          }}
-          onViewAll={() => navigate('sermons')}
-        />
-        <BooksSection
-          books={books}
-          onBookSelect={(book) => {
-            setSelectedBook(book);
-            navigate('book-details', book.id);
-          }}
-          onViewAll={() => navigate('books')}
-        />
-        <EventsSection events={events} />
-        <BlogSection
-          posts={posts}
-          onPostSelect={(post) => {
-            setSelectedPost(post);
-            navigate('blog-details', post.id);
-          }}
-          onViewAll={() => navigate('blog')}
-        />
-        <TestimonialsSection />
-
-        <DonationBanner onGiveClick={navigateToDonate} />
+        <Suspense fallback={<div className="h-40 flex items-center justify-center bg-gray-50"><div className="w-8 h-8 rounded-full border-4 border-gold-500 border-t-transparent animate-spin" /></div>}>
+          <StatsSection
+            sermonsCount={stats?.sermons}
+            booksCount={stats?.books}
+            membersCount={stats?.members}
+          />
+          <FeaturedSermons
+            sermons={sermons}
+            isLoading={isLoadingSermons}
+            onSermonSelect={(sermon) => {
+              setSelectedSermon(sermon);
+              navigate('sermon-player', sermon.id);
+            }}
+            onViewAll={() => navigate('sermons')}
+          />
+          <BooksSection
+            books={books}
+            onBookSelect={(book) => {
+              setSelectedBook(book);
+              navigate('book-details', book.id);
+            }}
+            onViewAll={() => navigate('books')}
+          />
+          <EventsSection events={events} />
+          <BlogSection
+            posts={posts}
+            onPostSelect={(post) => {
+              setSelectedPost(post);
+              navigate('blog-details', post.id);
+            }}
+            onViewAll={() => navigate('blog')}
+          />
+          <TestimonialsSection />
+          <DonationBanner onGiveClick={navigateToDonate} />
+        </Suspense>
       </main>
       <Footer onNavigate={navigate} />
       <PushNotificationPrompt />
