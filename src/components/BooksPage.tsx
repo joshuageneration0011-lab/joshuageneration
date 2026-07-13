@@ -108,12 +108,11 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 {/* Cover Frame */}
-                <div className="relative aspect-[3/4] bg-gray-100 overflow-hidden">
+                <div className="relative aspect-[3/4] bg-gray-50 border-b border-gray-100 overflow-hidden">
                   <img loading="lazy" decoding="async"
                     src={resolveApiUrl(book.coverUrl)}
                     alt={book.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    loading="lazy"
+                    className="w-full h-full object-contain p-6 group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   

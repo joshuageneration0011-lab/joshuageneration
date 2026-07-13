@@ -64,7 +64,7 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
             >
               {/* Book cover */}
               <div
-                className="relative rounded-2xl overflow-hidden aspect-[3/4] mb-4 shadow-soft hover:shadow-soft-lg transition-all duration-500 hover:-translate-y-1"
+                className="relative rounded-2xl overflow-hidden aspect-[3/4] mb-4 shadow-soft hover:shadow-soft-lg transition-all duration-500 hover:-translate-y-1 bg-gray-50 border border-gray-100"
                 style={{
                   boxShadow: '4px 6px 24px rgba(0,0,0,0.12), -1px 0 0 rgba(0,0,0,0.06)',
                 }}
@@ -72,7 +72,7 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
                 <img loading="lazy" decoding="async"
                   src={resolveApiUrl(book.coverUrl)}
                   alt={book.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-700"
                 />
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

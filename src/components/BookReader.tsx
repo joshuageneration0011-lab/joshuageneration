@@ -35,11 +35,11 @@ export default function BookReader({ book, onBack }: BookReaderProps) {
           
           {/* Cover */}
           <div className="w-full md:w-1/3 flex-shrink-0">
-            <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-xl border border-gray-100">
+            <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-xl border border-gray-100 bg-gray-50">
               {book.coverUrl ? (
-                <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover" />
+                <img src={book.coverUrl} alt={book.title} className="w-full h-full object-contain p-4" />
               ) : (
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center">
                   <BookOpen className="w-12 h-12 text-gray-300" />
                 </div>
               )}
