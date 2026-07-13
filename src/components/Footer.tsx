@@ -1,6 +1,9 @@
 import React from 'react';
 import { Heart, Mail, MapPin, Phone, Send } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { api } from '@/utils/api';
+import { useState, useEffect } from 'react';
+import type { Settings } from '@/types';
 
 const quickLinks = [
   { name: 'Sermons', href: '/sermons' },
@@ -24,6 +27,31 @@ interface FooterProps {
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
+  const [settings, setSettings] = useState<Partial<Settings>>({
+    contactEmail: 'hello@joshuagen.org',
+    contactPhone: '+1 (555) 123-4567',
+    contactAddress: '42 Kingdom Way,\nJerusalem, Israel',
+    socialFacebook: '#',
+    socialTwitter: '#',
+    socialInstagram: '#',
+    socialYoutube: '#'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const cached = localStorage.getItem('jg_cache_public_settings');
+        if (cached) setSettings(JSON.parse(cached));
+        
+        const data = await api.getPublicSettings();
+        setSettings(data);
+        localStorage.setItem('jg_cache_public_settings', JSON.stringify(data));
+      } catch (err) {
+        console.error('Failed to load public settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
   const handleLinkClick = (name: string, href: string, e: React.MouseEvent) => {
     if (onNavigate) {
       if (name === 'Sermons') {
@@ -108,10 +136,17 @@ export default function Footer({ onNavigate }: FooterProps) {
               walk in purpose, and transform their world.
             </p>
             <div className="flex items-center gap-3">
-              {socialLinks.map((social) => (
+              {[
+                { name: 'Facebook', url: settings.socialFacebook },
+                { name: 'Twitter', url: settings.socialTwitter },
+                { name: 'Instagram', url: settings.socialInstagram },
+                { name: 'YouTube', url: settings.socialYoutube }
+              ].filter(s => s.url && s.url !== '#').map((social) => (
                 <a
                   key={social.name}
                   href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 rounded-xl bg-royal-blue-800/40 border border-royal-blue-700/50 flex items-center justify-center hover:bg-gold-500 hover:border-gold-400 text-royal-blue-200 hover:text-royal-blue-950 transition-all duration-300 hover:scale-110 shadow-lg"
                   aria-label={social.name}
                 >
@@ -154,19 +189,19 @@ export default function Footer({ onNavigate }: FooterProps) {
                 <div className="p-2 rounded-xl bg-royal-blue-800/40 group-hover:bg-gold-500/20 transition-colors">
                   <Mail className="w-4 h-4 text-gold-500" />
                 </div>
-                <a href="mailto:hello@joshuagen.org" className="hover:text-white transition-colors">hello@joshuagen.org</a>
+                <a href={`mailto:${settings.contactEmail}`} className="hover:text-white transition-colors">{settings.contactEmail}</a>
               </li>
               <li className="flex items-center gap-3 text-royal-blue-100/80 text-sm group">
                 <div className="p-2 rounded-xl bg-royal-blue-800/40 group-hover:bg-gold-500/20 transition-colors">
                   <Phone className="w-4 h-4 text-gold-500" />
                 </div>
-                <a href="tel:+15551234567" className="hover:text-white transition-colors">+1 (555) 123-4567</a>
+                <a href={`tel:${settings.contactPhone?.replace(/[^0-9+]/g, '')}`} className="hover:text-white transition-colors">{settings.contactPhone}</a>
               </li>
               <li className="flex items-start gap-3 text-royal-blue-100/80 text-sm group">
                 <div className="p-2 rounded-xl bg-royal-blue-800/40 group-hover:bg-gold-500/20 transition-colors mt-0.5">
                   <MapPin className="w-4 h-4 text-gold-500" />
                 </div>
-                <span className="group-hover:text-white transition-colors">42 Kingdom Way,<br/>Jerusalem, Israel</span>
+                <span className="group-hover:text-white transition-colors whitespace-pre-line">{settings.contactAddress}</span>
               </li>
             </ul>
           </div>

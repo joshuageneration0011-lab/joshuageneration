@@ -228,22 +228,41 @@ function initLocalData() {
       flutterwave_prophetic_client_id: '',
       flutterwave_prophetic_client_secret: '',
       flutterwave_mission_client_id: '',
-      flutterwave_mission_client_secret: ''
+      flutterwave_mission_client_secret: '',
+      contactEmail: 'hello@joshuagen.org',
+      contactPhone: '+1 (555) 123-4567',
+      contactAddress: '42 Kingdom Way,\nJerusalem, Israel',
+      socialFacebook: '#',
+      socialTwitter: '#',
+      socialInstagram: '#',
+      socialYoutube: '#'
     }, null, 2), 'utf-8');
     console.log('Initialized local settings database.');
   } else {
     // Migrate old key-based settings to V4 fields if needed
     try {
       const existing = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+      let needsUpdate = false;
       if (!('flutterwave_prophetic_client_id' in existing)) {
-        const migrated = {
-          flutterwave_prophetic_client_id: existing.flutterwave_prophetic_key || '',
-          flutterwave_prophetic_client_secret: '',
-          flutterwave_mission_client_id: existing.flutterwave_mission_key || '',
-          flutterwave_mission_client_secret: ''
-        };
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(migrated, null, 2), 'utf-8');
-        console.log('Migrated settings to V4 format.');
+        existing.flutterwave_prophetic_client_id = existing.flutterwave_prophetic_key || '';
+        existing.flutterwave_prophetic_client_secret = '';
+        existing.flutterwave_mission_client_id = existing.flutterwave_mission_key || '';
+        existing.flutterwave_mission_client_secret = '';
+        needsUpdate = true;
+      }
+      if (!('contactEmail' in existing)) {
+        existing.contactEmail = 'hello@joshuagen.org';
+        existing.contactPhone = '+1 (555) 123-4567';
+        existing.contactAddress = '42 Kingdom Way,\nJerusalem, Israel';
+        existing.socialFacebook = '#';
+        existing.socialTwitter = '#';
+        existing.socialInstagram = '#';
+        existing.socialYoutube = '#';
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(existing, null, 2), 'utf-8');
+        console.log('Migrated settings to include contact fields.');
       }
     } catch (e) {
       console.warn('Failed to migrate settings:', e.message);
@@ -393,7 +412,7 @@ async function initDb() {
       `);
 
       // Safe migration: add new columns first (idempotent), THEN remove old ones
-      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret']) {
+      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube']) {
         try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS ${col} TEXT DEFAULT ''`); } catch (e) {}
       }
 
@@ -1390,7 +1409,7 @@ const server = http.createServer(async (req, res) => {
       // Load full settings (including secrets) server-side
       let clientId, clientSecret;
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret FROM settings WHERE id = 1');
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube" FROM settings WHERE id = 1');
         const row = result.rows[0] || {};
         clientId = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_id : row.flutterwave_mission_client_id;
         clientSecret = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_secret : row.flutterwave_mission_client_secret;
@@ -1611,10 +1630,33 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GET Settings (Admin only - returns full keys including secrets)
+  if (pathname === '/api/admin/settings/public' && method === 'GET') {
+    try {
+      const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube" FROM settings WHERE id = 1');
+      if (rows.length > 0) {
+        sendJson(res, 200, rows[0]);
+      } else {
+        sendJson(res, 200, {
+          contactEmail: 'hello@joshuagen.org',
+          contactPhone: '+1 (555) 123-4567',
+          contactAddress: '42 Kingdom Way,\nJerusalem, Israel',
+          socialFacebook: '#',
+          socialTwitter: '#',
+          socialInstagram: '#',
+          socialYoutube: '#'
+        });
+      }
+    } catch (e) {
+      console.error('Failed to retrieve public settings:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve public settings' });
+    }
+    return;
+  }
+
   if (pathname === '/api/admin/settings' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret FROM settings WHERE id = 1');
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube" FROM settings WHERE id = 1');
         sendJson(res, 200, result.rows[0] || { 
           flutterwave_prophetic_client_id: '', flutterwave_prophetic_client_secret: '',
           flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '' 

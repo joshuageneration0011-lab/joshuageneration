@@ -104,4 +104,11 @@ export interface Settings {
   flutterwave_prophetic_client_secret: string;
   flutterwave_mission_client_id: string;
   flutterwave_mission_client_secret: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactAddress?: string;
+  socialFacebook?: string;
+  socialTwitter?: string;
+  socialInstagram?: string;
+  socialYoutube?: string;
 }

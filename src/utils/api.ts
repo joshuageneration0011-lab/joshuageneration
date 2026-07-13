@@ -310,11 +310,16 @@ export const api = {
     return res.json();
   },
 
-  async getSettings(): Promise<Settings> {
-    const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
-      headers: getHeaders()
-    });
+  // Admin Settings
+  getSettings: async (): Promise<Settings> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/settings`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch settings');
+    return res.json();
+  },
+
+  getPublicSettings: async (): Promise<Partial<Settings>> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/settings/public`);
+    if (!res.ok) throw new Error('Failed to fetch public settings');
     return res.json();
   },
 

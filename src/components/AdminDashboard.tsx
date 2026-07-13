@@ -4896,6 +4896,15 @@ function SettingsTab() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Contact & Social Settings State
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactAddress, setContactAddress] = useState('');
+  const [socialFacebook, setSocialFacebook] = useState('');
+  const [socialTwitter, setSocialTwitter] = useState('');
+  const [socialInstagram, setSocialInstagram] = useState('');
+  const [socialYoutube, setSocialYoutube] = useState('');
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -4904,6 +4913,13 @@ function SettingsTab() {
         setPropheticClientSecret(data.flutterwave_prophetic_client_secret || '');
         setMissionClientId(data.flutterwave_mission_client_id || '');
         setMissionClientSecret(data.flutterwave_mission_client_secret || '');
+        setContactEmail(data.contactEmail || '');
+        setContactPhone(data.contactPhone || '');
+        setContactAddress(data.contactAddress || '');
+        setSocialFacebook(data.socialFacebook || '');
+        setSocialTwitter(data.socialTwitter || '');
+        setSocialInstagram(data.socialInstagram || '');
+        setSocialYoutube(data.socialYoutube || '');
       } catch (err) {
         console.error('Failed to fetch settings:', err);
       }
@@ -4921,6 +4937,13 @@ function SettingsTab() {
         flutterwave_prophetic_client_secret: propheticClientSecret,
         flutterwave_mission_client_id: missionClientId,
         flutterwave_mission_client_secret: missionClientSecret,
+        contactEmail,
+        contactPhone,
+        contactAddress,
+        socialFacebook,
+        socialTwitter,
+        socialInstagram,
+        socialYoutube,
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
