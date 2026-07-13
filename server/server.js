@@ -304,6 +304,15 @@ async function initDb() {
           audios JSONB DEFAULT '[]'::jsonb
         );
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS subscribers (
+          id VARCHAR PRIMARY KEY,
+          email VARCHAR UNIQUE NOT NULL,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
       try {
         await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS audios JSONB DEFAULT '[]'::jsonb");
       } catch (err) {
@@ -748,6 +757,55 @@ const server = http.createServer(async (req, res) => {
   // --- PUBLIC ROUTES ---
 
   // Push Notification Public Key
+  
+  // --- Newsletter Subscriptions ---
+  if (pathname === '/api/subscribe' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const data = JSON.parse(body);
+        const email = data.email?.trim().toLowerCase();
+        
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: false, error: 'Invalid email address' }));
+        }
+
+        const id = crypto.randomUUID();
+        
+        // Use ON CONFLICT to handle duplicates gracefully
+        await pool.query(`
+          INSERT INTO subscribers (id, email, is_active) 
+          VALUES ($1, $2, true)
+          ON CONFLICT (email) DO UPDATE SET is_active = true
+        `, [id, email]);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Subscribed successfully!' }));
+      } catch (err) {
+        console.error('Subscription error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Internal Server Error' }));
+      }
+    });
+    return;
+  }
+
+  if (pathname === '/api/admin/subscribers' && method === 'GET') {
+    if (!authMiddleware(req, res)) return;
+    try {
+      const result = await pool.query('SELECT * FROM subscribers ORDER BY created_at DESC');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result.rows));
+    } catch (err) {
+      console.error('Fetch subscribers error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Internal Server Error' }));
+    }
+    return;
+  }
+
   if (pathname === '/api/push/public-key' && method === 'GET') {
     sendJson(res, 200, { publicKey: vapidPublicKey });
     return;

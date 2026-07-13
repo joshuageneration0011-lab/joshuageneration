@@ -118,3 +118,11 @@ export interface Settings {
   homeBibleVerse?: string;
   homeBibleReference?: string;
 }
+
+
+export interface Subscriber {
+  id: string;
+  email: string;
+  is_active: boolean;
+  created_at: string;
+}

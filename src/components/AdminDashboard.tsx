@@ -12,11 +12,11 @@ import { Home,
   Type, Camera, TrendingUp, Radio, Headphones
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import type { BlogPost, Book, Sermon, Donation, Settings as SettingsType, Event, SermonAudio } from '@/types';
+import type { Subscriber, BlogPost, Book, Sermon, Donation, Settings as SettingsType, Event, SermonAudio } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 
-type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages';
+type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers';
 
 // Dynamic sidebar configuration inside component
 
@@ -138,6 +138,7 @@ export default function AdminDashboard({
     { id: 'blog', label: 'Blog', icon: FileText, badge: posts.length.toString() },
     { id: 'events', label: 'Events', icon: Calendar, badge: events.length.toString() },
     { id: 'messages', label: 'Messages', icon: Mail, badge: unreadMsgCount > 0 ? String(unreadMsgCount) : undefined },
+    { id: 'subscribers', label: 'Subscribers', icon: UserPlus },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
     { id: 'donations', label: 'Donations', icon: DollarSign },
     { id: 'prayer', label: 'Prayer', icon: Heart },
@@ -383,6 +384,106 @@ interface DashboardTabProps {
   events: Event[];
   sermons: Sermon[];
   users: any[];
+}
+
+
+function SubscribersTab() {
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSubscribers();
+  }, []);
+
+  const fetchSubscribers = async () => {
+    try {
+      setLoading(true);
+      const data = await api.admin.getSubscribers();
+      setSubscribers(data);
+    } catch (err) {
+      console.error('Failed to fetch subscribers:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadCSV = () => {
+    if (subscribers.length === 0) return;
+    const header = "Email,Subscribed At,Status\n";
+    const csvContent = subscribers.map(s => `${s.email},${new Date(s.created_at).toISOString()},${s.is_active ? 'Active' : 'Inactive'}`).join('\n');
+    const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `subscribers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            Newsletter Subscribers
+            <span className="px-2.5 py-0.5 rounded-full bg-royal-blue-100 text-royal-blue-700 text-sm font-bold">
+              {subscribers.length}
+            </span>
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">Manage and export your newsletter subscribers for ZeptoMail</p>
+        </div>
+        <button
+          onClick={handleDownloadCSV}
+          disabled={subscribers.length === 0}
+          className="px-4 py-2 bg-royal-blue-600 text-white font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors text-sm flex items-center gap-2 shadow-sm disabled:opacity-50"
+        >
+          <Download className="w-4 h-4" /> Download CSV
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center"><RefreshCw className="w-6 h-6 text-royal-blue-500 animate-spin mx-auto" /></div>
+        ) : subscribers.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No subscribers yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-gray-600">
+              <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Subscribed At</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {subscribers.map((sub) => (
+                  <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{sub.email}</td>
+                    <td className="px-6 py-4">
+                      {sub.is_active ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                          <CheckCircle className="w-3.5 h-3.5" /> Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-semibold">
+                          Unsubscribed
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      {new Date(sub.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function DashboardTab({ posts, onTabChange, donations, events, sermons, users }: DashboardTabProps) {

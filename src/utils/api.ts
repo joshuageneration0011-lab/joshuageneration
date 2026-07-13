@@ -1,4 +1,4 @@
-import type { Sermon, Book, BlogPost, Donation, Settings, Event } from '../types';
+import type { Subscriber, Sermon, Book, BlogPost, Donation, Settings, Event } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
   ? import.meta.env.VITE_API_BASE_URL

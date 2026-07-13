@@ -27,6 +27,25 @@ interface FooterProps {
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setStatus('loading');
+    const res = await api.subscribeNewsletter(email);
+    if (res.success) {
+      setStatus('success');
+      setMessage(res.message || 'Subscribed!');
+      setEmail('');
+      setTimeout(() => setStatus('idle'), 5000);
+    } else {
+      setStatus('error');
+      setMessage(res.error || 'Failed to subscribe');
+    }
+  };
   const [settings, setSettings] = useState<Partial<Settings>>({
     contactEmail: 'hello@joshuagen.org',
     contactPhone: '+1 (555) 123-4567',
@@ -97,17 +116,32 @@ export default function Footer({ onNavigate }: FooterProps) {
               Subscribe to receive daily devotionals, event updates, and ministry news.
             </p>
           </div>
-          <div className="w-full md:w-auto flex-1 max-w-md flex flex-col sm:flex-row gap-3">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 px-5 py-3.5 rounded-xl bg-royal-blue-950/50 border border-royal-blue-400/30 text-white placeholder-royal-blue-200/50 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner"
-            />
-            <button className="px-6 py-3.5 bg-gradient-to-r from-gold-500 to-gold-600 text-royal-blue-950 rounded-xl font-bold text-sm shadow-lg shadow-gold-500/20 hover:shadow-gold-500/40 hover:scale-105 transition-all flex items-center justify-center gap-2 group">
-              Subscribe
-              <Send className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </button>
-          </div>
+          <form onSubmit={handleSubscribe} className="w-full md:w-auto flex-1 max-w-md">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                disabled={status === 'loading' || status === 'success'}
+                className="flex-1 px-5 py-3.5 rounded-xl bg-royal-blue-950/50 border border-royal-blue-400/30 text-white placeholder-royal-blue-200/50 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner disabled:opacity-50"
+              />
+              <button 
+                type="submit"
+                disabled={status === 'loading' || status === 'success'}
+                className="px-6 py-3.5 bg-gradient-to-r from-gold-500 to-gold-600 text-royal-blue-950 rounded-xl font-bold text-sm shadow-lg shadow-gold-500/20 hover:shadow-gold-500/40 hover:scale-105 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 disabled:hover:scale-100"
+              >
+                {status === 'loading' ? 'Sending...' : status === 'success' ? 'Subscribed!' : 'Subscribe'}
+                {status !== 'loading' && status !== 'success' && <Send className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
+              </button>
+            </div>
+            {message && (
+              <p className={`mt-2 text-xs font-medium ${status === 'error' ? 'text-red-400' : 'text-emerald-400'}`}>
+                {message}
+              </p>
+            )}
+          </form>
         </div>
       </div>
 
