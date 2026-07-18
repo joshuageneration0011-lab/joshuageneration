@@ -1,5 +1,4 @@
-import { Gift, Heart, Building2, Users, ArrowRight, Crown, Globe } from 'lucide-react';
-import { stats } from '@/data/mockData';
+import { ArrowRight, Crown, Globe } from 'lucide-react';
 
 interface DonationBannerProps {
   onGiveClick?: (cause?: string) => void;
@@ -11,7 +10,6 @@ const GIVE_OPTIONS = [
 ];
 
 export default function DonationBanner({ onGiveClick }: DonationBannerProps) {
-  const progressPercent = Math.min(Math.round((stats.totalDonations / 2000000) * 100), 100);
 
   return (
     <section id="donate" className="relative py-24 sm:py-32 bg-[#0a0f1e] overflow-hidden">

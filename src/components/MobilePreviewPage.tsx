@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Wifi, Battery, Shield, Settings, LogOut, ChevronRight, Play, Star,
-  BookOpen, Users, DollarSign, MessageSquare, Send, ArrowRight, Compass,
-  UserCheck, Bell, Award, PlayCircle, Menu, CheckCircle, Zap, Volume2, BookOpen as BookIcon, Radio
+  Wifi, Battery, ChevronRight, Play,
+  DollarSign, ArrowRight, Compass,
+  PlayCircle, CheckCircle, Zap, Volume2, BookOpen as BookIcon, Radio
 } from 'lucide-react';
 
 interface Sermon {
@@ -34,7 +34,7 @@ export const MobilePreviewPage = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'sermons' | 'books' | 'donate'>('home');
   
   // App Data & Session States
-  const [sermons, setSermons] = useState<Sermon[]>([
+  const [sermons] = useState<Sermon[]>([
     {
       id: '1',
       title: 'Discerning the Voice of God',
@@ -55,7 +55,7 @@ export const MobilePreviewPage = () => {
     }
   ]);
 
-  const [books, setBooks] = useState<Book[]>([
+  const [books] = useState<Book[]>([
     {
       id: '1',
       title: 'Defining Prophetic Seasons',

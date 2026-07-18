@@ -61,7 +61,6 @@ export default function PrayerRequestSection() {
           <textarea
             placeholder="Share your prayer request here..."
             className="w-full h-32 px-4 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:border-transparent transition-all text-sm leading-relaxed"
-            style={{ focusRingColor: '#d4af37' }}
           />
 
           <div className="flex flex-wrap items-center gap-3 mt-4">

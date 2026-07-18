@@ -6,7 +6,7 @@ interface StatsSectionProps {
   membersCount?: number;
 }
 
-export default function StatsSection({ sermonsCount, booksCount, membersCount }: StatsSectionProps) {
+export default function StatsSection(_props: StatsSectionProps) {
   const platforms = [
     {
       name: 'Spotify',

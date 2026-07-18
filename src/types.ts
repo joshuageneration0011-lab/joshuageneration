@@ -36,6 +36,9 @@ export interface Book {
   }[];
   amazonUrl?: string;
   selarUrl?: string;
+  downloads?: number;
+  pages?: number;
+  rating?: number;
 }
 
 export interface Event {

@@ -56,7 +56,7 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
 
         {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-          {featuredBooks.map((book, index) => (
+          {featuredBooks.map((book) => (
             <div
               key={book.id}
               onClick={() => onBookSelect?.(book)}

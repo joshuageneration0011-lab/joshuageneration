@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Play, Pause, Volume2, VolumeX, Download, Copy, Share2,
+  Play, Pause, Volume2, VolumeX, Download, Copy,
   Headphones, Calendar, Eye, Clock, Check
 } from 'lucide-react';
 import type { Sermon } from '@/types';

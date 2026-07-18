@@ -1,18 +1,19 @@
-import { Home, useState, useEffect } from 'react';
-import { Home,
-  LayoutDashboard, Users, Tv, BookOpen, FileText, Calendar,
-  Video, DollarSign, BarChart3, MapPin, Shield,
+import { useState, useEffect } from 'react';
+import {
+  Home,
+  LayoutDashboard, Users, Tv, BookOpen, FileText,
+  DollarSign, BarChart3, Shield,
   Settings, LogOut, Bell, Search, Menu, X,
   MoreHorizontal, Download, ChevronRight, UserPlus, Eye, Clock,
-  Heart, Gift, ArrowUp, ArrowDown, Play, Plus, Edit3, Trash2,
-  Filter, Star, CheckCircle, AlertCircle, Globe, Wifi,
+  Heart, Gift, ArrowUp, ArrowDown, Plus, Edit3, Trash2,
+  Filter, Star, CheckCircle, AlertCircle, Globe,
   Monitor, Moon, Sun, Mail, Phone,
-  MessageSquare, Upload, FileDown,
+  Upload,
   Check, AlertTriangle, RefreshCw, PenTool,
-  Type, Camera, TrendingUp, Radio, Headphones
+  Type, TrendingUp, Radio, Headphones
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import type { Subscriber, BlogPost, Book, Sermon, Donation, Settings as SettingsType, Event, SermonAudio } from '@/types';
+import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 
@@ -21,46 +22,7 @@ type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' |
 // Dynamic sidebar configuration inside component
 
 // ====== MOCK DATA ======
-const allUsers = [
-  { id: 1, name: 'Emily Watson', email: 'emily@example.com', status: 'active', joined: 'Dec 10, 2025', sermons: 24, donations: 350, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80', role: 'Member' },
-  { id: 2, name: 'Michael Adebayo', email: 'michael@example.com', status: 'active', joined: 'Nov 28, 2025', sermons: 18, donations: 1200, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80', role: 'Partner' },
-  { id: 3, name: 'Sarah Chen', email: 'sarah@example.com', status: 'new', joined: 'Dec 15, 2025', sermons: 3, donations: 0, avatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&q=80', role: 'Member' },
-  { id: 4, name: 'David Kim', email: 'david@example.com', status: 'active', joined: 'Sep 5, 2025', sermons: 42, donations: 2500, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80', role: 'Partner' },
-  { id: 5, name: 'Rachel Grace', email: 'rachel@example.com', status: 'inactive', joined: 'Mar 12, 2025', sermons: 8, donations: 150, avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80', role: 'Minister' },
-  { id: 6, name: 'James O\'Brien', email: 'james@example.com', status: 'active', joined: 'Jan 20, 2025', sermons: 56, donations: 5000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Partner' },
-  { id: 7, name: 'Maria Gonzalez', email: 'maria@example.com', status: 'active', joined: 'Oct 8, 2025', sermons: 15, donations: 800, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80', role: 'Member' },
-  { id: 8, name: 'Apostle Joshua Iyemifokhae', email: 'john@joshuagen.org', status: 'active', joined: 'Jan 1, 2020', sermons: 312, donations: 15000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Admin' },
-];
 
-const allSermons = [
-  { id: 1, title: 'Walking in Divine Authority', speaker: 'Apostle Joshua Iyemifokhae', duration: '45:22', views: 12400, date: 'Dec 10, 2025', status: 'Published', category: 'Faith' },
-  { id: 2, title: 'The Power of Kingdom Prayer', speaker: 'Sarah Williams', duration: '38:15', views: 9800, date: 'Dec 3, 2025', status: 'Published', category: 'Prayer' },
-  { id: 3, title: 'Breaking Generational Chains', speaker: 'Apostle David Thompson', duration: '52:40', views: 15600, date: 'Nov 28, 2025', status: 'Published', category: 'Freedom' },
-  { id: 4, title: 'Grace That Transforms', speaker: 'Apostle Joshua Iyemifokhae', duration: '42:10', views: 11200, date: 'Nov 20, 2025', status: 'Published', category: 'Grace' },
-  { id: 5, title: 'Rising in Unshakable Faith', speaker: 'Minister Rachel Grace', duration: '35:50', views: 8700, date: 'Nov 15, 2025', status: 'Published', category: 'Faith' },
-  { id: 6, title: 'The Season of Harvest', speaker: 'Pastor Sarah Williams', duration: '48:30', views: 13200, date: 'Nov 8, 2025', status: 'Draft', category: 'Season' },
-  { id: 7, title: 'Overcoming Fear with Faith', speaker: 'Apostle Joshua Iyemifokhae', duration: '41:05', views: 7100, date: 'Nov 1, 2025', status: 'Published', category: 'Faith' },
-  { id: 8, title: 'The Armor of God', speaker: 'Apostle David Thompson', duration: '55:20', views: 18900, date: 'Oct 25, 2025', status: 'Published', category: 'Spiritual Warfare' },
-];
-
-const allBooks = [
-  { id: 1, title: 'Purpose & Destiny', author: 'Apostle Joshua Iyemifokhae', downloads: 12400, pages: 248, status: 'Published', rating: 4.8, category: 'Purpose' },
-  { id: 2, title: 'The Prayer Warrior', author: 'Sarah Williams', downloads: 8900, pages: 312, status: 'Published', rating: 4.9, category: 'Prayer' },
-  { id: 3, title: 'Kingdom Economics', author: 'David Thompson', downloads: 15600, pages: 196, status: 'Published', rating: 4.7, category: 'Finance' },
-  { id: 4, title: 'Walking in the Spirit', author: 'Rachel Grace', downloads: 6700, pages: 224, status: 'Published', rating: 4.6, category: 'Spiritual Growth' },
-  { id: 5, title: 'Healing for the Broken', author: 'Apostle Joshua Iyemifokhae', downloads: 11200, pages: 176, status: 'Published', rating: 4.9, category: 'Healing' },
-  { id: 6, title: 'The Family Altar', author: 'Minister Rachel Grace', downloads: 4300, pages: 256, status: 'Draft', rating: 0, category: 'Family' },
-];
-
-
-
-const allEvents = [
-  { id: 1, title: 'Kingdom Conference 2025', date: 'Jan 20, 2026', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson', 'Pastor Sarah Williams'] },
-  { id: 2, title: 'Youth Revival Night', date: 'Jan 15, 2026', time: '06:00 PM', location: 'JGen Youth Auditorium', registrations: 450, capacity: 500, status: 'Upcoming', speakers: ['Minister Rachel Grace', 'Youth Pastor Mark'] },
-  { id: 3, title: 'Women of Faith Summit', date: 'Feb 8, 2026', time: '10:00 AM', location: 'Grace Cathedral', registrations: 680, capacity: 1000, status: 'Upcoming', speakers: ['Pastor Sarah Williams', 'Minister Rachel Grace'] },
-  { id: 4, title: 'Prayer & Fasting Week', date: 'Jan 3, 2026', time: '05:00 AM', location: 'JGen Prayer Mountain', registrations: 2300, capacity: 3000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson'] },
-  { id: 5, title: 'Leadership Summit 2025', date: 'Oct 15, 2025', time: '08:00 AM', location: 'JGen Headquarters', registrations: 890, capacity: 800, status: 'Completed', speakers: ['Apostle Joshua Iyemifokhae'] },
-];
 
 const allPrayerRequests = [
   { id: 1, name: 'Anonymous', request: 'Please pray for my son who is battling cancer. We need a miracle.', isUrgent: true, prayers: 234, date: 'Dec 10, 2025', status: 'Active' },
@@ -69,17 +31,6 @@ const allPrayerRequests = [
   { id: 4, name: 'David M.', request: 'Pray for my spiritual growth and knowing God more intimately.', isUrgent: false, prayers: 67, date: 'Dec 7, 2025', status: 'Answered' },
   { id: 5, name: 'Anonymous', request: 'My daughter is struggling with depression. Please pray for her healing.', isUrgent: true, prayers: 198, date: 'Dec 6, 2025', status: 'Active' },
   { id: 6, name: 'Pastor Mark', request: 'Pray for the upcoming evangelism outreach in the city.', isUrgent: false, prayers: 45, date: 'Dec 5, 2025', status: 'Active' },
-];
-
-const allDonations = [
-  { id: 1, donor: 'Kingdom Builders', amount: 5000, purpose: 'Building Fund', date: 'Today', method: 'Credit Card', recurring: true },
-  { id: 2, donor: 'Grace Foundation', amount: 2500, purpose: 'Missions', date: 'Yesterday', method: 'Bank Transfer', recurring: false },
-  { id: 3, donor: 'Anonymous', amount: 1000, purpose: 'General', date: '2 days ago', method: 'Cash', recurring: false },
-  { id: 4, donor: 'Zion Church', amount: 7500, purpose: 'Conference', date: '3 days ago', method: 'Bank Transfer', recurring: true },
-  { id: 5, donor: 'Michael A.', amount: 500, purpose: 'Youth', date: '4 days ago', method: 'Credit Card', recurring: false },
-  { id: 6, donor: 'Sarah & David', amount: 2000, purpose: 'Media', date: '5 days ago', method: 'PayPal', recurring: true },
-  { id: 7, donor: 'Anonymous', amount: 150, purpose: 'General', date: '6 days ago', method: 'Cash', recurring: false },
-  { id: 8, donor: 'New Life Church', amount: 10000, purpose: 'Building Fund', date: '1 week ago', method: 'Bank Transfer', recurring: false },
 ];
 
 interface AdminDashboardProps {
@@ -92,7 +43,6 @@ interface AdminDashboardProps {
   mixlrUrl: string;
   isRadioActive: boolean;
   onUpdateRadio: (url: string, active: boolean) => void;
-  onUpdateEvents: (events: Event[]) => void;
   users: any[];
   onUpdateUsers: (newUsers: any[]) => void;
   onLogout?: () => void;
@@ -108,8 +58,6 @@ export default function AdminDashboard({
   mixlrUrl,
   isRadioActive,
   onUpdateRadio,
-  events,
-  onUpdateEvents,
   users,
   onUpdateUsers,
   onLogout
@@ -662,7 +610,6 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users }: Dashboa
                 { label: 'Sermons', value: '1,240', icon: Tv, color: 'text-royal-blue-600 bg-royal-blue-50 border-royal-blue-100/30' },
                 { label: 'Books', value: '28', icon: BookOpen, color: 'text-emerald-600 bg-emerald-50 border-emerald-100/30' },
                 { label: 'Blog Posts', value: posts.length.toString(), icon: FileText, color: 'text-gold-600 bg-gold-50 border-gold-100/30' },
-                { label: 'Events', value: events.length.toString(), icon: Calendar, color: 'text-violet-600 bg-violet-50 border-violet-100/30' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100/50 transition-all border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-2.5">
@@ -3545,521 +3492,6 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
   );
 }
 
-// ====== EVENTS TAB ======
-interface EventsTabProps {
-  onUpdateEvents: (events: Event[]) => void;
-}
-
-function EventsTab({ events, onUpdateEvents }: EventsTabProps) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
-  const [imageSourceMode, setImageSourceMode] = useState<'upload' | 'url'>('upload');
-
-  // Form Fields
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [location, setLocation] = useState('');
-  const [description, setDescription] = useState('');
-  const [capacity, setCapacity] = useState('1000');
-  const [registrations, setRegistrations] = useState('0');
-  const [status, setStatus] = useState<'Upcoming' | 'Completed' | 'Cancelled'>('Upcoming');
-  const [speakersInput, setSpeakersInput] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [errorMessage, setErrorMessage] = useState('');
-
-  const openNewForm = () => {
-    setEditingEvent(null);
-    setTitle('');
-    setDate('');
-    setTime('');
-    setLocation('');
-    setDescription('');
-    setCapacity('1000');
-    setRegistrations('0');
-    setStatus('Upcoming');
-    setSpeakersInput('');
-    setImageUrl('');
-    setImageFile(null);
-    setErrorMessage('');
-    setIsFormOpen(true);
-  };
-
-  const openEditForm = (ev: Event) => {
-    setEditingEvent(ev);
-    setTitle(ev.title || '');
-    setDate(ev.date || '');
-    setTime(ev.time || '');
-    setLocation(ev.location || '');
-    setDescription(ev.description || '');
-    setCapacity(String(ev.capacity || 1000));
-    setRegistrations(String(ev.registrations || 0));
-    setStatus(ev.status || 'Upcoming');
-    setSpeakersInput((ev.speakers || []).join(', '));
-    setImageUrl(ev.imageUrl || '');
-    setImageFile(null);
-    setImageSourceMode(ev.imageUrl ? 'url' : 'upload');
-    setErrorMessage('');
-    setIsFormOpen(true);
-  };
-
-  const handleDeleteClick = (ev: Event) => {
-    setEventToDelete(ev);
-  };
-
-  const confirmDelete = async () => {
-    if (!eventToDelete) return;
-    try {
-      const remaining = events.filter(e => e.id !== eventToDelete.id);
-      await onUpdateEvents(remaining);
-      setEventToDelete(null);
-    } catch (err: any) {
-      alert('Failed to delete event: ' + err.message);
-    }
-  };
-
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      let file = e.target.files[0];
-      try {
-        file = await compressImage(file, 800, 0.8);
-      } catch (err) {
-        console.error("Failed to compress event image:", err);
-      }
-      setImageFile(file);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !date || !time || !location) {
-      setErrorMessage('Title, date, time and location are required.');
-      return;
-    }
-
-    setIsSaving(true);
-    setErrorMessage('');
-    try {
-      let finalImageUrl = imageUrl;
-      if (imageSourceMode === 'upload' && imageFile) {
-        setUploadProgress(10);
-        finalImageUrl = await api.uploadFile(imageFile, (pct) => {
-          setUploadProgress(pct);
-        });
-      }
-
-      const speakersList = speakersInput
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-
-      const eventData: Partial<Event> = {
-        id: editingEvent?.id,
-        title,
-        date,
-        time,
-        location,
-        description,
-        imageUrl: finalImageUrl,
-        speakers: speakersList,
-        capacity: parseInt(capacity) || 1000,
-        registrations: parseInt(registrations) || 0,
-        status
-      };
-
-      let newEventsList: Event[];
-      if (editingEvent) {
-        newEventsList = events.map(e => e.id === editingEvent.id ? { ...e, ...eventData } as Event : e);
-      } else {
-        const tempEvent = { ...eventData, id: '' } as Event;
-        newEventsList = [...events, tempEvent];
-      }
-
-      await onUpdateEvents(newEventsList);
-      setIsFormOpen(false);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to save event');
-    } finally {
-      setIsSaving(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const filteredEvents = events.filter(ev => 
-    ev.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ev.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getEventDateDisplay = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) {
-        return {
-          month: d.toLocaleString('default', { month: 'short' }).toUpperCase(),
-          day: String(d.getDate())
-        };
-      }
-    } catch (_) {}
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const m = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][parseInt(parts[1]) - 1] || 'JAN';
-      return { month: m, day: parts[2] };
-    }
-    return { month: 'JAN', day: '01' };
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Events</h2>
-          <p className="text-gray-500 text-sm">Manage programs and conferences â€” {events.length} events</p>
-        </div>
-        <button 
-          onClick={openNewForm}
-          className="px-4 py-2 rounded-xl bg-royal-blue-600 text-white text-sm font-medium hover:bg-royal-blue-700 transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Create Event
-        </button>
-      </div>
-
-      {/* Search Filter */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-        <input 
-          type="text"
-          placeholder="Search by title or location..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9 pr-4 py-2 w-full rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm"
-        />
-      </div>
-
-      {filteredEvents.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
-          <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-550 font-medium">No events found</p>
-          <p className="text-gray-400 text-xs mt-1">Click "Create Event" to add your first program.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEvents.map((event) => {
-            const { month, day } = getEventDateDisplay(event.date);
-            const registrationsCount = event.registrations || 0;
-            const capacityLimit = event.capacity || 1000;
-            const pct = Math.min(100, Math.round((registrationsCount / capacityLimit) * 100));
-
-            return (
-              <div key={event.id} className="rounded-2xl bg-white border border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md transition-all flex flex-col overflow-hidden">
-                {/* Cover Image */}
-                <div className="relative h-40 bg-gray-100 flex-shrink-0">
-                  {event.imageUrl ? (
-                    <img 
-                      src={resolveApiUrl(event.imageUrl)} 
-                      alt={event.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-royal-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-center px-4 text-sm">
-                      {event.title}
-                    </div>
-                  )}
-                  {/* Floating Date Badge */}
-                  <div className="absolute top-3 left-3 w-12 h-14 rounded-xl bg-white flex flex-col items-center justify-center border border-gray-100 shadow-md">
-                    <span className="text-[9px] font-bold text-royal-blue-600 uppercase">{month}</span>
-                    <span className="text-lg font-bold text-gray-900 -mt-0.5">{day}</span>
-                  </div>
-                  {/* Status Badge */}
-                  <span className={cn('absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-semibold border shadow-sm',
-                    event.status === 'Upcoming' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                    event.status === 'Completed' ? 'bg-gray-50 text-gray-500 border-gray-100' :
-                    'bg-red-50 text-red-700 border-red-100'
-                  )}>
-                    {event.status || 'Upcoming'}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="p-5 flex-1 flex flex-col gap-3">
-                  <div>
-                    <h3 className="text-gray-900 font-bold text-sm line-clamp-1 mb-1">{event.title}</h3>
-                    <p className="text-gray-500 text-xs flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" /> {event.time}
-                    </p>
-                    <p className="text-gray-505 text-xs flex items-center gap-1 mt-1">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400" /> {event.location}
-                    </p>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="mt-1">
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-                      <span>{registrationsCount}/{capacityLimit} registered</span>
-                      <span>{pct}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-royal-blue-500 to-indigo-500" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-
-                  {/* Speakers list summary */}
-                  {event.speakers && event.speakers.length > 0 && (
-                    <div className="pt-2 border-t border-gray-50">
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Speakers</p>
-                      <p className="text-xs text-gray-650 font-medium truncate">{event.speakers.join(' â€¢ ')}</p>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 mt-auto pt-3 border-t border-gray-50">
-                    <button 
-                      onClick={() => openEditForm(event)}
-                      className="flex-1 px-3 py-2 rounded-xl bg-royal-blue-50 text-royal-blue-700 border border-royal-blue-100 text-[10px] font-semibold hover:bg-royal-blue-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteClick(event)}
-                      className="px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 hover:text-red-800 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Event Form Modal */}
-      {isFormOpen && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl overflow-hidden border border-gray-100 animate-in">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-gray-900 font-bold text-base">
-                {editingEvent ? 'Edit Event' : 'Create New Event'}
-              </h3>
-              <button 
-                onClick={() => setIsFormOpen(false)}
-                className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div className="space-y-1.5">
-                <label className="text-gray-700 text-xs font-semibold">Event Title</label>
-                <input 
-                  type="text" 
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Kingdom Conference 2026"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-gray-700 text-xs font-semibold">Date</label>
-                  <input 
-                    type="date" 
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-gray-700 text-xs font-semibold">Time</label>
-                  <input 
-                    type="text" 
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    placeholder="e.g. 09:00 AM"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-gray-700 text-xs font-semibold">Location</label>
-                <input 
-                  type="text" 
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Jerusalem Convention Center"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-gray-700 text-xs font-semibold">Capacity</label>
-                  <input 
-                    type="number" 
-                    value={capacity}
-                    onChange={(e) => setCapacity(e.target.value)}
-                    placeholder="1000"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-gray-700 text-xs font-semibold">Registrations</label>
-                  <input 
-                    type="number" 
-                    value={registrations}
-                    onChange={(e) => setRegistrations(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-gray-700 text-xs font-semibold">Status</label>
-                  <select 
-                    value={status} 
-                    onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                  >
-                    <option value="Upcoming">Upcoming</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-gray-700 text-xs font-semibold">Speakers (comma-separated)</label>
-                <input 
-                  type="text" 
-                  value={speakersInput}
-                  onChange={(e) => setSpeakersInput(e.target.value)}
-                  placeholder="e.g. Apostle Joshua Iyemifokhae, Apostle David Thompson"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-gray-700 text-xs font-semibold">Event Description</label>
-                <textarea 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Details about this program..."
-                  rows={3}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all resize-none"
-                />
-              </div>
-
-              {/* Cover Image Selection */}
-              <div className="space-y-2 border-t border-gray-50 pt-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-gray-700 text-xs font-semibold">Cover Image</label>
-                  <div className="flex bg-gray-100 p-0.5 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => setImageSourceMode('upload')}
-                      className={cn("px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer", imageSourceMode === 'upload' ? "bg-white text-royal-blue-600 shadow-sm" : "text-gray-500")}
-                    >
-                      Upload File
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setImageSourceMode('url')}
-                      className={cn("px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer", imageSourceMode === 'url' ? "bg-white text-royal-blue-600 shadow-sm" : "text-gray-500")}
-                    >
-                      Image URL
-                    </button>
-                  </div>
-                </div>
-
-                {imageSourceMode === 'upload' ? (
-                  <div className="space-y-2">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleImageFileChange}
-                      className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-700 hover:file:bg-royal-blue-100"
-                    />
-                    {imageFile && (
-                      <p className="text-xs text-emerald-600 font-semibold">Selected file: {imageFile.name}</p>
-                    )}
-                  </div>
-                ) : (
-                  <input 
-                    type="text" 
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
-                  />
-                )}
-              </div>
-
-              {uploadProgress > 0 && (
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-2">
-                  <div className="bg-royal-blue-600 h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                </div>
-              )}
-
-              {errorMessage && (
-                <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl font-semibold">
-                  {errorMessage}
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-50 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-655 hover:bg-gray-50 transition-colors text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
-                >
-                  {isSaving ? 'Saving...' : 'Save Event'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Event Confirmation Modal */}
-      {eventToDelete && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl p-6 border border-gray-100 animate-in">
-            <h3 className="text-gray-900 font-bold text-base mb-2">Delete Event</h3>
-            <p className="text-gray-500 text-xs mb-6">Are you sure you want to delete <span className="font-semibold text-gray-800">"{eventToDelete.title}"</span>? This action cannot be undone.</p>
-            <div className="flex items-center justify-end gap-3">
-              <button 
-                onClick={() => setEventToDelete(null)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-655 hover:bg-gray-50 text-xs font-semibold cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-xl bg-red-650 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-sm text-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function RadioTab({
   mixlrUrl,
@@ -4471,7 +3903,7 @@ function AnalyticsTab({ sermons, books, users }: AnalyticsTabProps) {
 
   // 2. Resource Downloads calculation (exact database figures)
   // Since e-books downloads are simulated per book from their properties (pages, etc) or default to 0
-  const getBookDownloads = (b: Book, idx: number) => {
+  const getBookDownloads = (_b: Book, _idx: number) => {
     return 0; // Freshly reset
   };
   const totalBookDownloads = books.reduce((sum, b, idx) => sum + getBookDownloads(b, idx), 0);

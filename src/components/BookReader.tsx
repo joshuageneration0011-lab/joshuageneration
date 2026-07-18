@@ -1,6 +1,5 @@
 import { ArrowLeft, BookOpen, Download, ExternalLink } from 'lucide-react';
 import type { Book } from '@/types';
-import { cn } from '@/utils/cn';
 
 interface BookReaderProps {
   book: Book;

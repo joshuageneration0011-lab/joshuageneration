@@ -1,5 +1,4 @@
-import React from 'react';
-import { ArrowLeft, Headphones, ExternalLink, Play, Radio, Volume2 } from 'lucide-react';
+import { ArrowLeft, Headphones, ExternalLink, Radio, Volume2 } from 'lucide-react';
 
 interface PodcastPageProps {
   onBack: () => void;

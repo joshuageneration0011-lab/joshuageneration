@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gift, Heart, CreditCard, CheckCircle2, ArrowLeft, Mail, User, ShieldCheck, Sparkles, AlertCircle, Crown, Globe } from 'lucide-react';
-import { api } from '../utils/api';
+import { Gift, Heart, CheckCircle2, ArrowLeft, Mail, User, ShieldCheck, Sparkles, AlertCircle, Crown, Globe } from 'lucide-react';
 interface DonatePageProps {
   onBack: () => void;
   initialCause?: string;
@@ -178,61 +177,6 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep2 = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!cardName.trim()) {
-      newErrors.cardName = 'Cardholder name is required';
-    }
-    
-    // Simple length checks for simulation
-    const cleanedCard = cardNumber.replace(/\s+/g, '');
-    if (cleanedCard.length < 16) {
-      newErrors.cardNumber = 'Please enter a valid 16-digit card number';
-    }
-    
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      newErrors.expiry = 'Use MM/YY format';
-    } else {
-      const [m, y] = expiry.split('/').map(Number);
-      if (m < 1 || m > 12) {
-        newErrors.expiry = 'Invalid month';
-      }
-    }
-    
-    if (cvv.length < 3) {
-      newErrors.cvv = 'CVC is invalid';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 16) value = value.slice(0, 16);
-    // Format: XXXX XXXX XXXX XXXX
-    const parts = [];
-    for (let i = 0; i < value.length; i += 4) {
-      parts.push(value.slice(i, i + 4));
-    }
-    setCardNumber(parts.join(' '));
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 4) value = value.slice(0, 4);
-    if (value.length > 2) {
-      setExpiry(`${value.slice(0, 2)}/${value.slice(2)}`);
-    } else {
-      setExpiry(value);
-    }
-  };
-
-  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 4) setCvv(value);
-  };
 
   const handleCategorySelect = (category: string) => {
     setCause(category);
@@ -589,110 +533,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   )}
                 </button>
               </form>
-            )}
 
-            {step === 2 && (
-              <form onSubmit={handlePaymentSubmit} className="space-y-6 animate-in">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-800">Simulate Payment</h3>
-                  <span className="text-lg font-bold text-royal-blue-700">{currencySymbols[currency] || '$'}{getFinalAmount()}</span>
-                </div>
-
-                {/* Card input controls */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Cardholder Name</label>
-                    <input
-                      type="text"
-                      placeholder="Name on card"
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-sm"
-                    />
-                    {errors.cardName && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">{errors.cardName}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Card Number</label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="XXXX XXXX XXXX XXXX"
-                        value={cardNumber}
-                        onChange={handleCardNumberChange}
-                        className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-sm font-mono tracking-wider"
-                      />
-                    </div>
-                    {errors.cardNumber && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">{errors.cardNumber}</p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5">Expiry Date</label>
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        value={expiry}
-                        onChange={handleExpiryChange}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-sm font-mono text-center"
-                      />
-                      {errors.expiry && (
-                        <p className="mt-1 text-xs text-red-500 font-medium">{errors.expiry}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5">CVC / CVV</label>
-                      <input
-                        type="password"
-                        placeholder="123"
-                        value={cvv}
-                        onChange={handleCvvChange}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-sm font-mono text-center"
-                      />
-                      {errors.cvv && (
-                        <p className="mt-1 text-xs text-red-500 font-medium">{errors.cvv}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {errors.payment && (
-                  <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-medium">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>{errors.payment}</span>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    disabled={isProcessing}
-                    className="flex-1 py-3.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl font-semibold text-sm transition-all duration-200"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="flex-[2] py-3.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white rounded-xl font-semibold text-sm shadow-lg shadow-royal-blue-500/20 transition-all duration-200 flex items-center justify-center gap-2"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      `Donate ${currencySymbols[currency] || '$'}${getFinalAmount()}`
-                    )}
-                  </button>
-                </div>
-              </form>
             )}
 
             {step === 3 && (

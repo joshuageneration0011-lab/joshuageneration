@@ -1,4 +1,3 @@
-import React from 'react';
 import { Heart, Crown, Globe, ArrowLeft, CheckCircle2, ArrowRight } from 'lucide-react';
 
 interface PartnershipPageProps {

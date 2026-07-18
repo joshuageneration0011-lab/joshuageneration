@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
-import { cn } from '@/utils/cn';
 
 // Convert base64 VAPID key to Uint8Array for push manager
 function urlBase64ToUint8Array(base64String: string) {

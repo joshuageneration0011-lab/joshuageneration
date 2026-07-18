@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { getSavedBlogPosts, saveBlogPost, deleteBlogPost } from '@/data/blogStore';
 import { getSavedBooks, saveBook, deleteBook } from '@/data/bookStore';
 import { getSavedSermons, saveSermon, deleteSermon } from '@/data/sermonStore';
@@ -9,7 +9,6 @@ const FeaturedSermons = lazy(() => import('@/components/FeaturedSermons'));
 const BooksSection = lazy(() => import('@/components/BooksSection'));
 
 const BlogSection = lazy(() => import('@/components/BlogSection'));
-const PrayerRequestSection = lazy(() => import('@/components/PrayerRequestSection'));
 const DonationBanner = lazy(() => import('@/components/DonationBanner'));
 const TestimonialsSection = lazy(() => import('@/components/TestimonialsSection'));
 const StatsSection = lazy(() => import('@/components/StatsSection'));
@@ -30,6 +29,8 @@ const BlogPostReader = lazy(() => import('@/components/BlogPostReader'));
 const DonatePage = lazy(() => import('@/components/DonatePage'));
 const PartnershipPage = lazy(() => import('@/components/PartnershipPage'));
 const PodcastPage = lazy(() => import('@/components/PodcastPage'));
+const SermonsPage = lazy(() => import('@/components/SermonsPage'));
+const ContactPage = lazy(() => import('@/components/ContactPage'));
 import type { Sermon, Book, BlogPost } from '@/types';
 
 const PageLoader = () => (
@@ -418,34 +419,6 @@ export default function App() {
             setSermons(newSermons);
             await reloadStats();
           }}
-         
-          onUpdateEvents={async (newEvents) => {
-            if (newEvents.length < events.length) {
-              const deleted = events.find(ev => !newEvents.some(x => x.id === ev.id));
-              if (deleted) {
-                try {
-                  await deleteEvent(deleted.id);
-                } catch (e) {
-                  console.error(e);
-                  throw e;
-                }
-              }
-            } else {
-              const changed = newEvents.find(ev => {
-                const original = events.find(x => x.id === ev.id);
-                return !original || JSON.stringify(original) !== JSON.stringify(ev);
-              });
-              if (changed) {
-                try {
-                  await saveEvent(changed);
-                } catch (e) {
-                  console.error(e);
-                  throw e;
-                }
-              }
-            }
-            setEvents(newEvents);
-          }}
           mixlrUrl={mixlrUrl}
           isRadioActive={isRadioActive}
           onUpdateRadio={handleUpdateRadio}
@@ -473,7 +446,7 @@ export default function App() {
           <SermonsPage
             sermons={sermons}
             isLoading={isLoadingSermons}
-            onSermonSelect={(sermon) => {
+            onSermonSelect={(sermon: Sermon) => {
               setSelectedSermon(sermon);
               navigate('sermon-player', sermon.id);
             }}

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Heart, Mail, MapPin, Phone, Send } from 'lucide-react';
-import { cn } from '@/utils/cn';
 import { api } from '@/utils/api';
 import { useState, useEffect } from 'react';
 import type { Settings } from '@/types';
@@ -13,13 +12,6 @@ const quickLinks = [
   { name: 'Prayer Requests', href: '#prayer' },
   { name: 'Contact', href: '/contact' },
   { name: 'Donate', href: '/donate' },
-];
-
-const socialLinks = [
-  { name: 'Facebook', url: '#' },
-  { name: 'Twitter', url: '#' },
-  { name: 'Instagram', url: '#' },
-  { name: 'YouTube', url: '#' },
 ];
 
 interface FooterProps {

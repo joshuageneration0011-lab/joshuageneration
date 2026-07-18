@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Radio, X, Music, Volume2 } from 'lucide-react';
-import { cn } from '@/utils/cn';
+import { Radio, X, Volume2 } from 'lucide-react';
 
 interface RadioPlayerProps {
   mixlrUrl: string;
