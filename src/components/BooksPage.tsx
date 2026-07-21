@@ -141,12 +141,7 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const purchaseUrl = book.selarUrl || book.amazonUrl;
-                          if (purchaseUrl) {
-                            window.open(purchaseUrl, '_blank', 'noopener,noreferrer');
-                          } else {
-                            onBookSelect(book);
-                          }
+                          onBookSelect(book);
                         }}
                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-650 rounded-xl text-white font-bold text-xs hover:scale-[1.03] transition-transform shadow-lg border-none"
                       >
@@ -188,12 +183,7 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const purchaseUrl = book.selarUrl || book.amazonUrl;
-                        if (purchaseUrl) {
-                          window.open(purchaseUrl, '_blank', 'noopener,noreferrer');
-                        } else {
-                          onBookSelect(book);
-                        }
+                        onBookSelect(book);
                       }}
                       className="w-full mt-4 py-2 border border-gray-205 hover:border-gold-500 hover:bg-gold-50/20 text-gray-700 hover:text-gold-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                     >

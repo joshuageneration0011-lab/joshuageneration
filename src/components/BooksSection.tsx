@@ -101,12 +101,7 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const purchaseUrl = book.selarUrl || book.amazonUrl;
-                        if (purchaseUrl) {
-                          window.open(purchaseUrl, '_blank', 'noopener,noreferrer');
-                        } else {
-                          onBookSelect?.(book);
-                        }
+                        onBookSelect?.(book);
                       }}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs text-white transition-all duration-200"
                       style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)', boxShadow: '0 4px 12px rgba(212,175,55,0.4)' }}
