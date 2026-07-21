@@ -229,20 +229,6 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
               )}>
                 <Heart className="w-5 h-5" />
               </button>
-              <button
-                onClick={isAuthenticated ? onLogoutClick : onLoginClick}
-                title={isAuthenticated ? 'Log Out' : 'Sign In'}
-                className={cn(
-                  'p-2.5 rounded-xl transition-all duration-200 flex items-center gap-1.5',
-                  isScrolled || currentPage !== 'home'
-                    ? 'text-gray-500 hover:text-royal-blue-600 hover:bg-royal-blue-50'
-                    : 'text-white/70 hover:text-white hover:bg-white/10',
-                  isAuthenticated && 'text-royal-blue-600 font-semibold'
-                )}
-              >
-                <User className="w-5 h-5" />
-                {isAuthenticated && <span className="text-[10px] font-semibold hidden md:inline">Log Out</span>}
-              </button>
               <button 
                 onClick={() => onNavigate && onNavigate('donate')}
                 className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-gold-500 to-gold-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-gold-500/20 hover:shadow-gold-500/30 hover:scale-105 transition-all duration-300"
@@ -353,17 +339,7 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
               <Heart className="w-5 h-5 text-gray-400" />
               Saved
             </button>
-            {isAuthenticated ? (
-              <button onClick={() => { setIsOpen(false); onLogoutClick?.(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 font-medium w-full">
-                <User className="w-5 h-5 text-red-500" />
-                Log Out
-              </button>
-            ) : (
-              <button onClick={() => { setIsOpen(false); onLoginClick?.(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50 transition-all duration-200 font-medium w-full">
-                <User className="w-5 h-5 text-gray-400" />
-                Sign In
-              </button>
-            )}
+
             {onAdminClick && (
               <button onClick={() => { setIsOpen(false); onAdminClick(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50 transition-all duration-200 font-medium">
                 <Shield className="w-5 h-5 text-gray-400" />
@@ -391,7 +367,6 @@ export default function Navbar({ onLoginClick, onNavigate, onAdminClick, current
             { icon: Tv, label: 'Sermons', page: 'sermons' as Page },
             { icon: Library, label: 'Books', page: 'books' as Page },
             { icon: BookOpen, label: 'Blog', page: 'blog' as Page },
-            { icon: User, label: 'Profile', page: 'home' as Page },
           ].map((item, idx) => {
             const active = currentPage === item.page ||
               (item.label === 'Home' && currentPage === 'sermon-player') ||

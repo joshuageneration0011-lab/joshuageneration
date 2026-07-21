@@ -15,7 +15,6 @@ const StatsSection = lazy(() => import('@/components/StatsSection'));
 
 import Footer from '@/components/Footer';
 import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
-import LoginModal from '@/components/LoginModal';
 import RadioPlayer from '@/components/RadioPlayer';
 import NewsletterPopup from '@/components/NewsletterPopup';
 
@@ -64,7 +63,7 @@ const getPageFromPath = (): Page => {
 };
 
 export default function App() {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+
   const [currentPage, setCurrentPage] = useState<Page>(() => getPageFromPath());
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
     return api.isAuthenticated() && (api.getRole() === 'admin' || api.getRole() === 'superadmin');
@@ -438,12 +437,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <SermonsPage
@@ -456,7 +452,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -466,12 +462,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <SermonPlayer
@@ -484,7 +477,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -494,12 +487,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BooksPage
@@ -511,7 +501,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -521,12 +511,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BookReader
@@ -535,7 +522,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -545,12 +532,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BlogPage
@@ -562,7 +546,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -576,12 +560,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <BlogPostReader
@@ -595,7 +576,7 @@ export default function App() {
           />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -605,18 +586,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <PrivacyPolicyPage onBack={() => navigate('home')} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -626,18 +604,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <TermsOfServicePage onBack={() => navigate('home')} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -647,18 +622,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <CookiePolicyPage onBack={() => navigate('home')} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -676,7 +648,7 @@ export default function App() {
           <ContactPage />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -686,18 +658,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <PartnershipPage onBack={() => navigate('home')} onNavigateToDonate={navigateToDonate} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -707,18 +676,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <DonatePage onBack={() => navigate('home')} initialCause={donateCause} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -728,18 +694,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
           onAdminClick={handleAdminClick}
           currentPage={currentPage}
-          isAuthenticated={isUserAuthenticated}
-          onLogoutClick={handleLogout}
         />
         <Suspense fallback={<PageLoader />}>
           <PodcastPage onBack={() => navigate('home')} />
         </Suspense>
         <Footer onNavigate={navigate} />
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
       </div>
     );
@@ -748,12 +711,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar
-        onLoginClick={() => setIsLoginOpen(true)}
         onNavigate={navigate}
         onAdminClick={handleAdminClick}
         currentPage={currentPage}
-        isAuthenticated={isUserAuthenticated}
-        onLogoutClick={handleLogout}
       />
       <main>
         <HeroSection 
@@ -799,7 +759,7 @@ export default function App() {
       <Footer onNavigate={navigate} />
       <PushNotificationPrompt />
       <RadioPlayer mixlrUrl={mixlrUrl} isActive={isRadioActive} />
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+
         <NewsletterPopup />
     </div>
   );
