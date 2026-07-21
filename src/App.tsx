@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { getSavedBlogPosts, saveBlogPost, deleteBlogPost } from '@/data/blogStore';
 import { getSavedBooks, saveBook, deleteBook } from '@/data/bookStore';
 import { getSavedSermons, saveSermon, deleteSermon } from '@/data/sermonStore';
+import { getSavedEvents, saveEvent, deleteEvent } from '@/data/eventStore';
 import { api } from '@/utils/api';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
@@ -9,6 +10,7 @@ const FeaturedSermons = lazy(() => import('@/components/FeaturedSermons'));
 const BooksSection = lazy(() => import('@/components/BooksSection'));
 
 const BlogSection = lazy(() => import('@/components/BlogSection'));
+const EventsSection = lazy(() => import('@/components/EventsSection'));
 const DonationBanner = lazy(() => import('@/components/DonationBanner'));
 const TestimonialsSection = lazy(() => import('@/components/TestimonialsSection'));
 const StatsSection = lazy(() => import('@/components/StatsSection'));
@@ -33,7 +35,7 @@ const ContactPage = lazy(() => import('@/components/ContactPage'));
 const PrivacyPolicyPage = lazy(() => import('@/components/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('@/components/TermsOfServicePage'));
 const CookiePolicyPage = lazy(() => import('@/components/CookiePolicyPage'));
-import type { Sermon, Book, BlogPost } from '@/types';
+import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
   <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white">
@@ -68,7 +70,6 @@ export default function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
     return api.isAuthenticated() && (api.getRole() === 'admin' || api.getRole() === 'superadmin');
   });
-  const [isUserAuthenticated, setIsUserAuthenticated] = useState(() => api.isAuthenticated());
   const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState<{ sermons: number; books: number; members: number } | null>(null);
   const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null);
@@ -78,6 +79,7 @@ export default function App() {
   const [isLoadingSermons, setIsLoadingSermons] = useState(true);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);  const [donateCause, setDonateCause] = useState<string | undefined>(undefined);
+  const [events, setEvents] = useState<Event[]>([]);
 
   const [mixlrUrl, setMixlrUrl] = useState('https://mixlr.com/users/8375836/embed');
   const [isRadioActive, setIsRadioActive] = useState(false);
@@ -90,7 +92,6 @@ export default function App() {
     };
     const handleUnauthorized = () => {
       setIsAdminAuthenticated(false);
-      setIsUserAuthenticated(false);
       navigate('admin-login');
       alert('Session expired. Please log in again.');
     };
@@ -106,9 +107,20 @@ export default function App() {
 
   // Listen to events update triggers
   useEffect(() => {
+    const handleEventsUpdated = async () => {
+      try {
+        const loadedEvents = await getSavedEvents();
+        setEvents(loadedEvents);
+      } catch (err) {
+        console.error('Failed to reload events:', err);
+      }
+    };
+    window.addEventListener('events_updated', handleEventsUpdated);
     return () => {
+      window.removeEventListener('events_updated', handleEventsUpdated);
     };
   }, []);
+
 
   // Listen to sermons update triggers
   useEffect(() => {
@@ -181,6 +193,9 @@ export default function App() {
     const cachedPosts = localStorage.getItem('jg_cache_posts');
     if (cachedPosts) setPosts(JSON.parse(cachedPosts));
 
+    const cachedEvents = localStorage.getItem('jg_cache_events');
+    if (cachedEvents) setEvents(JSON.parse(cachedEvents));
+
     // 2. Fetch fresh data in the background and update UI + Cache
     getSavedSermons()
       .then(loadedSermons => {
@@ -210,6 +225,13 @@ export default function App() {
         localStorage.setItem('jg_cache_posts', JSON.stringify(loadedPosts));
       })
       .catch(err => console.error('Failed to load posts:', err));
+
+    getSavedEvents()
+      .then(loadedEvents => {
+        setEvents(loadedEvents);
+        localStorage.setItem('jg_cache_events', JSON.stringify(loadedEvents));
+      })
+      .catch(err => console.error('Failed to load events:', err));
 
     api.getRadio()
       .then(radio => {
@@ -282,14 +304,12 @@ export default function App() {
 
   const handleAdminLogin = () => {
     setIsAdminAuthenticated(true);
-    setIsUserAuthenticated(true);
     navigate('admin');
   };
 
   const handleLogout = () => {
     api.logout();
     setIsAdminAuthenticated(false);
-    setIsUserAuthenticated(false);
     navigate('home');
   };
 
@@ -426,6 +446,34 @@ export default function App() {
           onUpdateRadio={handleUpdateRadio}
           users={users}
           onUpdateUsers={handleUpdateUsers}
+          events={events}
+          onUpdateEvents={async (newEvents: Event[]) => {
+            if (newEvents.length < events.length) {
+              const deleted = events.find((ev: Event) => !newEvents.some((x: Event) => x.id === ev.id));
+              if (deleted) {
+                try {
+                  await deleteEvent(deleted.id);
+                } catch (e) {
+                  console.error(e);
+                  throw e;
+                }
+              }
+            } else {
+              const changed = newEvents.find((ev: Event) => {
+                const original = events.find((x: Event) => x.id === ev.id);
+                return !original || JSON.stringify(original) !== JSON.stringify(ev);
+              });
+              if (changed) {
+                try {
+                  await saveEvent(changed);
+                } catch (e) {
+                  console.error(e);
+                  throw e;
+                }
+              }
+            }
+            setEvents(newEvents);
+          }}
         />
       </Suspense>
     );
@@ -640,8 +688,8 @@ export default function App() {
     return (
       <div className="min-h-screen bg-white">
         <Navbar
-          onLoginClick={() => setIsLoginOpen(true)}
           onNavigate={navigate}
+          onAdminClick={handleAdminClick}
           currentPage={currentPage}
         />
         <Suspense fallback={<PageLoader />}>
@@ -744,6 +792,7 @@ export default function App() {
             }}
             onViewAll={() => navigate('books')}
           />
+          <EventsSection events={events} />
           <BlogSection
             posts={posts}
             onPostSelect={(post) => {

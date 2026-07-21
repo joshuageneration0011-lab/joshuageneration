@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Search, User, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail } from 'lucide-react';
+import { Menu, X, Search, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
 
@@ -14,15 +14,12 @@ const navLinks = [
 ];
 
 interface NavbarProps {
-  onLoginClick?: () => void;
   onNavigate?: (page: Page) => void;
   onAdminClick?: () => void;
   currentPage?: Page;
-  isAuthenticated?: boolean;
-  onLogoutClick?: () => void;
 }
 
-export default function Navbar({ onLoginClick, onNavigate, onAdminClick, currentPage = 'home', isAuthenticated, onLogoutClick }: NavbarProps) {
+export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSermonDropdownOpen, setIsSermonDropdownOpen] = useState(false);

@@ -1,11 +1,54 @@
+import { useState } from 'react';
 import { MapPin, Clock, ChevronRight, Calendar } from 'lucide-react';
 import type { Event } from '../types';
+import { resolveApiUrl } from '../utils/api';
 
 interface EventsSectionProps {
   events: Event[];
 }
 
 export default function EventsSection({ events }: EventsSectionProps) {
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('jg_registered_events') || '[]');
+    } catch (_) {
+      return [];
+    }
+  });
+
+  const openRegistration = (event: Event) => {
+    setSelectedEvent(event);
+    setName('');
+    setEmail('');
+    setPhone('');
+    setSuccess(registeredEventIds.includes(event.id));
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email) return;
+
+    setIsRegistering(true);
+    // Simulate registration processing for a premium look
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const updatedIds = [...registeredEventIds, selectedEvent!.id];
+    setRegisteredEventIds(updatedIds);
+    localStorage.setItem('jg_registered_events', JSON.stringify(updatedIds));
+
+    // Optimistically update registration count locally for UI display
+    selectedEvent!.registrations = (selectedEvent!.registrations || 0) + 1;
+
+    setIsRegistering(false);
+    setSuccess(true);
+  };
+
   return (
     <section id="events" className="relative py-24 sm:py-32 bg-[#0a0f1e] overflow-hidden">
       {/* Grid texture */}
@@ -69,6 +112,8 @@ export default function EventsSection({ events }: EventsSectionProps) {
               console.error('Error parsing date:', e);
             }
 
+            const isRegistered = registeredEventIds.includes(event.id);
+
             return (
               <div
                 key={event.id}
@@ -78,7 +123,7 @@ export default function EventsSection({ events }: EventsSectionProps) {
                 {/* Image */}
                 <div className="relative h-44 overflow-hidden">
                   <img
-                    src={event.imageUrl}
+                    src={resolveApiUrl(event.imageUrl)}
                     alt={event.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70 group-hover:opacity-90"
                   />
@@ -116,14 +161,19 @@ export default function EventsSection({ events }: EventsSectionProps) {
                   </div>
 
                   <button
-                    className="w-full py-2.5 rounded-xl font-semibold text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                    onClick={() => openRegistration(event)}
+                    className="w-full py-2.5 rounded-xl font-semibold text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer"
                     style={{
-                      background: 'linear-gradient(135deg, #d4af37, #b8942f)',
-                      boxShadow: '0 4px 12px rgba(212,175,55,0.25)',
+                      background: isRegistered 
+                        ? 'linear-gradient(135deg, #10b981, #059669)'
+                        : 'linear-gradient(135deg, #d4af37, #b8942f)',
+                      boxShadow: isRegistered
+                        ? '0 4px 12px rgba(16,185,129,0.25)'
+                        : '0 4px 12px rgba(212,175,55,0.25)',
                       color: '#fff',
                     }}
                   >
-                    Register Now
+                    {isRegistered ? 'Registered ✓' : 'Register Now'}
                   </button>
                 </div>
               </div>
@@ -131,6 +181,102 @@ export default function EventsSection({ events }: EventsSectionProps) {
           })}
         </div>
       </div>
+
+      {/* Registration Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-[#020617]/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-[#0b1329] border border-white/[0.08] rounded-3xl max-w-md w-full shadow-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gold-400/5 rounded-full blur-[40px] pointer-events-none" />
+
+            <button
+              onClick={() => setSelectedEvent(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-white/50 hover:text-white transition-all cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {!success ? (
+              <form onSubmit={handleRegisterSubmit} className="space-y-5">
+                <div>
+                  <span className="text-gold-400 text-[10px] font-bold tracking-wider uppercase">Event Registration</span>
+                  <h3 className="text-lg font-bold text-white mt-1 leading-snug">{selectedEvent.title}</h3>
+                  <p className="text-xs text-white/50 mt-1 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-gold-400/60" /> {selectedEvent.date} at {selectedEvent.time}
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-white/60 text-xs font-semibold">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. John Doe"
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-white/60 text-xs font-semibold">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. john@example.com"
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-white/60 text-xs font-semibold">Phone Number (Optional)</label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. +1 234 567 890"
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isRegistering}
+                  className="w-full py-3.5 rounded-xl font-bold text-sm text-[#0a0f1e] transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg shadow-gold-500/10 hover:shadow-gold-500/20 disabled:opacity-50 cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)' }}
+                >
+                  {isRegistering ? 'Processing...' : 'Complete Registration'}
+                </button>
+              </form>
+            ) : (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400 animate-bounce">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-lg font-bold text-white">Registration Successful!</h3>
+                  <p className="text-xs text-white/50 leading-relaxed max-w-xs mx-auto">
+                    You have successfully registered for <span className="text-gold-300 font-semibold">{selectedEvent.title}</span>. We look forward to seeing you!
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="px-6 py-2 bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-white/70 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer mt-4"
+                >
+                  Close Window
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

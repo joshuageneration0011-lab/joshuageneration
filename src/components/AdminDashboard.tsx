@@ -10,10 +10,11 @@ import {
   Monitor, Moon, Sun, Mail, Phone,
   Upload,
   Check, AlertTriangle, RefreshCw, PenTool,
-  Type, TrendingUp, Radio, Headphones
+  Type, TrendingUp, Radio, Headphones,
+  Calendar, MapPin
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio } from '@/types';
+import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 
@@ -46,6 +47,8 @@ interface AdminDashboardProps {
   users: any[];
   onUpdateUsers: (newUsers: any[]) => void;
   onLogout?: () => void;
+  events: Event[];
+  onUpdateEvents: (events: Event[]) => void;
 }
 
 export default function AdminDashboard({ 
@@ -60,7 +63,9 @@ export default function AdminDashboard({
   onUpdateRadio,
   users,
   onUpdateUsers,
-  onLogout
+  onLogout,
+  events,
+  onUpdateEvents
 }: AdminDashboardProps) {
   const userRole = api.getRole();
 
@@ -83,6 +88,7 @@ export default function AdminDashboard({
     { id: 'sermons', label: 'Sermons', icon: Tv, badge: sermons.length.toString() },
     { id: 'books', label: 'Books', icon: BookOpen, badge: books.length.toString() },
     { id: 'blog', label: 'Blog', icon: FileText, badge: posts.length.toString() },
+    { id: 'events', label: 'Events', icon: Calendar, badge: events.length.toString() },
     { id: 'messages', label: 'Messages', icon: Mail, badge: unreadMsgCount > 0 ? String(unreadMsgCount) : undefined },
     { id: 'subscribers', label: 'Subscribers', icon: UserPlus },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
@@ -130,11 +136,12 @@ export default function AdminDashboard({
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} />;
+      case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} events={events} books={books} />;
       case 'users': return <UsersTab users={users} onUpdateUsers={handleUpdateUsers} />;
       case 'sermons': return <SermonsTab sermons={sermons} onUpdateSermons={onUpdateSermons} />;
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
+      case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
       case 'subscribers': return <SubscribersTab />;
       case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
@@ -145,7 +152,7 @@ export default function AdminDashboard({
       case 'moderation': return <ModerationTab />;
       case 'settings': 
         return <SettingsTab />;
-      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} />;
+      default: return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} events={events} books={books} />;
     }
   };
 
@@ -329,6 +336,8 @@ interface DashboardTabProps {
   donations: Donation[];
   sermons: Sermon[];
   users: any[];
+  events: Event[];
+  books: Book[];
 }
 
 
@@ -433,7 +442,7 @@ function SubscribersTab() {
   );
 }
 
-function DashboardTab({ posts, onTabChange, donations, sermons, users }: DashboardTabProps) {
+function DashboardTab({ posts, onTabChange, donations, sermons, users, events, books }: DashboardTabProps) {
   const userRole = api.getRole();
   const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
 
@@ -452,12 +461,13 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users }: Dashboa
         <div className="absolute inset-0 bg-grid opacity-10" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-500/10 rounded-full blur-[80px]" />
         <div className="relative">
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome back, {displayName} ðŸ‘‹</h1>
-          <p className="text-white/80 text-sm mt-1 max-w-lg">The Lord is doing great things. Here's your ministry overview for today.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome back, {displayName}</h1>
+          <p className="text-white/80 text-sm mt-1 max-w-lg">Here is your overview for today.</p>
           <div className="flex flex-wrap gap-2 mt-4">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">ðŸ•Šï¸ {newMembersCount} new members</span>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">ðŸ”¥ {sermons.length} sermons uploaded</span>
-            <span className="px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 text-xs font-medium">ðŸ“– {posts.length} blog posts</span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">{newMembersCount} new members</span>
+            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">{sermons.length} sermons uploaded</span>
+            <span className="px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 text-xs font-medium">{posts.length} blog posts</span>
+            <span className="px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-medium">{events.length} upcoming events</span>
           </div>
         </div>
       </div>
@@ -607,9 +617,10 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users }: Dashboa
             </div>
             <div className="space-y-3">
               {[
-                { label: 'Sermons', value: '1,240', icon: Tv, color: 'text-royal-blue-600 bg-royal-blue-50 border-royal-blue-100/30' },
-                { label: 'Books', value: '28', icon: BookOpen, color: 'text-emerald-600 bg-emerald-50 border-emerald-100/30' },
+                { label: 'Sermons', value: sermons.length.toString(), icon: Tv, color: 'text-royal-blue-600 bg-royal-blue-50 border-royal-blue-100/30' },
+                { label: 'Books', value: books.length.toString(), icon: BookOpen, color: 'text-emerald-600 bg-emerald-50 border-emerald-100/30' },
                 { label: 'Blog Posts', value: posts.length.toString(), icon: FileText, color: 'text-gold-600 bg-gold-50 border-gold-100/30' },
+                { label: 'Events', value: events.length.toString(), icon: Calendar, color: 'text-violet-600 bg-violet-50 border-violet-100/30' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100/50 transition-all border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-2.5">
@@ -5162,3 +5173,521 @@ function MessagesTab({ onCountChange }: { onCountChange?: (n: number) => void })
     </div>
   );
 }
+
+// ====== EVENTS TAB ======
+interface EventsTabProps {
+  events: Event[];
+  onUpdateEvents: (events: Event[]) => void;
+}
+
+function EventsTab({ events, onUpdateEvents }: EventsTabProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [imageSourceMode, setImageSourceMode] = useState<'upload' | 'url'>('upload');
+
+  // Form Fields
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [capacity, setCapacity] = useState('1000');
+  const [registrations, setRegistrations] = useState('0');
+  const [status, setStatus] = useState<'Upcoming' | 'Completed' | 'Cancelled'>('Upcoming');
+  const [speakersInput, setSpeakersInput] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const openNewForm = () => {
+    setEditingEvent(null);
+    setTitle('');
+    setDate('');
+    setTime('');
+    setLocation('');
+    setDescription('');
+    setCapacity('1000');
+    setRegistrations('0');
+    setStatus('Upcoming');
+    setSpeakersInput('');
+    setImageUrl('');
+    setImageFile(null);
+    setErrorMessage('');
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (ev: Event) => {
+    setEditingEvent(ev);
+    setTitle(ev.title || '');
+    setDate(ev.date || '');
+    setTime(ev.time || '');
+    setLocation(ev.location || '');
+    setDescription(ev.description || '');
+    setCapacity(String(ev.capacity || 1000));
+    setRegistrations(String(ev.registrations || 0));
+    setStatus(ev.status || 'Upcoming');
+    setSpeakersInput((ev.speakers || []).join(', '));
+    setImageUrl(ev.imageUrl || '');
+    setImageFile(null);
+    setImageSourceMode(ev.imageUrl ? 'url' : 'upload');
+    setErrorMessage('');
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteClick = (ev: Event) => {
+    setEventToDelete(ev);
+  };
+
+  const confirmDelete = async () => {
+    if (!eventToDelete) return;
+    try {
+      const remaining = events.filter(e => e.id !== eventToDelete.id);
+      await onUpdateEvents(remaining);
+      setEventToDelete(null);
+    } catch (err: any) {
+      alert('Failed to delete event: ' + err.message);
+    }
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      let file = e.target.files[0];
+      try {
+        file = await compressImage(file, 800, 0.8);
+      } catch (err) {
+        console.error("Failed to compress event image:", err);
+      }
+      setImageFile(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !date || !time || !location) {
+      setErrorMessage('Title, date, time and location are required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage('');
+    try {
+      let finalImageUrl = imageUrl;
+      if (imageSourceMode === 'upload' && imageFile) {
+        setUploadProgress(10);
+        finalImageUrl = await api.uploadFile(imageFile, (pct) => {
+          setUploadProgress(pct);
+        });
+      }
+
+      const speakersList = speakersInput
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      const eventData: Partial<Event> = {
+        id: editingEvent?.id,
+        title,
+        date,
+        time,
+        location,
+        description,
+        imageUrl: finalImageUrl,
+        speakers: speakersList,
+        capacity: parseInt(capacity) || 1000,
+        registrations: parseInt(registrations) || 0,
+        status
+      };
+
+      let newEventsList: Event[];
+      if (editingEvent) {
+        newEventsList = events.map(e => e.id === editingEvent.id ? { ...e, ...eventData } as Event : e);
+      } else {
+        const tempEvent = { ...eventData, id: '' } as Event;
+        newEventsList = [...events, tempEvent];
+      }
+
+      await onUpdateEvents(newEventsList);
+      setIsFormOpen(false);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to save event');
+    } finally {
+      setIsSaving(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const filteredEvents = events.filter(ev => 
+    ev.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ev.location.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getEventDateDisplay = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        return {
+          month: d.toLocaleString('default', { month: 'short' }).toUpperCase(),
+          day: String(d.getDate())
+        };
+      }
+    } catch (_) {}
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const m = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][parseInt(parts[1]) - 1] || 'JAN';
+      return { month: m, day: parts[2] };
+    }
+    return { month: 'JAN', day: '01' };
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Events</h2>
+          <p className="text-gray-500 text-sm">Manage programs and conferences — {events.length} events</p>
+        </div>
+        <button 
+          onClick={openNewForm}
+          className="px-4 py-2 rounded-xl bg-royal-blue-600 text-white text-sm font-medium hover:bg-royal-blue-700 transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
+        >
+          <Plus className="w-4 h-4" /> Create Event
+        </button>
+      </div>
+
+      {/* Search Filter */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+        <input 
+          type="text"
+          placeholder="Search by title or location..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9 pr-4 py-2 w-full rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm"
+        />
+      </div>
+
+      {filteredEvents.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+          <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-550 font-medium">No events found</p>
+          <p className="text-gray-400 text-xs mt-1">Click "Create Event" to add your first program.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredEvents.map((event) => {
+            const { month, day } = getEventDateDisplay(event.date);
+            const registrationsCount = event.registrations || 0;
+            const capacityLimit = event.capacity || 1000;
+            const pct = Math.min(100, Math.round((registrationsCount / capacityLimit) * 100));
+
+            return (
+              <div key={event.id} className="rounded-2xl bg-white border border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md transition-all flex flex-col overflow-hidden">
+                {/* Cover Image */}
+                <div className="relative h-40 bg-gray-100 flex-shrink-0">
+                  {event.imageUrl ? (
+                    <img 
+                      src={resolveApiUrl(event.imageUrl)} 
+                      alt={event.title} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-royal-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-center px-4 text-sm">
+                      {event.title}
+                    </div>
+                  )}
+                  {/* Floating Date Badge */}
+                  <div className="absolute top-3 left-3 w-12 h-14 rounded-xl bg-white flex flex-col items-center justify-center border border-gray-100 shadow-md">
+                    <span className="text-[9px] font-bold text-royal-blue-600 uppercase">{month}</span>
+                    <span className="text-lg font-bold text-gray-900 -mt-0.5">{day}</span>
+                  </div>
+                  {/* Status Badge */}
+                  <span className={cn('absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-semibold border shadow-sm',
+                    event.status === 'Upcoming' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                    event.status === 'Completed' ? 'bg-gray-50 text-gray-500 border-gray-100' :
+                    'bg-red-50 text-red-700 border-red-100'
+                  )}>
+                    {event.status || 'Upcoming'}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="p-5 flex-1 flex flex-col gap-3">
+                  <div>
+                    <h3 className="text-gray-900 font-bold text-sm line-clamp-1 mb-1">{event.title}</h3>
+                    <p className="text-gray-500 text-xs flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-gray-400" /> {event.time}
+                    </p>
+                    <p className="text-gray-505 text-xs flex items-center gap-1 mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400" /> {event.location}
+                    </p>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mt-1">
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                      <span>{registrationsCount}/{capacityLimit} registered</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-royal-blue-500 to-indigo-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Speakers list summary */}
+                  {event.speakers && event.speakers.length > 0 && (
+                    <div className="pt-2 border-t border-gray-50">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Speakers</p>
+                      <p className="text-xs text-gray-650 font-medium truncate">{event.speakers.join(' • ')}</p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 mt-auto pt-3 border-t border-gray-50">
+                    <button 
+                      onClick={() => openEditForm(event)}
+                      className="flex-1 px-3 py-2 rounded-xl bg-royal-blue-50 text-royal-blue-700 border border-royal-blue-100 text-[10px] font-semibold hover:bg-royal-blue-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteClick(event)}
+                      className="px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 hover:text-red-800 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Event Form Modal */}
+      {isFormOpen && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl overflow-hidden border border-gray-100 animate-in">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-gray-900 font-bold text-base">
+                {editingEvent ? 'Edit Event' : 'Create New Event'}
+              </h3>
+              <button 
+                onClick={() => setIsFormOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <div className="space-y-1.5">
+                <label className="text-gray-700 text-xs font-semibold">Event Title</label>
+                <input 
+                  type="text" 
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Kingdom Conference 2026"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-gray-700 text-xs font-semibold">Date</label>
+                  <input 
+                    type="date" 
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-gray-700 text-xs font-semibold">Time</label>
+                  <input 
+                    type="text" 
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    placeholder="e.g. 09:00 AM"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-gray-700 text-xs font-semibold">Location</label>
+                <input 
+                  type="text" 
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. Jerusalem Convention Center"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-gray-700 text-xs font-semibold">Capacity</label>
+                  <input 
+                    type="number" 
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                    placeholder="1000"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-gray-700 text-xs font-semibold">Registrations</label>
+                  <input 
+                    type="number" 
+                    value={registrations}
+                    onChange={(e) => setRegistrations(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-gray-700 text-xs font-semibold">Status</label>
+                  <select 
+                    value={status} 
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                  >
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-gray-700 text-xs font-semibold">Speakers (comma-separated)</label>
+                <input 
+                  type="text" 
+                  value={speakersInput}
+                  onChange={(e) => setSpeakersInput(e.target.value)}
+                  placeholder="e.g. Apostle Joshua Iyemifokhae, Apostle David Thompson"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-gray-700 text-xs font-semibold">Event Description</label>
+                <textarea 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Details about this program..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all resize-none"
+                />
+              </div>
+
+              {/* Cover Image Selection */}
+              <div className="space-y-2 border-t border-gray-50 pt-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-gray-700 text-xs font-semibold">Cover Image</label>
+                  <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setImageSourceMode('upload')}
+                      className={cn("px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer", imageSourceMode === 'upload' ? "bg-white text-royal-blue-600 shadow-sm" : "text-gray-500")}
+                    >
+                      Upload File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageSourceMode('url')}
+                      className={cn("px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer", imageSourceMode === 'url' ? "bg-white text-royal-blue-600 shadow-sm" : "text-gray-500")}
+                    >
+                      Image URL
+                    </button>
+                  </div>
+                </div>
+
+                {imageSourceMode === 'upload' ? (
+                  <div className="space-y-2">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-700 hover:file:bg-royal-blue-100"
+                    />
+                    {imageFile && (
+                      <p className="text-xs text-emerald-600 font-semibold">Selected file: {imageFile.name}</p>
+                    )}
+                  </div>
+                ) : (
+                  <input 
+                    type="text" 
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                  />
+                )}
+              </div>
+
+              {uploadProgress > 0 && (
+                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-2">
+                  <div className="bg-royal-blue-600 h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl font-semibold">
+                  {errorMessage}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-4 border-t border-gray-50 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsFormOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-655 hover:bg-gray-50 transition-colors text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {isSaving ? 'Saving...' : 'Save Event'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Event Confirmation Modal */}
+      {eventToDelete && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl p-6 border border-gray-100 animate-in">
+            <h3 className="text-gray-900 font-bold text-base mb-2">Delete Event</h3>
+            <p className="text-gray-500 text-xs mb-6">Are you sure you want to delete <span className="font-semibold text-gray-800">"{eventToDelete.title}"</span>? This action cannot be undone.</p>
+            <div className="flex items-center justify-end gap-3">
+              <button 
+                onClick={() => setEventToDelete(null)}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-655 hover:bg-gray-50 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-xl bg-red-650 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-sm text-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
