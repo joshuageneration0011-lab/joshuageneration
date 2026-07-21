@@ -1,6 +1,6 @@
 import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo } from 'react';
-import { Search, Download, BookOpen, SlidersHorizontal } from 'lucide-react';
+import { Search, Download, BookOpen, SlidersHorizontal, ExternalLink } from 'lucide-react';
 import type { Book } from '@/types';
 import { cn } from '@/utils/cn';
 
@@ -118,22 +118,42 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
                   
                   {/* Actions overlay */}
                   <div className="absolute bottom-4 left-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                    <button
-                      onClick={(e) => handleDownload(book, e)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white rounded-xl text-gray-900 font-bold text-xs hover:bg-gray-50 transition-colors shadow-lg"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      PDF
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onBookSelect(book);
-                      }}
-                      className="flex items-center justify-center p-2.5 bg-royal-blue-600 rounded-xl text-white font-medium hover:bg-royal-blue-700 transition-colors shadow-lg"
-                    >
-                      <BookOpen className="w-4 h-4" />
-                    </button>
+                    {book.pdfs && book.pdfs.length > 0 ? (
+                      <>
+                        <button
+                          onClick={(e) => handleDownload(book, e)}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white rounded-xl text-gray-900 font-bold text-xs hover:bg-gray-50 transition-colors shadow-lg"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          PDF
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onBookSelect(book);
+                          }}
+                          className="flex items-center justify-center p-2.5 bg-royal-blue-600 rounded-xl text-white font-medium hover:bg-royal-blue-700 transition-colors shadow-lg"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const purchaseUrl = book.selarUrl || book.amazonUrl;
+                          if (purchaseUrl) {
+                            window.open(purchaseUrl, '_blank', 'noopener,noreferrer');
+                          } else {
+                            onBookSelect(book);
+                          }
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-650 rounded-xl text-white font-bold text-xs hover:scale-[1.03] transition-transform shadow-lg border-none"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Get Book
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -153,16 +173,34 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
                     {book.description}
                   </p>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onBookSelect(book);
-                    }}
-                    className="w-full mt-4 py-2 border border-gray-200 hover:border-royal-blue-500 hover:bg-royal-blue-50/20 text-gray-700 hover:text-royal-blue-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    Read E-Book
-                  </button>
+                  {book.pdfs && book.pdfs.length > 0 ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onBookSelect(book);
+                      }}
+                      className="w-full mt-4 py-2 border border-gray-200 hover:border-royal-blue-500 hover:bg-royal-blue-50/20 text-gray-700 hover:text-royal-blue-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      Read E-Book
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const purchaseUrl = book.selarUrl || book.amazonUrl;
+                        if (purchaseUrl) {
+                          window.open(purchaseUrl, '_blank', 'noopener,noreferrer');
+                        } else {
+                          onBookSelect(book);
+                        }
+                      }}
+                      className="w-full mt-4 py-2 border border-gray-205 hover:border-gold-500 hover:bg-gold-50/20 text-gray-700 hover:text-gold-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Buy E-Book
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

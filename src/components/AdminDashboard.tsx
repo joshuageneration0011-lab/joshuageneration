@@ -2208,6 +2208,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [pdfsInput, setPdfsInput] = useState<{ title: string; url: string }[]>([]);
+  const [enablePdf, setEnablePdf] = useState(true);
   const [uploadingPdfIndex, setUploadingPdfIndex] = useState<number | null>(null);
   const [pdfProgress, setPdfProgress] = useState(0);
   const [enableAmazon, setEnableAmazon] = useState(false);
@@ -2233,6 +2234,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setSelarUrl('');
     setPages('150');
     setDownloads('0');
+    setEnablePdf(true);
     setPdfsInput([{ title: 'Main Book PDF', url: '' }]);
     setIsFormOpen(true);
   };
@@ -2252,6 +2254,9 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setSelarUrl(book.selarUrl || '');
     setPages(String(book.pages || '150'));
     setDownloads(String(book.downloads || '0'));
+    
+    const hasPdfs = !!book.pdfs && book.pdfs.length > 0;
+    setEnablePdf(hasPdfs);
     setPdfsInput(book.pdfs || []);
     setIsFormOpen(true);
   };
@@ -2345,7 +2350,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       rating: editingBook ? (editingBook as any).rating || 4.8 : 4.8,
       amazonUrl: enableAmazon ? amazonUrl.trim() : undefined,
       selarUrl: enableSelar ? selarUrl.trim() : undefined,
-      pdfs: pdfsInput
+      pdfs: enablePdf ? pdfsInput : []
     };
 
     let newBooks: Book[];
@@ -2621,70 +2626,88 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                   )}
                 </div>
 
-                {/* Multiple PDF Upload */}
+                {/* PDF Toggle and upload block */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Book PDFs</label>
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-gray-50 border border-gray-200">
+                    <div>
+                      <label className="text-xs font-bold text-gray-750 uppercase tracking-wider block">Enable PDF Reading & Downloads</label>
+                      <span className="text-[10px] text-gray-400 font-medium mt-0.5 block">Disable if readers should only purchase via Amazon/Selar link</span>
+                    </div>
                     <button
                       type="button"
-                      onClick={addPdf}
-                      className="px-3 py-1 rounded-lg bg-royal-blue-50 hover:bg-royal-blue-100 text-royal-blue-700 text-[10px] font-semibold transition-all cursor-pointer border-none"
+                      onClick={() => setEnablePdf(!enablePdf)}
+                      className={`w-8 h-4 rounded-full transition-colors ${enablePdf ? 'bg-royal-blue-600' : 'bg-gray-300'} relative cursor-pointer border-none`}
                     >
-                      + Add PDF
+                      <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${enablePdf ? 'translate-x-4' : ''}`} />
                     </button>
                   </div>
 
-                  <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
-                    {pdfsInput.map((pdf, idx) => (
-                      <div key={idx} className="p-3 rounded-xl border border-gray-200 bg-white space-y-2 relative">
+                  {enablePdf && (
+                    <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-white">
+                      <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                        <label className="text-xs font-bold text-gray-555 uppercase tracking-wider">Book PDF Files</label>
                         <button
                           type="button"
-                          onClick={() => removePdf(idx)}
-                          className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer border-none bg-transparent"
+                          onClick={addPdf}
+                          className="px-3 py-1 rounded-lg bg-royal-blue-50 hover:bg-royal-blue-100 text-royal-blue-700 text-[10px] font-semibold transition-all cursor-pointer border-none"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          + Add PDF
                         </button>
-                        <input
-                          type="text"
-                          required
-                          value={pdf.title}
-                          onChange={(e) => updatePdfTitle(idx, e.target.value)}
-                          placeholder="PDF title (e.g. Volume 1)"
-                          className="w-11/12 px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none font-bold"
-                        />
-                        <div className="space-y-2 mt-1">
-                          <input
-                            type="url"
-                            value={pdf.url}
-                            onChange={(e) => {
-                              const newPdfs = [...pdfsInput];
-                              newPdfs[idx] = { ...newPdfs[idx], url: e.target.value };
-                              setPdfsInput(newPdfs);
-                            }}
-                            placeholder="Paste external PDF link or upload file below..."
-                            className="w-11/12 px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none"
-                          />
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              onChange={(e) => handlePdfUpload(idx, e)}
-                              disabled={uploadingPdfIndex === idx}
-                              className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer disabled:opacity-50"
-                            />
-                            {uploadingPdfIndex === idx && (
-                              <span className="text-[10px] font-semibold text-royal-blue-600 animate-pulse">Uploading {pdfProgress}%...</span>
-                            )}
-                            {pdf.url && pdf.url !== '#' && pdf.url.startsWith('http') && !uploadingPdfIndex && (
-                              <span className="text-emerald-600 text-[10px] font-semibold flex items-center gap-1">
-                                <Check className="w-3 h-3" /> Valid Link Ready
-                              </span>
-                            )}
-                          </div>
-                        </div>
                       </div>
-                    ))}
-                  </div>
+
+                      <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
+                        {pdfsInput.map((pdf, idx) => (
+                          <div key={idx} className="p-3 rounded-xl border border-gray-200 bg-gray-50/50 space-y-2 relative">
+                            <button
+                              type="button"
+                              onClick={() => removePdf(idx)}
+                              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer border-none bg-transparent"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                            <input
+                              type="text"
+                              required
+                              value={pdf.title}
+                              onChange={(e) => updatePdfTitle(idx, e.target.value)}
+                              placeholder="PDF title (e.g. Volume 1)"
+                              className="w-11/12 px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none font-bold"
+                            />
+                            <div className="space-y-2 mt-1">
+                              <input
+                                type="url"
+                                value={pdf.url}
+                                onChange={(e) => {
+                                  const newPdfs = [...pdfsInput];
+                                  newPdfs[idx] = { ...newPdfs[idx], url: e.target.value };
+                                  setPdfsInput(newPdfs);
+                                }}
+                                placeholder="Paste external PDF link or upload file below..."
+                                className="w-11/12 px-2.5 py-1 text-xs border border-gray-150 rounded-lg focus:outline-none"
+                              />
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="file"
+                                  accept="application/pdf"
+                                  onChange={(e) => handlePdfUpload(idx, e)}
+                                  disabled={uploadingPdfIndex === idx}
+                                  className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer disabled:opacity-50"
+                                />
+                                {uploadingPdfIndex === idx && (
+                                  <span className="text-[10px] font-semibold text-royal-blue-600 animate-pulse">Uploading {pdfProgress}%...</span>
+                                )}
+                                {pdf.url && pdf.url !== '#' && pdf.url.startsWith('http') && !uploadingPdfIndex && (
+                                  <span className="text-emerald-600 text-[10px] font-semibold flex items-center gap-1">
+                                    <Check className="w-3 h-3" /> Valid Link Ready
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">

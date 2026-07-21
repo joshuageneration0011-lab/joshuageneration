@@ -1,4 +1,4 @@
-import { Download, BookOpen, ChevronRight } from 'lucide-react';
+import { Download, BookOpen, ChevronRight, ExternalLink } from 'lucide-react';
 import type { Book } from '@/types';
 import { resolveApiUrl } from '@/utils/api';
 
@@ -79,21 +79,42 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
 
                 {/* Actions on hover */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onBookSelect?.(book); }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs text-white transition-all duration-200"
-                    style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)', boxShadow: '0 4px 12px rgba(212,175,55,0.4)' }}
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    Read Now
-                  </button>
-                  <button
-                    onClick={(e) => handleDownload(book, e)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/90 backdrop-blur-sm font-semibold text-xs text-gray-900 hover:bg-white transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download PDF
-                  </button>
+                  {book.pdfs && book.pdfs.length > 0 ? (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onBookSelect?.(book); }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs text-white transition-all duration-200"
+                        style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)', boxShadow: '0 4px 12px rgba(212,175,55,0.4)' }}
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Read Now
+                      </button>
+                      <button
+                        onClick={(e) => handleDownload(book, e)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/90 backdrop-blur-sm font-semibold text-xs text-gray-900 hover:bg-white transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download PDF
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const purchaseUrl = book.selarUrl || book.amazonUrl;
+                        if (purchaseUrl) {
+                          window.open(purchaseUrl, '_blank', 'noopener,noreferrer');
+                        } else {
+                          onBookSelect?.(book);
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs text-white transition-all duration-200"
+                      style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)', boxShadow: '0 4px 12px rgba(212,175,55,0.4)' }}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Get E-Book
+                    </button>
+                  )}
                 </div>
 
                 {/* Category pill */}
