@@ -14,7 +14,10 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables from local .env file
 try {
-  const envPath = path.join(__dirname, '.env');
+  let envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) {
+    envPath = path.join(__dirname, '..', '.env');
+  }
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf8');
     envContent.split(/\r?\n/).forEach(line => {
@@ -63,6 +66,7 @@ const DONATIONS_FILE = path.join(DATA_DIR, 'donations.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const SUBSCRIBERS_FILE = path.join(DATA_DIR, 'subscribers.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 
 // In-memory sessions store
@@ -780,12 +784,33 @@ const server = http.createServer(async (req, res) => {
 
         const id = crypto.randomUUID();
         
-        // Use ON CONFLICT to handle duplicates gracefully
-        await pool.query(`
-          INSERT INTO subscribers (id, email, name, is_active) 
-          VALUES ($1, $2, $3, true)
-          ON CONFLICT (email) DO UPDATE SET is_active = true, name = EXCLUDED.name
-        `, [id, email, name]);
+        if (pool) {
+          // Use ON CONFLICT to handle duplicates gracefully
+          await pool.query(`
+            INSERT INTO subscribers (id, email, name, is_active) 
+            VALUES ($1, $2, $3, true)
+            ON CONFLICT (email) DO UPDATE SET is_active = true, name = EXCLUDED.name
+          `, [id, email, name]);
+        } else {
+          let subscribers = [];
+          if (fs.existsSync(SUBSCRIBERS_FILE)) {
+            subscribers = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
+          }
+          const index = subscribers.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
+          if (index !== -1) {
+            subscribers[index].is_active = true;
+            if (name) subscribers[index].name = name;
+          } else {
+            subscribers.push({
+              id,
+              email,
+              name,
+              is_active: true,
+              created_at: new Date().toISOString()
+            });
+          }
+          fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subscribers, null, 2), 'utf-8');
+        }
 
         return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
       } catch (err) {
@@ -802,8 +827,16 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 401, { error: 'Unauthorized' });
     }
     try {
-      const result = await pool.query('SELECT * FROM subscribers ORDER BY created_at DESC');
-      return sendJson(res, 200, result.rows);
+      if (pool) {
+        const result = await pool.query('SELECT * FROM subscribers ORDER BY created_at DESC');
+        return sendJson(res, 200, result.rows);
+      } else {
+        let subscribers = [];
+        if (fs.existsSync(SUBSCRIBERS_FILE)) {
+          subscribers = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
+        }
+        return sendJson(res, 200, subscribers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      }
     } catch (err) {
       console.error('Fetch subscribers error:', err);
       return sendJson(res, 500, { error: 'Internal Server Error' });
@@ -1700,25 +1733,30 @@ const server = http.createServer(async (req, res) => {
   // GET Settings (Admin only - returns full keys including secrets)
   if (pathname === '/api/admin/settings/public' && method === 'GET') {
     try {
-      const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
-      if (rows.length > 0) {
-        sendJson(res, 200, rows[0]);
+      if (pool) {
+        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
+        if (rows.length > 0) {
+          sendJson(res, 200, rows[0]);
+        } else {
+          sendJson(res, 200, {
+            contactEmail: 'hello@joshuagen.org',
+            contactPhone: '+1 (555) 123-4567',
+            contactAddress: '42 Kingdom Way,\nJerusalem, Israel',
+            socialFacebook: '#',
+            socialTwitter: '#',
+            socialInstagram: '#',
+            socialYoutube: '#',
+            homeHeadlinePrefix: 'Experience the ',
+            homeHeadlineHighlight: 'Presence',
+            homeHeadlineSuffix: ' of God',
+            homeSubheading: 'A digital ministry where faith comes alive — through powerful audio sermons, life-changing books, and a growing global community of believers.',
+            homeBibleVerse: 'Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.',
+            homeBibleReference: 'Joshua 1:9'
+          });
+        }
       } else {
-        sendJson(res, 200, {
-          contactEmail: 'hello@joshuagen.org',
-          contactPhone: '+1 (555) 123-4567',
-          contactAddress: '42 Kingdom Way,\nJerusalem, Israel',
-          socialFacebook: '#',
-          socialTwitter: '#',
-          socialInstagram: '#',
-          socialYoutube: '#',
-          homeHeadlinePrefix: 'Experience the ',
-          homeHeadlineHighlight: 'Presence',
-          homeHeadlineSuffix: ' of God',
-          homeSubheading: 'A digital ministry where faith comes alive — through powerful audio sermons, life-changing books, and a growing global community of believers.',
-          homeBibleVerse: 'Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.',
-          homeBibleReference: 'Joshua 1:9'
-        });
+        const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        sendJson(res, 200, data);
       }
     } catch (e) {
       console.error('Failed to retrieve public settings:', e);

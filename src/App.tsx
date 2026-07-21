@@ -31,6 +31,9 @@ const PartnershipPage = lazy(() => import('@/components/PartnershipPage'));
 const PodcastPage = lazy(() => import('@/components/PodcastPage'));
 const SermonsPage = lazy(() => import('@/components/SermonsPage'));
 const ContactPage = lazy(() => import('@/components/ContactPage'));
+const PrivacyPolicyPage = lazy(() => import('@/components/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(() => import('@/components/TermsOfServicePage'));
+const CookiePolicyPage = lazy(() => import('@/components/CookiePolicyPage'));
 import type { Sermon, Book, BlogPost } from '@/types';
 
 const PageLoader = () => (
@@ -50,7 +53,7 @@ const getPageFromPath = (): Page => {
   if (path.startsWith('blog/')) return 'blog-details';
   if (path.startsWith('sermon/')) return 'sermon-player';
   if (path.startsWith('books/')) return 'book-details';
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast', 'contact'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy'];
   if (validPages.includes(path)) {
     return path;
   }
@@ -590,6 +593,69 @@ export default function App() {
               window.scrollTo(0, 0);
             }}
           />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'privacy-policy') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onLoginClick={() => setIsLoginOpen(true)}
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <PrivacyPolicyPage onBack={() => navigate('home')} />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'terms-of-service') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onLoginClick={() => setIsLoginOpen(true)}
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <TermsOfServicePage onBack={() => navigate('home')} />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'cookie-policy') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onLoginClick={() => setIsLoginOpen(true)}
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+          isAuthenticated={isUserAuthenticated}
+          onLogoutClick={handleLogout}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <CookiePolicyPage onBack={() => navigate('home')} />
         </Suspense>
         <Footer onNavigate={navigate} />
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => setIsUserAuthenticated(true)} />

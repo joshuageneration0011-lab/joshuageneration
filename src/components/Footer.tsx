@@ -252,9 +252,36 @@ export default function Footer({ onNavigate }: FooterProps) {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-royal-blue-200/60">
             <p className="font-medium">© {new Date().getFullYear()} Joshua Generation. All rights reserved.</p>
             <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
+              <a
+                href="/privacy-policy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onNavigate) onNavigate('privacy-policy');
+                }}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="/terms-of-service"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onNavigate) onNavigate('terms-of-service');
+                }}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Terms of Service
+              </a>
+              <a
+                href="/cookie-policy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onNavigate) onNavigate('cookie-policy');
+                }}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Cookie Policy
+              </a>
             </div>
             <p className="flex items-center gap-1.5 font-medium">
               Made with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" /> for His glory
