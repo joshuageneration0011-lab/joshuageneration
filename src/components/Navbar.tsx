@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Search, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
+import LovePopup from './LovePopup';
 
 const navLinks = [
   { name: 'Home', href: '/', icon: Home, page: 'home' as Page },
@@ -23,6 +24,7 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSermonDropdownOpen, setIsSermonDropdownOpen] = useState(false);
+  const [isLovePopupOpen, setIsLovePopupOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -220,6 +222,19 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
               </button>
 
               <button 
+                onClick={() => setIsLovePopupOpen(true)}
+                className={cn(
+                  'p-2.5 rounded-xl transition-all duration-200',
+                  isScrolled || currentPage !== 'home'
+                    ? 'text-gray-500 hover:text-red-500 hover:bg-red-50/50'
+                    : 'text-white/70 hover:text-red-400 hover:bg-white/10'
+                )}
+                title="Open Love Hub"
+              >
+                <Heart className="w-5 h-5" />
+              </button>
+
+              <button 
                 onClick={() => onNavigate && onNavigate('donate')}
                 className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-gold-500 to-gold-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-gold-500/20 hover:shadow-gold-500/30 hover:scale-105 transition-all duration-300"
               >
@@ -326,6 +341,14 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
             })}
             <div className="h-px bg-gray-100 my-2" />
 
+            <button 
+              onClick={() => { setIsOpen(false); setIsLovePopupOpen(true); }}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:text-red-600 hover:bg-red-50/30 transition-all duration-200 font-medium w-full text-left"
+            >
+              <Heart className="w-5 h-5 text-gray-400" />
+              Saved / Loved Items
+            </button>
+
 
             {onAdminClick && (
               <button onClick={() => { setIsOpen(false); onAdminClick(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:text-royal-blue-600 hover:bg-royal-blue-50 transition-all duration-200 font-medium">
@@ -387,6 +410,12 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
           </button>
         </div>
       </div>
+
+      <LovePopup
+        isOpen={isLovePopupOpen}
+        onClose={() => setIsLovePopupOpen(false)}
+        onNavigate={onNavigate}
+      />
     </>
   );
 }

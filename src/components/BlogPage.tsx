@@ -1,9 +1,10 @@
 import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Clock, ArrowRight, Tag, Bookmark, TrendingUp, Feather } from 'lucide-react';
+import { Search, Clock, ArrowRight, Tag, Bookmark, TrendingUp, Feather, Heart } from 'lucide-react';
 import type { BlogPost } from '@/types';
 import { cn } from '@/utils/cn';
 import { updatePageSEO } from '@/utils/seo';
+import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
 
 interface BlogPageProps {
   posts: BlogPost[];
@@ -29,6 +30,16 @@ function readingLabel(readTime: string) {
 }
 
 export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
+  const [likedBlogIds, setLikedBlogIds] = useState<string[]>(() => getLikedItems('blog'));
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setLikedBlogIds(getLikedItems('blog'));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -160,6 +171,17 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                             alt={post.title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                           />
+                          {/* Like Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleLikeItem('blog', post.id);
+                            }}
+                            className="absolute top-4 right-4 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer border-none"
+                            title="Like Post"
+                          >
+                            <Heart className={cn("w-3.5 h-3.5", likedBlogIds.includes(post.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                          </button>
                           {/* Gradient overlay */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/5" />
 
@@ -229,7 +251,17 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                             className="group cursor-pointer flex gap-4 p-4 rounded-2xl bg-white border border-[#ede8e0] hover:border-[#d4af37]/40 hover:shadow-md transition-all duration-300"
                           >
                             {/* Thumb */}
-                            <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
+                            <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100 relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleLikeItem('blog', post.id);
+                                }}
+                                className="absolute top-1 right-1 z-10 p-1 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer border-none"
+                                title="Like Post"
+                              >
+                                <Heart className={cn("w-3 h-3", likedBlogIds.includes(post.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                              </button>
                               <img loading="lazy" decoding="async"
                                 src={resolveApiUrl(post.imageUrl)}
                                 alt={post.title}

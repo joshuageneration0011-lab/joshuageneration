@@ -1,8 +1,10 @@
 import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Calendar, Clock, Share2, Link, Check, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Share2, Link, Check, MessageSquare, Heart } from 'lucide-react';
 import type { BlogPost } from '@/types';
 import { updatePageSEO } from '@/utils/seo';
+import { isItemLiked, toggleLikeItem } from '@/data/likesStore';
+import { cn } from '@/utils/cn';
 
 interface BlogPostReaderProps {
   posts: BlogPost[];
@@ -12,6 +14,20 @@ interface BlogPostReaderProps {
 }
 
 export default function BlogPostReader({ posts, post, onBack, onPostSelect }: BlogPostReaderProps) {
+  const [isLiked, setIsLiked] = useState(() => isItemLiked('blog', post.id));
+
+  useEffect(() => {
+    setIsLiked(isItemLiked('blog', post.id));
+  }, [post.id]);
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setIsLiked(isItemLiked('blog', post.id));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, [post.id]);
+
   const [copied, setCopied] = useState(false);
   const [comments, setComments] = useState<{ id: string; name: string; text: string; date: string }[]>([]);
   const [newCommentName, setNewCommentName] = useState('');
@@ -128,9 +144,23 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
               {post.category}
             </span>
 
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight mb-4">
-              {post.title}
-            </h1>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
+                {post.title}
+              </h1>
+              <button
+                onClick={() => toggleLikeItem('blog', post.id)}
+                className={cn(
+                  "p-2.5 rounded-xl border transition-all cursor-pointer flex-shrink-0",
+                  isLiked
+                    ? "bg-red-50 border-red-200 text-red-500 shadow-sm"
+                    : "bg-white border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50/20"
+                )}
+                title={isLiked ? "Unlike article" : "Like article"}
+              >
+                <Heart className={cn("w-5 h-5", isLiked && "fill-red-500")} />
+              </button>
+            </div>
 
             {/* Author & Read Time Byline */}
             <div className="flex items-center gap-4 border-b border-gray-100 pb-6 mb-8 text-sm text-gray-500 font-semibold">

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Play, Pause, Volume2, VolumeX, Download, Copy,
-  Headphones, Calendar, Eye, Clock, Check
+  Headphones, Calendar, Eye, Clock, Check, Heart
 } from 'lucide-react';
+import { isItemLiked, toggleLikeItem } from '@/data/likesStore';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
 import { api, resolveApiUrl } from '@/utils/api';
@@ -24,6 +25,19 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   const [localViews, setLocalViews] = useState(sermon.views);
   const [localDownloads, setLocalDownloads] = useState(sermon.downloads || 0);
   const [hasIncrementedView, setHasIncrementedView] = useState(false);
+  const [isLiked, setIsLiked] = useState(() => isItemLiked('sermon', sermon.id));
+
+  useEffect(() => {
+    setIsLiked(isItemLiked('sermon', sermon.id));
+  }, [sermon.id]);
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setIsLiked(isItemLiked('sermon', sermon.id));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, [sermon.id]);
 
   // Series additions
   const tracks = (sermon.audios && sermon.audios.length > 0)
@@ -474,9 +488,23 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight mb-3">
-                {sermon.title}
-              </h1>
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">
+                  {sermon.title}
+                </h1>
+                <button
+                  onClick={() => toggleLikeItem('sermon', sermon.id)}
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all cursor-pointer flex-shrink-0",
+                    isLiked
+                      ? "bg-red-50 border-red-200 text-red-500 shadow-sm"
+                      : "bg-white border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50/20"
+                  )}
+                  title={isLiked ? "Unlike message" : "Like message"}
+                >
+                  <Heart className={cn("w-5 h-5", isLiked && "fill-red-500")} />
+                </button>
+              </div>
 
               {/* Speaker card */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl mb-6">

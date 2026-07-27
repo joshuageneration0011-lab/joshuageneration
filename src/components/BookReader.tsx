@@ -1,5 +1,8 @@
-import { ArrowLeft, BookOpen, Download, ExternalLink } from 'lucide-react';
+import { ArrowLeft, BookOpen, Download, ExternalLink, Heart } from 'lucide-react';
 import type { Book } from '@/types';
+import { useState, useEffect } from 'react';
+import { isItemLiked, toggleLikeItem } from '@/data/likesStore';
+import { cn } from '@/utils/cn';
 
 interface BookReaderProps {
   book: Book;
@@ -7,6 +10,20 @@ interface BookReaderProps {
 }
 
 export default function BookReader({ book, onBack }: BookReaderProps) {
+  const [isLiked, setIsLiked] = useState(() => isItemLiked('book', book.id));
+
+  useEffect(() => {
+    setIsLiked(isItemLiked('book', book.id));
+  }, [book.id]);
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setIsLiked(isItemLiked('book', book.id));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, [book.id]);
+
   const pdfs = book.pdfs || [];
 
   return (
@@ -82,9 +99,23 @@ export default function BookReader({ book, onBack }: BookReaderProps) {
                 </div>
               )}
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold font-serif leading-tight mb-2">
-              {book.title}
-            </h1>
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <h1 className="text-3xl sm:text-4xl font-extrabold font-serif leading-tight">
+                {book.title}
+              </h1>
+              <button
+                onClick={() => toggleLikeItem('book', book.id)}
+                className={cn(
+                  "p-2.5 rounded-xl border transition-all cursor-pointer flex-shrink-0",
+                  isLiked
+                    ? "bg-red-50 border-red-200 text-red-500 shadow-sm"
+                    : "bg-white border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50/20"
+                )}
+                title={isLiked ? "Unlike book" : "Like book"}
+              >
+                <Heart className={cn("w-5 h-5", isLiked && "fill-red-500")} />
+              </button>
+            </div>
             <p className="text-gray-500 font-medium mb-6 text-sm">By {book.author}</p>
             
             <div className="prose prose-sm text-gray-600 leading-relaxed mb-10 max-w-none">

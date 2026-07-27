@@ -105,6 +105,35 @@ export default function App() {
     };
   }, []);
 
+  // Listen for navigation selections from Love Popup
+  useEffect(() => {
+    const handleSelectSermon = (e: Event) => {
+      const sermon = (e as CustomEvent).detail;
+      setSelectedSermon(sermon);
+      navigate('sermon-player', sermon.id);
+    };
+    const handleSelectBook = (e: Event) => {
+      const book = (e as CustomEvent).detail;
+      setSelectedBook(book);
+      navigate('book-details', book.id);
+    };
+    const handleSelectPost = (e: Event) => {
+      const post = (e as CustomEvent).detail;
+      setSelectedPost(post);
+      navigate('blog-details', post.id);
+    };
+
+    window.addEventListener('select-sermon', handleSelectSermon);
+    window.addEventListener('select-book', handleSelectBook);
+    window.addEventListener('select-post', handleSelectPost);
+
+    return () => {
+      window.removeEventListener('select-sermon', handleSelectSermon);
+      window.removeEventListener('select-book', handleSelectBook);
+      window.removeEventListener('select-post', handleSelectPost);
+    };
+  }, []);
+
   // Listen to events update triggers
   useEffect(() => {
     const handleEventsUpdated = async () => {

@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
 import { resolveApiUrl } from '@/utils/api';
+import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
 
 interface SermonsPageProps {
   sermons: Sermon[];
@@ -25,6 +26,16 @@ const formatNumber = (num: number): string => {
 };
 
 export default function SermonsPage({ sermons, onSermonSelect, isLoading = false }: SermonsPageProps) {
+  const [likedSermonIds, setLikedSermonIds] = useState<string[]>(() => getLikedItems('sermon'));
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setLikedSermonIds(getLikedItems('sermon'));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -226,6 +237,16 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
 
                 {/* Right Side: Thumbnail */}
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-900 flex-shrink-0 relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLikeItem('sermon', sermon.id);
+                    }}
+                    className="absolute top-1 right-1 z-10 p-1 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer"
+                    title="Like Sermon"
+                  >
+                    <Heart className={cn("w-3 h-3", likedSermonIds.includes(sermon.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                  </button>
                   {sermon.thumbnail ? (
                     <img loading="lazy" decoding="async"
                       src={resolveApiUrl(sermon.thumbnail)}
@@ -283,8 +304,20 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
                     {sermon.category}
                   </span>
 
+                  {/* Like Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLikeItem('sermon', sermon.id);
+                    }}
+                    className="absolute top-4 right-4 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer"
+                    title="Like Sermon"
+                  >
+                    <Heart className={cn("w-3.5 h-3.5", likedSermonIds.includes(sermon.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                  </button>
+
                   {/* Duration badge */}
-                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white text-xs font-medium">
+                  <div className="absolute bottom-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white text-xs font-medium">
                     <Clock className="w-3.5 h-3.5" />
                     {sermon.duration}
                   </div>

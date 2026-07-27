@@ -1,6 +1,9 @@
-import { Headphones, Clock, Eye, ChevronRight, Download, Play } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Headphones, Clock, Eye, ChevronRight, Download, Play, Heart } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { resolveApiUrl } from '@/utils/api';
+import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
+import { cn } from '@/utils/cn';
 
 interface FeaturedSermonsProps {
   sermons: Sermon[];
@@ -10,6 +13,16 @@ interface FeaturedSermonsProps {
 }
 
 export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll, isLoading = false }: FeaturedSermonsProps) {
+  const [likedSermonIds, setLikedSermonIds] = useState<string[]>(() => getLikedItems('sermon'));
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setLikedSermonIds(getLikedItems('sermon'));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, []);
+
   const featured = [...sermons]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 8);
@@ -115,9 +128,21 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll, is
                     {sermon.category}
                   </span>
 
+                  {/* Like Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLikeItem('sermon', sermon.id);
+                    }}
+                    className="absolute top-3 right-3 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer"
+                    title="Like Sermon"
+                  >
+                    <Heart className={cn("w-3.5 h-3.5", likedSermonIds.includes(sermon.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                  </button>
+
                   {/* Duration */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-sm text-white/70 text-[10px] font-medium">
-                    <Clock className="w-3 h-3" />
+                  <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-sm text-white/70 text-[10px] font-medium">
+                    <Clock className="w-3.5 h-3.5" />
                     {sermon.duration}
                   </div>
 

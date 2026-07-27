@@ -1,6 +1,9 @@
-import { Clock, ChevronRight, ArrowRight } from 'lucide-react';
+import { Clock, ChevronRight, ArrowRight, Heart } from 'lucide-react';
 import type { BlogPost } from '@/types';
 import { resolveApiUrl } from '@/utils/api';
+import { useState, useEffect } from 'react';
+import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
+import { cn } from '@/utils/cn';
 
 interface BlogSectionProps {
   posts: BlogPost[];
@@ -9,6 +12,16 @@ interface BlogSectionProps {
 }
 
 export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSectionProps) {
+  const [likedBlogIds, setLikedBlogIds] = useState<string[]>(() => getLikedItems('blog'));
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setLikedBlogIds(getLikedItems('blog'));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, []);
+
   const activePosts = posts.filter(p => !p.isDeleted);
   const featured = activePosts[0] || null;
   const others = activePosts.slice(1, 4);
@@ -55,7 +68,17 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
                 onClick={() => onPostSelect?.(featured)}
                 className="group cursor-pointer relative rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-500 hover:-translate-y-0.5"
               >
-                <div className="aspect-[16/10]">
+                <div className="aspect-[16/10] relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLikeItem('blog', featured.id);
+                    }}
+                    className="absolute top-4 right-4 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer border-none"
+                    title="Like Post"
+                  >
+                    <Heart className={cn("w-3.5 h-3.5", likedBlogIds.includes(featured.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                  </button>
                   <img loading="lazy" decoding="async"
                     src={resolveApiUrl(featured.imageUrl)}
                     alt={featured.title}
@@ -104,7 +127,17 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
                 className="group cursor-pointer flex gap-4 p-4 rounded-2xl bg-white border border-gray-100 hover:border-gold-200 shadow-soft hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-0.5"
               >
                 {/* Thumb */}
-                <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
+                <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100 relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLikeItem('blog', post.id);
+                    }}
+                    className="absolute top-1 right-1 z-10 p-1 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer border-none"
+                    title="Like Post"
+                  >
+                    <Heart className={cn("w-3 h-3", likedBlogIds.includes(post.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                  </button>
                   <img loading="lazy" decoding="async"
                     src={resolveApiUrl(post.imageUrl)}
                     alt={post.title}

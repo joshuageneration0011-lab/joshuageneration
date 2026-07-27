@@ -1,6 +1,9 @@
-import { Download, BookOpen, ChevronRight, ExternalLink } from 'lucide-react';
+import { Download, BookOpen, ChevronRight, ExternalLink, Heart } from 'lucide-react';
 import type { Book } from '@/types';
 import { resolveApiUrl } from '@/utils/api';
+import { useState, useEffect } from 'react';
+import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
+import { cn } from '@/utils/cn';
 
 interface BooksSectionProps {
   books: Book[];
@@ -9,6 +12,16 @@ interface BooksSectionProps {
 }
 
 export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSectionProps) {
+  const [likedBookIds, setLikedBookIds] = useState<string[]>(() => getLikedItems('book'));
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setLikedBookIds(getLikedItems('book'));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, []);
+
   const featuredBooks = books.slice(0, 4);
 
   const handleDownload = (book: Book, e: React.MouseEvent) => {
@@ -69,6 +82,17 @@ export default function BooksSection({ books, onBookSelect, onViewAll }: BooksSe
                   boxShadow: '4px 6px 24px rgba(0,0,0,0.12), -1px 0 0 rgba(0,0,0,0.06)',
                 }}
               >
+                {/* Like Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLikeItem('book', book.id);
+                  }}
+                  className="absolute top-3 left-3 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer border-none"
+                  title="Like Book"
+                >
+                  <Heart className={cn("w-3 h-3", likedBookIds.includes(book.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                </button>
                 <img loading="lazy" decoding="async"
                   src={resolveApiUrl(book.coverUrl)}
                   alt={book.title}

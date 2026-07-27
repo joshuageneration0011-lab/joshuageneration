@@ -1,8 +1,9 @@
 import { resolveApiUrl } from '@/utils/api';
-import { useState, useMemo } from 'react';
-import { Search, Download, BookOpen, SlidersHorizontal, ExternalLink } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Download, BookOpen, SlidersHorizontal, ExternalLink, Heart } from 'lucide-react';
 import type { Book } from '@/types';
 import { cn } from '@/utils/cn';
+import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
 
 interface BooksPageProps {
   books: Book[];
@@ -10,6 +11,16 @@ interface BooksPageProps {
 }
 
 export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
+  const [likedBookIds, setLikedBookIds] = useState<string[]>(() => getLikedItems('book'));
+
+  useEffect(() => {
+    const handleLikesUpdated = () => {
+      setLikedBookIds(getLikedItems('book'));
+    };
+    window.addEventListener('likes_updated', handleLikesUpdated);
+    return () => window.removeEventListener('likes_updated', handleLikesUpdated);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -109,6 +120,16 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
               >
                 {/* Cover Frame */}
                 <div className="relative aspect-[3/4] bg-gray-50 border-b border-gray-100 overflow-hidden">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLikeItem('book', book.id);
+                    }}
+                    className="absolute top-3 right-3 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white transition-all cursor-pointer"
+                    title="Like Book"
+                  >
+                    <Heart className={cn("w-3.5 h-3.5", likedBookIds.includes(book.id) ? "fill-red-500 text-red-500" : "text-white")} />
+                  </button>
                   <img loading="lazy" decoding="async"
                     src={resolveApiUrl(book.coverUrl)}
                     alt={book.title}
