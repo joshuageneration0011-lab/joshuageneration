@@ -1834,30 +1834,37 @@ const server = http.createServer(async (req, res) => {
   // GET Public Settings (Unauthenticated)
   if (pathname === '/api/settings/public' && method === 'GET') {
     try {
+      const defaults = {
+        contactEmail: 'hello@joshuagen.org',
+        contactPhone: '+1 (555) 123-4567',
+        contactAddress: '42 Kingdom Way,\nJerusalem, Israel',
+        socialFacebook: '#',
+        socialTwitter: '#',
+        socialInstagram: '#',
+        socialYoutube: '#',
+        homeHeadlinePrefix: 'Experience the ',
+        homeHeadlineHighlight: 'Presence',
+        homeHeadlineSuffix: ' of God',
+        homeSubheading: 'A digital ministry where faith comes alive — through powerful audio sermons, life-changing books, and a growing global community of believers.',
+        homeBibleVerse: 'Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.',
+        homeBibleReference: 'Joshua 1:9'
+      };
+
       if (pool) {
         const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
-        if (rows.length > 0) {
-          sendJson(res, 200, rows[0]);
-        } else {
-          sendJson(res, 200, {
-            contactEmail: 'hello@joshuagen.org',
-            contactPhone: '+1 (555) 123-4567',
-            contactAddress: '42 Kingdom Way,\nJerusalem, Israel',
-            socialFacebook: '#',
-            socialTwitter: '#',
-            socialInstagram: '#',
-            socialYoutube: '#',
-            homeHeadlinePrefix: 'Experience the ',
-            homeHeadlineHighlight: 'Presence',
-            homeHeadlineSuffix: ' of God',
-            homeSubheading: 'A digital ministry where faith comes alive — through powerful audio sermons, life-changing books, and a growing global community of believers.',
-            homeBibleVerse: 'Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.',
-            homeBibleReference: 'Joshua 1:9'
-          });
+        const row = rows[0] || {};
+        const responseData = {};
+        for (const key in defaults) {
+          responseData[key] = row[key] || defaults[key];
         }
+        sendJson(res, 200, responseData);
       } else {
         const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
-        sendJson(res, 200, data);
+        const responseData = {};
+        for (const key in defaults) {
+          responseData[key] = data[key] || defaults[key];
+        }
+        sendJson(res, 200, responseData);
       }
     } catch (e) {
       console.error('Failed to retrieve public settings:', e);
