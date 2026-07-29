@@ -337,7 +337,6 @@ function initLocalData() {
     console.log('Initialized local testimonies database.');
   }
 }
-}
 
 // --- Combined DB Initializer ---
 async function initDb() {
