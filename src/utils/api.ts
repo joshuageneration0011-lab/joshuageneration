@@ -318,7 +318,7 @@ export const api = {
   },
 
   getPublicSettings: async (): Promise<Partial<Settings>> => {
-    const res = await fetch(`${API_BASE_URL}/api/admin/settings/public`);
+    const res = await fetch(`${API_BASE_URL}/api/settings/public`);
     if (!res.ok) throw new Error('Failed to fetch public settings');
     return res.json();
   },

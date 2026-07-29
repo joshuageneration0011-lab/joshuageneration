@@ -1831,15 +1831,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // --- SECURE ADMIN ROUTES (Requires authorization header) ---
-  const user = getAuthenticatedUser(req);
-  if (!user) {
-    sendJson(res, 401, { error: 'Unauthorized admin access' });
-    return;
-  }
-
-  // GET Settings (Admin only - returns full keys including secrets)
-  if (pathname === '/api/admin/settings/public' && method === 'GET') {
+  // GET Public Settings (Unauthenticated)
+  if (pathname === '/api/settings/public' && method === 'GET') {
     try {
       if (pool) {
         const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
@@ -1870,6 +1863,13 @@ const server = http.createServer(async (req, res) => {
       console.error('Failed to retrieve public settings:', e);
       sendJson(res, 500, { error: 'Failed to retrieve public settings' });
     }
+    return;
+  }
+
+  // --- SECURE ADMIN ROUTES (Requires authorization header) ---
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    sendJson(res, 401, { error: 'Unauthorized admin access' });
     return;
   }
 

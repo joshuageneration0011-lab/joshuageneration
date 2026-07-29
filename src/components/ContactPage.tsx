@@ -1,8 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { api } from '@/utils/api';
 
 const ContactPage = () => {
+  const [contactInfo, setContactInfo] = useState({
+    email: 'info@joshuasgeneration.com',
+    phone: '+234 800 000 0000',
+    address: '123 Ministry Way,\nFaith City, FC 12345\nNigeria'
+  });
+
+  useEffect(() => {
+    const fetchContactSettings = async () => {
+      try {
+        const data = await api.getPublicSettings();
+        setContactInfo({
+          email: data.contactEmail || 'info@joshuasgeneration.com',
+          phone: data.contactPhone || '+234 800 000 0000',
+          address: data.contactAddress || '123 Ministry Way,\nFaith City, FC 12345\nNigeria'
+        });
+      } catch (err) {
+        console.error('Failed to load contact settings:', err);
+      }
+    };
+    fetchContactSettings();
+  }, []);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -59,9 +80,12 @@ const ContactPage = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Visit Us</h3>
               <p className="text-gray-600">
-                123 Ministry Way,<br />
-                Faith City, FC 12345<br />
-                Nigeria
+                {contactInfo.address.split('\n').map((line, i) => (
+                  <React.Fragment key={i}>
+                    {line}
+                    <br />
+                  </React.Fragment>
+                ))}
               </p>
             </div>
 
@@ -71,8 +95,8 @@ const ContactPage = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Email Us</h3>
               <p className="text-gray-600">
-                <a href="mailto:info@joshuasgeneration.com" className="hover:text-indigo-600 transition-colors">
-                  info@joshuasgeneration.com
+                <a href={`mailto:${contactInfo.email}`} className="hover:text-indigo-600 transition-colors">
+                  {contactInfo.email}
                 </a>
               </p>
             </div>
@@ -83,8 +107,8 @@ const ContactPage = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Call Us</h3>
               <p className="text-gray-600">
-                <a href="tel:+2348000000000" className="hover:text-emerald-600 transition-colors">
-                  +234 800 000 0000
+                <a href={`tel:${contactInfo.phone.replace(/\s+/g, '')}`} className="hover:text-emerald-600 transition-colors">
+                  {contactInfo.phone}
                 </a>
               </p>
             </div>
