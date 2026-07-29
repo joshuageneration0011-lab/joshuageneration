@@ -67,6 +67,7 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SUBSCRIBERS_FILE = path.join(DATA_DIR, 'subscribers.json');
+const TESTIMONIES_FILE = path.join(DATA_DIR, 'testimonies.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 
 // In-memory sessions store
@@ -167,6 +168,57 @@ const defaultEvents = [
 
 const defaultUsers = [
   { id: 1, name: 'Apostle Joshua Iyemifokhae', email: 'john@joshuagen.org', status: 'active', joined: 'Jan 1, 2020', sermons: 312, donations: 15000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Superadmin' }
+];
+
+const defaultTestimonies = [
+  {
+    id: 't1',
+    name: 'Maria Gonzalez',
+    content: 'I came to JGen broken and hopeless. Through the teachings and the community, I found my purpose. Today I\'m a youth leader mentoring others!',
+    imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80',
+    type: 'written',
+    date: '2025-11-25'
+  },
+  {
+    id: 't2',
+    name: 'James O\'Brien',
+    content: 'After 20 years of addiction, God set me free during a JGen conference. The prayer team never gave up on me. Now I\'m free indeed!',
+    imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80',
+    type: 'written',
+    date: '2025-11-20'
+  },
+  {
+    id: 't3',
+    name: 'Sarah & David Chen',
+    content: 'Our marriage was at the brink of divorce when we attended the Kingdom Marriage seminar. God restored what the enemy stole!',
+    imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80',
+    type: 'written',
+    date: '2025-11-15'
+  },
+  {
+    id: 't4',
+    name: 'Pastor Amos Kiprop',
+    content: 'The leadership training at JGen transformed how I pastor my church. The resources and mentorship are unparalleled.',
+    imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80',
+    type: 'written',
+    date: '2025-11-10'
+  },
+  {
+    id: 't5',
+    name: 'Emily Watson',
+    content: 'I was diagnosed with a chronic illness, but through the teachings on divine healing and the prayers of the saints, I am completely healed!',
+    imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80',
+    type: 'written',
+    date: '2025-11-05'
+  },
+  {
+    id: 't6',
+    name: 'Michael Adebayo',
+    content: 'God used JGen to teach me kingdom economics. I went from debt to financial freedom in one year. The principles work!',
+    imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80',
+    type: 'written',
+    date: '2025-10-30'
+  }
 ];
 
 // --- File Data Init Helpers ---
@@ -280,6 +332,11 @@ function initLocalData() {
     fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2), 'utf-8');
     console.log('Initialized local users database.');
   }
+  if (!fs.existsSync(TESTIMONIES_FILE)) {
+    fs.writeFileSync(TESTIMONIES_FILE, JSON.stringify(defaultTestimonies, null, 2), 'utf-8');
+    console.log('Initialized local testimonies database.');
+  }
+}
 }
 
 // --- Combined DB Initializer ---
@@ -531,6 +588,29 @@ async function initDb() {
           );
         }
         console.log('Seeded users table.');
+      }
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS testimonies (
+          id VARCHAR PRIMARY KEY,
+          name VARCHAR NOT NULL,
+          content TEXT NOT NULL,
+          image_url TEXT,
+          type VARCHAR DEFAULT 'written',
+          date VARCHAR
+        );
+      `);
+
+      const testimonyCheck = await pool.query('SELECT 1 FROM testimonies LIMIT 1');
+      if (testimonyCheck.rowCount === 0) {
+        for (const t of defaultTestimonies) {
+          await pool.query(
+            `INSERT INTO testimonies (id, name, content, image_url, type, date)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [t.id, t.name, t.content, t.imageUrl, t.type || 'written', t.date]
+          );
+        }
+        console.log('Seeded testimonies table.');
       }
 
       // Seed if empty
@@ -1647,6 +1727,35 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET Testimonies (Public)
+  if (pathname === '/api/testimonies' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM testimonies ORDER BY id DESC');
+        const testimonies = result.rows.map(row => ({
+          id: row.id,
+          name: row.name,
+          content: row.content,
+          imageUrl: row.image_url,
+          type: row.type || 'written',
+          date: row.date
+        }));
+        sendJson(res, 200, testimonies);
+      } else {
+        if (fs.existsSync(TESTIMONIES_FILE)) {
+          const data = JSON.parse(fs.readFileSync(TESTIMONIES_FILE, 'utf-8'));
+          sendJson(res, 200, data);
+        } else {
+          sendJson(res, 200, defaultTestimonies);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to retrieve testimonies:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve testimonies' });
+    }
+    return;
+  }
+
   // GET Uploaded Files (Audio & Images)
   if (pathname.startsWith('/api/uploads/') && method === 'GET') {
     try {
@@ -2441,6 +2550,107 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { success: true });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to delete event' });
+    }
+    return;
+  }
+
+  // POST /api/testimonies (Save / Create / Edit)
+  if (pathname === '/api/testimonies' && method === 'POST') {
+    try {
+      const item = await getJsonBody(req);
+      if (!item.name || !item.content) {
+        sendJson(res, 400, { error: 'Name and content are required' });
+        return;
+      }
+      const id = item.id || `t_${Date.now()}`;
+      item.id = id;
+      item.date = item.date || new Date().toISOString().split('T')[0];
+      item.type = item.type || 'written';
+
+      // Check and handle base64 uploads for imageUrl
+      if (item.imageUrl && item.imageUrl.startsWith('data:')) {
+        const commaIndex = item.imageUrl.indexOf(',');
+        if (commaIndex !== -1) {
+          const prefix = item.imageUrl.substring(0, commaIndex);
+          const base64Data = item.imageUrl.substring(commaIndex + 1);
+          const mimeMatch = prefix.match(/data:([^;]+);base64/);
+          if (mimeMatch) {
+            const mimeType = mimeMatch[1];
+            const buffer = Buffer.from(base64Data, 'base64');
+            let ext = '.jpg';
+            if (mimeType.includes('png')) ext = '.png';
+            else if (mimeType.includes('webp')) ext = '.webp';
+            else if (mimeType.includes('gif')) ext = '.gif';
+
+            const uploadDir = path.join(DATA_DIR, 'uploads');
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            const filename = `testimony_${item.id}_${Date.now()}${ext}`;
+            const filepath = path.join(uploadDir, filename);
+            fs.writeFileSync(filepath, buffer);
+            item.imageUrl = `/api/uploads/${filename}`;
+          }
+        }
+      }
+
+      if (pool) {
+        await pool.query(
+          `INSERT INTO testimonies (id, name, content, image_url, type, date)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             content = EXCLUDED.content,
+             image_url = EXCLUDED.image_url,
+             type = EXCLUDED.type,
+             date = EXCLUDED.date`,
+          [item.id, item.name, item.content, item.imageUrl || '', item.type, item.date]
+        );
+      } else {
+        let testimonies = [];
+        if (fs.existsSync(TESTIMONIES_FILE)) {
+          testimonies = JSON.parse(fs.readFileSync(TESTIMONIES_FILE, 'utf-8'));
+        }
+        const index = testimonies.findIndex(x => x.id === item.id);
+        if (index > -1) {
+          testimonies[index] = item;
+        } else {
+          testimonies.unshift(item);
+        }
+        fs.writeFileSync(TESTIMONIES_FILE, JSON.stringify(testimonies, null, 2), 'utf-8');
+      }
+      sendJson(res, 200, { success: true, item });
+    } catch (e) {
+      console.error('Failed to save testimony:', e);
+      sendJson(res, 500, { error: 'Failed to save testimony' });
+    }
+    return;
+  }
+
+  // DELETE /api/testimonies/:id
+  if (pathname.startsWith('/api/testimonies/') && method === 'DELETE') {
+    try {
+      const parts = pathname.split('/');
+      const id = parts[parts.length - 1];
+      if (!id) {
+        sendJson(res, 400, { error: 'Testimony ID is required' });
+        return;
+      }
+
+      if (pool) {
+        await pool.query('DELETE FROM testimonies WHERE id = $1', [id]);
+      } else {
+        if (fs.existsSync(TESTIMONIES_FILE)) {
+          const testimonies = JSON.parse(fs.readFileSync(TESTIMONIES_FILE, 'utf-8'));
+          const filtered = testimonies.filter(x => x.id !== id);
+          fs.writeFileSync(TESTIMONIES_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+        }
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to delete testimony:', e);
+      sendJson(res, 500, { error: 'Failed to delete testimony' });
     }
     return;
   }

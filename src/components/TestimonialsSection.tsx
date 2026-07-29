@@ -1,7 +1,48 @@
+import { useState, useEffect } from 'react';
 import { Quote, Star } from 'lucide-react';
-import { testimonies } from '@/data/mockData';
+import type { Testimony } from '@/types';
+import { getSavedTestimonies } from '@/data/testimonyStore';
 
-export default function TestimonialsSection() {
+interface TestimonialsSectionProps {
+  testimonies?: Testimony[];
+}
+
+export default function TestimonialsSection({ testimonies: propTestimonies }: TestimonialsSectionProps) {
+  const [list, setList] = useState<Testimony[]>(propTestimonies || []);
+
+  const loadTestimonies = async () => {
+    try {
+      const data = await getSavedTestimonies();
+      if (data && data.length > 0) {
+        setList(data);
+      }
+    } catch (e) {
+      console.error('Failed to load testimonies in TestimonialsSection:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (propTestimonies && propTestimonies.length > 0) {
+      setList(propTestimonies);
+    } else {
+      loadTestimonies();
+    }
+
+    const handleUpdate = () => {
+      loadTestimonies();
+    };
+
+    window.addEventListener('testimonies_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('testimonies_updated', handleUpdate);
+    };
+  }, [propTestimonies]);
+
+  const displayItems = list.length > 0 ? list : [];
+  const scrollItems = displayItems.length > 0 ? (displayItems.length < 4 ? [...displayItems, ...displayItems, ...displayItems, ...displayItems] : [...displayItems, ...displayItems]) : [];
+
+  if (displayItems.length === 0) return null;
+
   return (
     <section className="relative py-24 sm:py-32 bg-white overflow-hidden">
       {/* Decorative background */}
@@ -41,17 +82,24 @@ export default function TestimonialsSection() {
             style={{ background: 'linear-gradient(270deg, white, transparent)' }} />
 
           <div className="flex gap-5 animate-scroll hover:[animation-play-state:paused]">
-            {[...testimonies, ...testimonies].map((testimony, index) => (
+            {scrollItems.map((testimony, index) => (
               <div
                 key={`${testimony.id}-${index}`}
                 className="flex-shrink-0 w-[340px] sm:w-[380px] flex flex-col gap-4 p-6 rounded-3xl border border-gray-100 bg-white shadow-soft hover:shadow-soft-lg hover:border-gold-100 transition-all duration-300"
               >
                 {/* Quote icon */}
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)' }}
-                >
-                  <Quote className="w-4 h-4 text-gold-500" />
+                <div className="flex items-center justify-between">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)' }}
+                  >
+                    <Quote className="w-4 h-4 text-gold-500" />
+                  </div>
+                  {testimony.type === 'video' && (
+                    <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-purple-50 text-purple-600 border border-purple-100">
+                      Video Testimony
+                    </span>
+                  )}
                 </div>
 
                 {/* Stars */}
@@ -69,13 +117,18 @@ export default function TestimonialsSection() {
                 {/* Author */}
                 <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
                   <img
-                    src={testimony.imageUrl}
+                    src={testimony.imageUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80'}
                     alt={testimony.name}
                     className="w-9 h-9 rounded-full object-cover ring-2 ring-gold-100"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80';
+                    }}
                   />
                   <div>
                     <p className="font-bold text-gray-900 text-sm leading-none">{testimony.name}</p>
-                    <p className="text-gray-400 text-[11px] mt-0.5">Member</p>
+                    <p className="text-gray-400 text-[11px] mt-0.5">
+                      {testimony.date ? new Date(testimony.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Member'}
+                    </p>
                   </div>
                 </div>
               </div>

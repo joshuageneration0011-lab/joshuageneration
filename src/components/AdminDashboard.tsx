@@ -11,14 +11,15 @@ import {
   Upload,
   Check, AlertTriangle, RefreshCw, PenTool,
   Type, TrendingUp, Radio, Headphones,
-  Calendar, MapPin
+  Calendar, MapPin, Quote
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event } from '@/types';
+import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event, Testimony } from '@/types';
 import { api, resolveApiUrl } from '@/utils/api';
 import { compressImage } from '@/utils/image';
+import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/testimonyStore';
 
-type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers';
+type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'testimonies';
 
 // Dynamic sidebar configuration inside component
 
@@ -80,11 +81,13 @@ export default function AdminDashboard({
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loadingDonations, setLoadingDonations] = useState(true);
   const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
+  const [testimoniesCount, setTestimoniesCount] = useState<number>(0);
 
   const sidebarItems: { id: AdminTab; label: string; icon: any; badge?: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'users', label: 'Users', icon: Users, badge: `+${users.length}` },
+    { id: 'testimonies', label: 'Testimonies', icon: Quote, badge: testimoniesCount > 0 ? testimoniesCount.toString() : undefined },
     { id: 'sermons', label: 'Sermons', icon: Tv, badge: sermons.length.toString() },
     { id: 'books', label: 'Books', icon: BookOpen, badge: books.length.toString() },
     { id: 'blog', label: 'Blog', icon: FileText, badge: posts.length.toString() },
@@ -129,15 +132,24 @@ export default function AdminDashboard({
     } catch { /* silent */ }
   };
 
+  const refreshTestimoniesCount = async () => {
+    try {
+      const list = await getSavedTestimonies();
+      setTestimoniesCount(list.length);
+    } catch { /* silent */ }
+  };
+
   useEffect(() => {
     loadDonations();
     refreshUnreadCount();
+    refreshTestimoniesCount();
   }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} events={events} books={books} />;
       case 'users': return <UsersTab users={users} onUpdateUsers={handleUpdateUsers} />;
+      case 'testimonies': return <TestimoniesTab onCountChange={setTestimoniesCount} />;
       case 'sermons': return <SermonsTab sermons={sermons} onUpdateSermons={onUpdateSermons} />;
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
@@ -5680,6 +5692,469 @@ function EventsTab({ events, onUpdateEvents }: EventsTabProps) {
               <button 
                 onClick={confirmDelete}
                 className="px-4 py-2 rounded-xl bg-red-650 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-sm text-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ====== TESTIMONIES TAB COMPONENT ======
+function TestimoniesTab({ onCountChange }: { onCountChange?: (count: number) => void }) {
+  const [testimonies, setTestimonies] = useState<Testimony[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'written' | 'video'>('all');
+
+  // Modal State
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTestimony, setEditingTestimony] = useState<Testimony | null>(null);
+  const [testimonyToDelete, setTestimonyToDelete] = useState<Testimony | null>(null);
+
+  // Form inputs
+  const [name, setName] = useState('');
+  const [content, setContent] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [type, setType] = useState<'written' | 'video'>('written');
+  const [date, setDate] = useState('');
+
+  // Image Upload helpers
+  const [imageSourceMode, setImageSourceMode] = useState<'upload' | 'url'>('url');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const data = await getSavedTestimonies();
+      setTestimonies(data);
+      if (onCountChange) onCountChange(data.length);
+    } catch (e) {
+      console.error('Failed to load testimonies:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const openCreateForm = () => {
+    setEditingTestimony(null);
+    setName('');
+    setContent('');
+    setImageUrl('');
+    setType('written');
+    setDate(new Date().toISOString().split('T')[0]);
+    setImageFile(null);
+    setImageSourceMode('url');
+    setErrorMessage('');
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (item: Testimony) => {
+    setEditingTestimony(item);
+    setName(item.name);
+    setContent(item.content);
+    setImageUrl(item.imageUrl || '');
+    setType(item.type || 'written');
+    setDate(item.date || new Date().toISOString().split('T')[0]);
+    setImageFile(null);
+    setImageSourceMode('url');
+    setErrorMessage('');
+    setIsFormOpen(true);
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      try {
+        const compressedFile = await compressImage(file, 800, 0.85);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImageUrl(reader.result as string);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (err) {
+        console.error('Image compression failed, using raw file reader:', err);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImageUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !content.trim()) {
+      setErrorMessage('Name and content are required fields.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setErrorMessage('');
+      const payload: Testimony = {
+        id: editingTestimony ? editingTestimony.id : `t_${Date.now()}`,
+        name: name.trim(),
+        content: content.trim(),
+        imageUrl: imageUrl.trim(),
+        type,
+        date: date || new Date().toISOString().split('T')[0]
+      };
+
+      await saveTestimony(payload);
+      setIsFormOpen(false);
+      await loadData();
+    } catch (err: any) {
+      console.error('Failed to save testimony:', err);
+      setErrorMessage(err.message || 'Failed to save testimony.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (item: Testimony) => {
+    setTestimonyToDelete(item);
+  };
+
+  const confirmDelete = async () => {
+    if (!testimonyToDelete) return;
+    try {
+      await deleteTestimony(testimonyToDelete.id);
+      setTestimonyToDelete(null);
+      await loadData();
+    } catch (err) {
+      console.error('Failed to delete testimony:', err);
+      alert('Failed to delete testimony.');
+    }
+  };
+
+  const filteredTestimonies = testimonies.filter(t => {
+    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          t.content.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === 'all' || t.type === filterType;
+    return matchesSearch && matchesFilter;
+  });
+
+  const writtenCount = testimonies.filter(t => t.type === 'written').length;
+  const videoCount = testimonies.filter(t => t.type === 'video').length;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Testimonies Management</h1>
+          <p className="text-xs text-gray-500 mt-1">Add, modify, or delete member testimonies displayed on the website.</p>
+        </div>
+        <button
+          onClick={openCreateForm}
+          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-royal-blue-600 to-indigo-600 hover:from-royal-blue-700 hover:to-indigo-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition-all duration-200 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" /> Add New Testimony
+        </button>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-royal-blue-50 border border-royal-blue-100 flex items-center justify-center text-royal-blue-600">
+            <Quote className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 font-medium">Total Testimonies</p>
+            <h3 className="text-2xl font-bold text-gray-900">{testimonies.length}</h3>
+          </div>
+        </div>
+        <div className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+            <FileText className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 font-medium">Written Testimonies</p>
+            <h3 className="text-2xl font-bold text-gray-900">{writtenCount}</h3>
+          </div>
+        </div>
+        <div className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+            <Tv className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 font-medium">Video Testimonies</p>
+            <h3 className="text-2xl font-bold text-gray-900">{videoCount}</h3>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and Search Controls */}
+      <div className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search testimony by name or content..."
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-gray-900"
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs text-gray-500 font-medium">Filter:</span>
+          {(['all', 'written', 'video'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer",
+                filterType === t
+                  ? "bg-royal-blue-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              )}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content List / Grid */}
+      {loading ? (
+        <div className="p-12 text-center bg-white rounded-2xl border border-gray-100">
+          <div className="w-8 h-8 rounded-full border-4 border-royal-blue-600 border-t-transparent animate-spin mx-auto mb-3" />
+          <p className="text-xs text-gray-400 font-medium">Loading testimonies...</p>
+        </div>
+      ) : filteredTestimonies.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-2xl border border-gray-100">
+          <Quote className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <h3 className="text-gray-900 font-bold text-sm">No Testimonies Found</h3>
+          <p className="text-gray-400 text-xs mt-1">Try adjusting your search query or add a new testimony.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredTestimonies.map((item) => (
+            <div
+              key={item.id}
+              className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={item.imageUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80'}
+                      alt={item.name}
+                      className="w-10 h-10 rounded-full object-cover ring-2 ring-gold-100"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80';
+                      }}
+                    />
+                    <div>
+                      <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
+                      <p className="text-gray-400 text-[11px]">{item.date || 'No Date'}</p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border",
+                    item.type === 'video'
+                      ? "bg-purple-50 text-purple-600 border-purple-100"
+                      : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                  )}>
+                    {item.type}
+                  </span>
+                </div>
+                <p className="text-gray-600 text-xs leading-relaxed line-clamp-4 italic bg-gray-50/70 p-3 rounded-xl border border-gray-100/50">
+                  "{item.content}"
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-4 mt-4 border-t border-gray-100">
+                <button
+                  onClick={() => openEditForm(item)}
+                  className="flex-1 py-2 rounded-xl bg-royal-blue-50 text-royal-blue-700 border border-royal-blue-100 text-xs font-semibold hover:bg-royal-blue-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Modify
+                </button>
+                <button
+                  onClick={() => handleDeleteClick(item)}
+                  className="p-2 rounded-xl bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 transition-colors cursor-pointer"
+                  title="Delete testimony"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add / Edit Testimony Modal */}
+      {isFormOpen && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-gray-100 animate-in">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-gray-900 font-bold text-base">
+                {editingTestimony ? 'Modify Testimony' : 'Add New Testimony'}
+              </h3>
+              <button
+                onClick={() => setIsFormOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <div className="space-y-1.5">
+                <label className="text-gray-700 text-xs font-semibold">Member / Author Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Maria Gonzalez"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-gray-700 text-xs font-semibold">Testimony Type</label>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as any)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500"
+                  >
+                    <option value="written">Written Testimony</option>
+                    <option value="video">Video Testimony</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-gray-700 text-xs font-semibold">Date</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-gray-700 text-xs font-semibold">Testimony Content / Story</label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Share the testimony details here..."
+                  rows={4}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 resize-none"
+                />
+              </div>
+
+              {/* Author Photo Selection */}
+              <div className="space-y-2 border-t border-gray-50 pt-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-gray-700 text-xs font-semibold">Author Photo</label>
+                  <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setImageSourceMode('upload')}
+                      className={cn("px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer", imageSourceMode === 'upload' ? "bg-white text-royal-blue-600 shadow-sm" : "text-gray-500")}
+                    >
+                      Upload Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageSourceMode('url')}
+                      className={cn("px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer", imageSourceMode === 'url' ? "bg-white text-royal-blue-600 shadow-sm" : "text-gray-500")}
+                    >
+                      Image URL
+                    </button>
+                  </div>
+                </div>
+
+                {imageSourceMode === 'upload' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-700 hover:file:bg-royal-blue-100"
+                    />
+                    {imageFile && (
+                      <p className="text-xs text-emerald-600 font-semibold">Selected file: {imageFile.name}</p>
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 font-mono"
+                  />
+                )}
+
+                {imageUrl && (
+                  <div className="flex items-center gap-3 pt-2">
+                    <img src={imageUrl} alt="Preview" className="w-12 h-12 rounded-full object-cover ring-2 ring-royal-blue-100" />
+                    <span className="text-xs text-gray-500">Photo preview</span>
+                  </div>
+                )}
+              </div>
+
+              {errorMessage && (
+                <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl font-semibold">
+                  {errorMessage}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-4 border-t border-gray-50 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsFormOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {isSaving ? 'Saving...' : 'Save Testimony'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {testimonyToDelete && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl p-6 border border-gray-100 animate-in">
+            <h3 className="text-gray-900 font-bold text-base mb-2">Delete Testimony</h3>
+            <p className="text-gray-500 text-xs mb-6">
+              Are you sure you want to delete testimony by <span className="font-semibold text-gray-800">"{testimonyToDelete.name}"</span>? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setTestimonyToDelete(null)}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-sm"
               >
                 Delete
               </button>

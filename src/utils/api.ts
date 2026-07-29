@@ -1,4 +1,4 @@
-import type { Subscriber, Sermon, Book, BlogPost, Donation, Settings, Event } from '../types';
+import type { Subscriber, Sermon, Book, BlogPost, Donation, Settings, Event, Testimony } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
   ? import.meta.env.VITE_API_BASE_URL
@@ -355,6 +355,33 @@ export const api = {
       headers: getHeaders()
     });
     await handleResponse(res, 'Failed to delete event');
+    return true;
+  },
+
+  // Testimonies
+  async getTestimonies(): Promise<Testimony[]> {
+    const res = await fetch(`${API_BASE_URL}/api/testimonies`);
+    if (!res.ok) throw new Error('Failed to fetch testimonies');
+    return res.json();
+  },
+
+  async saveTestimony(testimony: Testimony): Promise<Testimony> {
+    const res = await fetch(`${API_BASE_URL}/api/testimonies`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(testimony)
+    });
+    await handleResponse(res, 'Failed to save testimony');
+    const data = await res.json();
+    return data.item || data;
+  },
+
+  async deleteTestimony(id: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/testimonies/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    await handleResponse(res, 'Failed to delete testimony');
     return true;
   },
 
