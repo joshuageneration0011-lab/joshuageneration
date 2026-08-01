@@ -19,6 +19,7 @@ export interface Sermon {
   description: string;
   category: string;
   audios?: SermonAudio[];
+  audience?: 'public' | 'sons-daughters' | 'partners';
 }
 
 export interface Book {

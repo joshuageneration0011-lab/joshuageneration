@@ -19,7 +19,7 @@ import { api, resolveApiUrl } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/testimonyStore';
 
-type AdminTab = 'dashboard' | 'users' | 'sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'testimonies';
+type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'testimonies';
 
 // Dynamic sidebar configuration inside component
 
@@ -88,7 +88,9 @@ export default function AdminDashboard({
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'users', label: 'Users', icon: Users, badge: `+${users.length}` },
     { id: 'testimonies', label: 'Testimonies', icon: Quote, badge: testimoniesCount > 0 ? testimoniesCount.toString() : undefined },
-    { id: 'sermons', label: 'Sermons', icon: Tv, badge: sermons.length.toString() },
+    { id: 'sermons', label: 'Sermons', icon: Tv, badge: sermons.filter(s => s.audience === 'public' || !s.audience).length.toString() },
+    { id: 'sons-daughters-sermons', label: 'Sons & Daughters', icon: Tv, badge: sermons.filter(s => s.audience === 'sons-daughters').length.toString() },
+    { id: 'partners-sermons', label: 'Partners', icon: Tv, badge: sermons.filter(s => s.audience === 'partners').length.toString() },
     { id: 'books', label: 'Books', icon: BookOpen, badge: books.length.toString() },
     { id: 'blog', label: 'Blog', icon: FileText, badge: posts.length.toString() },
     { id: 'events', label: 'Events', icon: Calendar, badge: events.length.toString() },
@@ -150,7 +152,9 @@ export default function AdminDashboard({
       case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} events={events} books={books} />;
       case 'users': return <UsersTab users={users} onUpdateUsers={handleUpdateUsers} />;
       case 'testimonies': return <TestimoniesTab onCountChange={setTestimoniesCount} />;
-      case 'sermons': return <SermonsTab sermons={sermons} onUpdateSermons={onUpdateSermons} />;
+      case 'sermons': return <SermonsTab audience="public" sermons={sermons} onUpdateSermons={onUpdateSermons} />;
+      case 'sons-daughters-sermons': return <SermonsTab audience="sons-daughters" sermons={sermons} onUpdateSermons={onUpdateSermons} />;
+      case 'partners-sermons': return <SermonsTab audience="partners" sermons={sermons} onUpdateSermons={onUpdateSermons} />;
       case 'books': return <BooksTab books={books} onUpdateBooks={onUpdateBooks} />;
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
@@ -1155,9 +1159,10 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
 interface SermonsTabProps {
   sermons: Sermon[];
   onUpdateSermons: (sermons: Sermon[]) => Promise<void> | void;
+  audience?: 'public' | 'sons-daughters' | 'partners';
 }
 
-function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
+function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSermon, setEditingSermon] = useState<Sermon | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
@@ -1461,7 +1466,8 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
         videoUrl: videoUrl.trim(),
         views: editingSermon ? editingSermon.views : 0,
         downloads: editingSermon ? (editingSermon.downloads || 0) : 0,
-        audios: sermonType === 'series' ? finalAudiosList : []
+        audios: sermonType === 'series' ? finalAudiosList : [],
+        audience: editingSermon ? (editingSermon.audience || audience) : audience
       };
 
       let updatedSermons: Sermon[];
@@ -1482,22 +1488,30 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
     }
   };
 
+  // Filter by audience
+  const audienceFilteredSermons = useMemo(() => {
+    return sermons.filter(s => {
+      const sAudience = s.audience || 'public';
+      return sAudience === audience;
+    });
+  }, [sermons, audience]);
+
   // Stats calculation
-  const totalViews = sermons.reduce((sum, s) => sum + s.views, 0);
+  const totalViews = audienceFilteredSermons.reduce((sum, s) => sum + s.views, 0);
   const formattedViews = totalViews >= 1000000 
     ? (totalViews / 1000000).toFixed(1) + 'M' 
     : totalViews >= 1000 
       ? (totalViews / 1000).toFixed(1) + 'K' 
       : totalViews.toString();
 
-  const totalDownloads = sermons.reduce((sum, s) => sum + (s.downloads || 0), 0);
+  const totalDownloads = audienceFilteredSermons.reduce((sum, s) => sum + (s.downloads || 0), 0);
   const formattedDownloads = totalDownloads >= 1000000
     ? (totalDownloads / 1000000).toFixed(1) + 'M'
     : totalDownloads >= 1000
       ? (totalDownloads / 1000).toFixed(1) + 'K'
       : totalDownloads.toString();
 
-  const filtered = sermons.filter(s => 
+  const filtered = audienceFilteredSermons.filter(s => 
     s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.speaker.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1515,13 +1529,24 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
   // Reset to page 1 when search changes
   useEffect(() => { setSermonPage(1); }, [searchTerm]);
 
+  // Title / Subtitle config
+  const titleInfo = useMemo(() => {
+    if (audience === 'sons-daughters') {
+      return { title: 'Sons & Daughters Manager', subtitle: 'Manage private messages for Sons & Daughters' };
+    }
+    if (audience === 'partners') {
+      return { title: 'Partners Manager', subtitle: 'Manage private messages for covenant partners' };
+    }
+    return { title: 'Sermons Manager', subtitle: 'Create, edit, and publish audio & video messages' };
+  }, [audience]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Sermons Manager</h2>
-          <p className="text-gray-500 text-sm">Create, edit, and publish audio & video messages</p>
+          <h2 className="text-xl font-bold text-gray-900">{titleInfo.title}</h2>
+          <p className="text-gray-500 text-sm">{titleInfo.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -1547,10 +1572,10 @@ function SermonsTab({ sermons, onUpdateSermons }: SermonsTabProps) {
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Sermons', value: sermons.length.toString(), icon: Tv, color: 'from-royal-blue-500 to-royal-blue-700' },
+          { label: 'Total Sermons', value: audienceFilteredSermons.length.toString(), icon: Tv, color: 'from-royal-blue-500 to-royal-blue-700' },
           { label: 'Total Views', value: formattedViews, icon: Eye, color: 'from-emerald-500 to-emerald-700' },
           { label: 'Total Downloads', value: formattedDownloads, icon: Download, color: 'from-gold-500 to-gold-600' },
-          { label: 'This Month', value: sermons.filter(s => new Date(s.date).getMonth() === new Date().getMonth()).length.toString(), icon: Upload, color: 'from-violet-500 to-violet-700' },
+          { label: 'This Month', value: audienceFilteredSermons.filter(s => new Date(s.date).getMonth() === new Date().getMonth()).length.toString(), icon: Upload, color: 'from-violet-500 to-violet-700' },
         ].map((stat) => (
           <div key={stat.label} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
             <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3', stat.color)}>

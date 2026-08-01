@@ -54,7 +54,7 @@ const getPageFromPath = (): Page => {
   if (path.startsWith('blog/')) return 'blog-details';
   if (path.startsWith('sermon/')) return 'sermon-player';
   if (path.startsWith('books/')) return 'book-details';
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners'];
   if (validPages.includes(path)) {
     return path;
   }
@@ -155,7 +155,8 @@ export default function App() {
   useEffect(() => {
     const handleSermonsUpdated = async () => {
       try {
-        const loadedSermons = await getSavedSermons();
+        const fetchSermonsFunc = isAdminAuthenticated ? () => api.getAdminSermons() : () => getSavedSermons();
+        const loadedSermons = await fetchSermonsFunc();
         setSermons(loadedSermons);
         setSelectedSermon(prev => {
           if (!prev) return null;
@@ -169,7 +170,7 @@ export default function App() {
     return () => {
       window.removeEventListener('sermons_updated', handleSermonsUpdated);
     };
-  }, []);
+  }, [isAdminAuthenticated]);
 
   // Redirect detail views to list views if reloaded with empty state
   useEffect(() => {
@@ -226,7 +227,8 @@ export default function App() {
     if (cachedEvents) setEvents(JSON.parse(cachedEvents));
 
     // 2. Fetch fresh data in the background and update UI + Cache
-    getSavedSermons()
+    const fetchSermonsFunc = isAdminAuthenticated ? () => api.getAdminSermons() : () => getSavedSermons();
+    fetchSermonsFunc()
       .then(loadedSermons => {
         setSermons(loadedSermons);
         localStorage.setItem('jg_cache_sermons', JSON.stringify(loadedSermons));
@@ -268,7 +270,7 @@ export default function App() {
         setIsRadioActive(radio.active);
       })
       .catch(err => console.error('Failed to load radio settings:', err));
-  }, []);
+  }, [isAdminAuthenticated]);
 
   // Fetch users when authenticated
   useEffect(() => {
@@ -522,6 +524,58 @@ export default function App() {
           <SermonsPage
             sermons={sermons}
             isLoading={isLoadingSermons}
+            onSermonSelect={(sermon: Sermon) => {
+              setSelectedSermon(sermon);
+              navigate('sermon-player', sermon.id);
+            }}
+          />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'sons-daughters') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <SermonsPage
+            audience="sons-daughters"
+            sermons={[]}
+            isLoading={false}
+            onSermonSelect={(sermon: Sermon) => {
+              setSelectedSermon(sermon);
+              navigate('sermon-player', sermon.id);
+            }}
+          />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'partners') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <SermonsPage
+            audience="partners"
+            sermons={[]}
+            isLoading={false}
             onSermonSelect={(sermon: Sermon) => {
               setSelectedSermon(sermon);
               navigate('sermon-player', sermon.id);

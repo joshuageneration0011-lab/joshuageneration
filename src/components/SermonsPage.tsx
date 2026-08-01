@@ -2,13 +2,14 @@ import { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, Clock, Headphones, Play, SlidersHorizontal, Calendar, Download, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
-import { resolveApiUrl } from '@/utils/api';
+import { api, resolveApiUrl } from '@/utils/api';
 import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
 
 interface SermonsPageProps {
   sermons: Sermon[];
   onSermonSelect: (sermon: Sermon) => void;
   isLoading?: boolean;
+  audience?: 'public' | 'sons-daughters' | 'partners';
 }
 
 type SortOption = 'newest' | 'views';
@@ -25,7 +26,7 @@ const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-export default function SermonsPage({ sermons, onSermonSelect, isLoading = false }: SermonsPageProps) {
+export default function SermonsPage({ sermons, onSermonSelect, isLoading = false, audience = 'public' }: SermonsPageProps) {
   const [likedSermonIds, setLikedSermonIds] = useState<string[]>(() => getLikedItems('sermon'));
 
   useEffect(() => {
@@ -36,6 +37,29 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
     return () => window.removeEventListener('likes_updated', handleLikesUpdated);
   }, []);
 
+  const [localSermons, setLocalSermons] = useState<Sermon[]>(sermons);
+  const [localLoading, setLocalLoading] = useState(isLoading);
+
+  useEffect(() => {
+    if (!audience || audience === 'public') {
+      setLocalSermons(sermons);
+      setLocalLoading(isLoading);
+    } else {
+      setLocalLoading(true);
+      const fetchPrivate = async () => {
+        try {
+          const data = await api.getSermonsByAudience(audience);
+          setLocalSermons(data);
+        } catch (err) {
+          console.error(`Failed to load ${audience} sermons:`, err);
+        } finally {
+          setLocalLoading(false);
+        }
+      };
+      fetchPrivate();
+    }
+  }, [sermons, isLoading, audience]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -43,13 +67,13 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
 
   // Categories extraction
   const categories = useMemo(() => {
-    const list = new Set(sermons.map((s) => s.category));
+    const list = new Set(localSermons.map((s) => s.category));
     return ['All', ...Array.from(list)];
-  }, []);
+  }, [localSermons]);
 
   // Filter and sort logic
   const filteredAndSortedSermons = useMemo(() => {
-    return sermons
+    return localSermons
       .filter((sermon) => {
         const matchesSearch =
           sermon.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,7 +89,7 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
         }
         return 0;
       });
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [localSermons, searchQuery, selectedCategory, sortBy]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -95,19 +119,42 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
     return pages;
   };
 
+  // Header content based on audience
+  const headerContent = useMemo(() => {
+    if (audience === 'sons-daughters') {
+      return {
+        badge: 'Sons & Daughters Library',
+        title: <>Sons & Daughters <span className="text-royal-blue-600">Sermons</span></>,
+        desc: 'Exclusive sermon library for Joshua Generation sons and daughters.'
+      };
+    }
+    if (audience === 'partners') {
+      return {
+        badge: 'Partners Library',
+        title: <>Partners <span className="text-royal-blue-600">Sermons</span></>,
+        desc: 'Exclusive sermon library for Joshua Generation covenant partners.'
+      };
+    }
+    return {
+      badge: 'Sermon Library',
+      title: <>Empowering Messages of <span className="text-royal-blue-600">Faith & Grace</span></>,
+      desc: 'Stream, listen, and study life-changing scriptures preached by our pastors and guest speakers.'
+    };
+  }, [audience]);
+
   return (
     <div className="pt-24 lg:pt-28 pb-20 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
           <span className="inline-block px-3 py-1 rounded-full bg-royal-blue-50 text-royal-blue-600 text-xs font-semibold tracking-wide uppercase mb-4">
-            Sermon Library
+            {headerContent.badge}
           </span>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
-            Empowering Messages of <span className="text-royal-blue-600">Faith & Grace</span>
+            {headerContent.title}
           </h1>
           <p className="text-lg text-gray-500">
-            Stream, listen, and study life-changing scriptures preached by our pastors and guest speakers.
+            {headerContent.desc}
           </p>
         </div>
 
@@ -161,7 +208,7 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
         </div>
 
         {/* Sermons Grid */}
-        {isLoading ? (
+        {localLoading ? (
           <div className="space-y-6">
             {/* Mobile Skeleton List */}
             <div className="flex flex-col sm:hidden border-t-2 border-black pt-2 mb-8 divide-y divide-gray-100">

@@ -233,8 +233,27 @@ function initLocalData() {
   }
 
   if (!fs.existsSync(SERMONS_FILE)) {
-    fs.writeFileSync(SERMONS_FILE, JSON.stringify(defaults.sermons, null, 2), 'utf-8');
+    fs.writeFileSync(SERMONS_FILE, JSON.stringify((defaults.sermons || []).map(s => ({ ...s, audience: 'public' })), null, 2), 'utf-8');
     console.log('Initialized local sermons database.');
+  } else {
+    try {
+      const sermons = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+      if (Array.isArray(sermons)) {
+        let updated = false;
+        sermons.forEach(s => {
+          if (!s.audience) {
+            s.audience = 'public';
+            updated = true;
+          }
+        });
+        if (updated) {
+          fs.writeFileSync(SERMONS_FILE, JSON.stringify(sermons, null, 2), 'utf-8');
+          console.log('Migrated local sermons database to add audience fields.');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to migrate local sermons file:', e);
+    }
   }
   if (!fs.existsSync(BOOKS_FILE)) {
     fs.writeFileSync(BOOKS_FILE, JSON.stringify(defaults.books, null, 2), 'utf-8');
@@ -361,7 +380,8 @@ async function initDb() {
           category VARCHAR,
           video_url TEXT,
           audio_url TEXT,
-          audios JSONB DEFAULT '[]'::jsonb
+          audios JSONB DEFAULT '[]'::jsonb,
+          audience VARCHAR DEFAULT 'public'
         );
       `);
 
@@ -388,6 +408,11 @@ async function initDb() {
         await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS downloads INT DEFAULT 0");
       } catch (err) {
         console.warn("Failed to check/add downloads column to sermons table:", err.message);
+      }
+      try {
+        await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS audience VARCHAR DEFAULT 'public'");
+      } catch (err) {
+        console.warn("Failed to check/add audience column to sermons table:", err.message);
       }
 
       await pool.query(`
@@ -1249,12 +1274,96 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET Sons & Daughters sermons (Public access by direct URL)
+  if (pathname === '/api/sermons/sons-daughters' && method === 'GET') {
+    try {
+      if (pool) {
+        try {
+          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'sons-daughters' ORDER BY id DESC");
+          const sermons = result.rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            speaker: row.speaker,
+            duration: row.duration,
+            thumbnail: row.thumbnail,
+            views: row.views,
+            downloads: row.downloads || 0,
+            date: row.date,
+            description: row.description,
+            category: row.category,
+            videoUrl: row.video_url,
+            audioUrl: row.audio_url,
+            audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || []),
+            audience: row.audience || 'sons-daughters'
+          }));
+          sendJson(res, 200, sermons);
+          return;
+        } catch (dbErr) {
+          console.warn('Database SELECT failed for private sermons:', dbErr.message);
+        }
+      }
+      if (fs.existsSync(SERMONS_FILE)) {
+        const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+        const privateSermons = data.filter(s => s.audience === 'sons-daughters');
+        sendJson(res, 200, privateSermons);
+      } else {
+        sendJson(res, 200, []);
+      }
+    } catch (e) {
+      console.error('All private sermon retrieval sources failed:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve private sermons' });
+    }
+    return;
+  }
+
+  // GET Partners sermons (Public access by direct URL)
+  if (pathname === '/api/sermons/partners' && method === 'GET') {
+    try {
+      if (pool) {
+        try {
+          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'partners' ORDER BY id DESC");
+          const sermons = result.rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            speaker: row.speaker,
+            duration: row.duration,
+            thumbnail: row.thumbnail,
+            views: row.views,
+            downloads: row.downloads || 0,
+            date: row.date,
+            description: row.description,
+            category: row.category,
+            videoUrl: row.video_url,
+            audioUrl: row.audio_url,
+            audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || []),
+            audience: row.audience || 'partners'
+          }));
+          sendJson(res, 200, sermons);
+          return;
+        } catch (dbErr) {
+          console.warn('Database SELECT failed for private sermons:', dbErr.message);
+        }
+      }
+      if (fs.existsSync(SERMONS_FILE)) {
+        const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+        const privateSermons = data.filter(s => s.audience === 'partners');
+        sendJson(res, 200, privateSermons);
+      } else {
+        sendJson(res, 200, []);
+      }
+    } catch (e) {
+      console.error('All private sermon retrieval sources failed:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve private sermons' });
+    }
+    return;
+  }
+
   // GET Sermons
   if (pathname === '/api/sermons' && method === 'GET') {
     try {
       if (pool) {
         try {
-          const result = await pool.query('SELECT * FROM sermons ORDER BY id DESC');
+          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'public' OR audience IS NULL ORDER BY id DESC");
           // Map database naming back to frontend interface
           const sermons = result.rows.map(row => ({
             id: row.id,
@@ -1269,7 +1378,8 @@ const server = http.createServer(async (req, res) => {
             category: row.category,
             videoUrl: row.video_url,
             audioUrl: row.audio_url,
-            audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || [])
+            audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || []),
+            audience: row.audience || 'public'
           }));
           // Cache locally as fallback backup
           try {
@@ -1287,7 +1397,8 @@ const server = http.createServer(async (req, res) => {
       // Local file fallback (used when pool is disabled or database query throws)
       if (fs.existsSync(SERMONS_FILE)) {
         const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
-        sendJson(res, 200, data);
+        const publicSermons = data.filter(s => s.audience === 'public' || !s.audience);
+        sendJson(res, 200, publicSermons);
       } else {
         sendJson(res, 200, []);
       }
@@ -1880,6 +1991,43 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET All Sermons for Admin (includes private ones)
+  if (pathname === '/api/admin/sermons' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM sermons ORDER BY id DESC');
+        const sermons = result.rows.map(row => ({
+          id: row.id,
+          title: row.title,
+          speaker: row.speaker,
+          duration: row.duration,
+          thumbnail: row.thumbnail,
+          views: row.views,
+          downloads: row.downloads || 0,
+          date: row.date,
+          description: row.description,
+          category: row.category,
+          videoUrl: row.video_url,
+          audioUrl: row.audio_url,
+          audios: typeof row.audios === 'string' ? JSON.parse(row.audios) : (row.audios || []),
+          audience: row.audience || 'public'
+        }));
+        sendJson(res, 200, sermons);
+      } else {
+        if (fs.existsSync(SERMONS_FILE)) {
+          const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+          sendJson(res, 200, data);
+        } else {
+          sendJson(res, 200, []);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to retrieve admin sermons:', e);
+      sendJson(res, 500, { error: 'Failed to retrieve sermons' });
+    }
+    return;
+  }
+
   if (pathname === '/api/admin/settings' && method === 'GET') {
     try {
       if (pool) {
@@ -2200,8 +2348,8 @@ const server = http.createServer(async (req, res) => {
 
       if (pool) {
         await pool.query(
-          `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url, audios)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url, audios, audience)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
            ON CONFLICT (id) DO UPDATE SET
              title = EXCLUDED.title,
              speaker = EXCLUDED.speaker,
@@ -2214,16 +2362,18 @@ const server = http.createServer(async (req, res) => {
              category = EXCLUDED.category,
              video_url = EXCLUDED.video_url,
              audio_url = EXCLUDED.audio_url,
-             audios = EXCLUDED.audios`,
-          [item.id, item.title, item.speaker, item.duration, item.thumbnail, item.views || 0, item.downloads || 0, item.date, item.description, item.category, item.videoUrl, item.audioUrl, JSON.stringify(item.audios || [])]
+             audios = EXCLUDED.audios,
+             audience = EXCLUDED.audience`,
+          [item.id, item.title, item.speaker, item.duration, item.thumbnail, item.views || 0, item.downloads || 0, item.date, item.description, item.category, item.videoUrl, item.audioUrl, JSON.stringify(item.audios || []), item.audience || 'public']
         );
       } else {
         const data = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
         const index = data.findIndex(x => x.id === item.id);
+        const sermonToSave = { ...item, audience: item.audience || 'public' };
         if (index > -1) {
-          data[index] = item;
+          data[index] = sermonToSave;
         } else {
-          data.push(item);
+          data.push(sermonToSave);
         }
         fs.writeFileSync(SERMONS_FILE, JSON.stringify(data, null, 2), 'utf-8');
       }

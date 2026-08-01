@@ -128,6 +128,20 @@ export const api = {
     return res.json();
   },
 
+  async getAdminSermons(): Promise<Sermon[]> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/sermons`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch admin sermons');
+    return res.json();
+  },
+
+  async getSermonsByAudience(audience: 'sons-daughters' | 'partners'): Promise<Sermon[]> {
+    const res = await fetch(`${API_BASE_URL}/api/sermons/${audience}`);
+    if (!res.ok) throw new Error(`Failed to fetch ${audience} sermons`);
+    return res.json();
+  },
+
   async saveSermon(sermon: Sermon): Promise<Sermon> {
     const res = await fetch(`${API_BASE_URL}/api/sermons`, {
       method: 'POST',
