@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Heart, BookOpen, Tv, Library, Sparkles, Send, Gift, MessageCircle } from 'lucide-react';
-import { getLikedItems, toggleLikeItem, isItemLiked } from '../data/likesStore';
+import { getLikedItems, toggleLikeItem } from '../data/likesStore';
 import { resolveApiUrl } from '../utils/api';
 import type { Sermon, Book, BlogPost } from '../types';
 

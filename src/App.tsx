@@ -107,18 +107,18 @@ export default function App() {
 
   // Listen for navigation selections from Love Popup
   useEffect(() => {
-    const handleSelectSermon = (e: Event) => {
-      const sermon = (e as CustomEvent).detail;
+    const handleSelectSermon = (e: any) => {
+      const sermon = e.detail;
       setSelectedSermon(sermon);
       navigate('sermon-player', sermon.id);
     };
-    const handleSelectBook = (e: Event) => {
-      const book = (e as CustomEvent).detail;
+    const handleSelectBook = (e: any) => {
+      const book = e.detail;
       setSelectedBook(book);
       navigate('book-details', book.id);
     };
-    const handleSelectPost = (e: Event) => {
-      const post = (e as CustomEvent).detail;
+    const handleSelectPost = (e: any) => {
+      const post = e.detail;
       setSelectedPost(post);
       navigate('blog-details', post.id);
     };

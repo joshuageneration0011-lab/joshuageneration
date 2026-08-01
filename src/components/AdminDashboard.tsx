@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Home,
   LayoutDashboard, Users, Tv, BookOpen, FileText,
@@ -1490,28 +1490,28 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
 
   // Filter by audience
   const audienceFilteredSermons = useMemo(() => {
-    return sermons.filter(s => {
+    return sermons.filter((s: Sermon) => {
       const sAudience = s.audience || 'public';
       return sAudience === audience;
     });
   }, [sermons, audience]);
 
   // Stats calculation
-  const totalViews = audienceFilteredSermons.reduce((sum, s) => sum + s.views, 0);
+  const totalViews = audienceFilteredSermons.reduce((sum: number, s: Sermon) => sum + s.views, 0);
   const formattedViews = totalViews >= 1000000 
     ? (totalViews / 1000000).toFixed(1) + 'M' 
     : totalViews >= 1000 
       ? (totalViews / 1000).toFixed(1) + 'K' 
       : totalViews.toString();
 
-  const totalDownloads = audienceFilteredSermons.reduce((sum, s) => sum + (s.downloads || 0), 0);
+  const totalDownloads = audienceFilteredSermons.reduce((sum: number, s: Sermon) => sum + (s.downloads || 0), 0);
   const formattedDownloads = totalDownloads >= 1000000
     ? (totalDownloads / 1000000).toFixed(1) + 'M'
     : totalDownloads >= 1000
       ? (totalDownloads / 1000).toFixed(1) + 'K'
       : totalDownloads.toString();
 
-  const filtered = audienceFilteredSermons.filter(s => 
+  const filtered = audienceFilteredSermons.filter((s: Sermon) => 
     s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.speaker.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1575,7 +1575,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
           { label: 'Total Sermons', value: audienceFilteredSermons.length.toString(), icon: Tv, color: 'from-royal-blue-500 to-royal-blue-700' },
           { label: 'Total Views', value: formattedViews, icon: Eye, color: 'from-emerald-500 to-emerald-700' },
           { label: 'Total Downloads', value: formattedDownloads, icon: Download, color: 'from-gold-500 to-gold-600' },
-          { label: 'This Month', value: audienceFilteredSermons.filter(s => new Date(s.date).getMonth() === new Date().getMonth()).length.toString(), icon: Upload, color: 'from-violet-500 to-violet-700' },
+          { label: 'This Month', value: audienceFilteredSermons.filter((s: Sermon) => new Date(s.date).getMonth() === new Date().getMonth()).length.toString(), icon: Upload, color: 'from-violet-500 to-violet-700' },
         ].map((stat) => (
           <div key={stat.label} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
             <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3', stat.color)}>
@@ -1603,7 +1603,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginatedSermons.map((s) => (
+              {paginatedSermons.map((s: Sermon) => (
                 <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
