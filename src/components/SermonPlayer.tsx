@@ -172,7 +172,6 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     // Sync views
     setLocalViews(sermon.views);
     setLocalDownloads(sermon.downloads || 0);
-    setHasIncrementedView(false);
   }, [sermon.id, sermon.views]);
 
   // Trigger audio reload/play when track or sermon changes
