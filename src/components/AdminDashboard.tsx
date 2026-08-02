@@ -2706,7 +2706,10 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                   {enablePdf && (
                     <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-white">
                       <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                        <label className="text-xs font-bold text-gray-555 uppercase tracking-wider">Book PDF Files</label>
+                        <div>
+                          <label className="text-xs font-bold text-gray-555 uppercase tracking-wider block">Book PDF Files</label>
+                          <span className="text-[9px] text-gray-400 font-medium block">Click "+ Add PDF" to upload multiple files or versions (e.g., PDF 1, PDF 2, etc.)</span>
+                        </div>
                         <button
                           type="button"
                           onClick={addPdf}
@@ -2716,7 +2719,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                         </button>
                       </div>
 
-                      <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                         {pdfsInput.map((pdf, idx) => (
                           <div key={idx} className="p-3 rounded-xl border border-gray-200 bg-gray-50/50 space-y-2 relative">
                             <button
