@@ -16,8 +16,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_the-foundation-of-prayer-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "The Foundation of Prayer  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_the-foundation-of-prayer-by-apostle-joshua-iyemifokhae",
+    "title": "The Foundation of Prayer part 1 to 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/07/file_00000000e91471f4b5a71cfa946983ae.png",
@@ -28,28 +28,25 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/07/The-Foundation-of-Prayer-by-Apostle-Joshua-Iyemifokhae-.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_the-foundation-of-prayer-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/07/The-Foundation-of-Prayer-by-Apostle-Joshua-Iyemifokhae-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-foundation-of-prayer-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/07/The_Foundation_of_Prayer_part_2_By_Apostle_Joshua_Iyemifokhae_.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
-    "id": "sermon_the-foundation-of-prayer-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "The Foundation of Prayer  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/07/file_00000000e91471f4b5a71cfa946983ae.png",
-    "views": 397,
-    "downloads": 0,
-    "date": "2026-07-05",
-    "description": "The Foundation of Prayer by Apostle Joshua Iyemifokhae lays the biblical basis for an effective prayer life. The message teaches believers to build prayer on faith, intimacy with God, and...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/07/The_Foundation_of_Prayer_part_2_By_Apostle_Joshua_Iyemifokhae_.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-name-of-jesus-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "The Name of Jesus  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_the-name-of-jesus-by-apostle-joshua-iyemifokhae",
+    "title": "The Name of Jesus part 1 and 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/06/20260630_191726-scaled.png",
@@ -60,23 +57,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/The-Name-of-Jesus-by-Apostle-Joshua-Iyemifokhae-3.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-name-of-jesus-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "The Name of Jesus  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/06/20260630_191726-scaled.png",
-    "views": 412,
-    "downloads": 0,
-    "date": "2026-06-30",
-    "description": "The Name of Jesus by Apostle Joshua Iyemifokhae reveals the authority, power, and victory found in the name of Jesus. The message teaches believers to exercise this divine authority in...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/07/The-Name-of-Jesus-part-2-By-Apostle-Joshua-Iyemifokhae-.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_the-name-of-jesus-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/The-Name-of-Jesus-by-Apostle-Joshua-Iyemifokhae-3.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-name-of-jesus-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/07/The-Name-of-Jesus-part-2-By-Apostle-Joshua-Iyemifokhae-.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -96,8 +90,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-study-the-bible-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "How to Study the Bible  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_how-to-study-the-bible-by-apostle-joshua-iyemifokhae",
+    "title": "How to Study the Bible part 1 to 3 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/file_000000002a8471fdb10c97ac0b401d1c.png",
@@ -108,39 +102,26 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_2042.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-study-the-bible-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "How to Study the Bible  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/file_000000002a8471fdb10c97ac0b401d1c.png",
-    "views": 917,
-    "downloads": 0,
-    "date": "2026-05-28",
-    "description": "How to Study the Bible by Apostle Joshua Iyemifokhae teaches believers practical ways to engage Scripture effectively. The message emphasizes consistency, meditation, context, and dependence on the...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/How-to-study-your-bible-part-2-by-Apostle-Joshua-Iyemifokhae.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-study-the-bible-by-apostle-joshua-iyemifokhae_part_3",
-    "title": "How to Study the Bible  by Apostle Joshua Iyemifokhae part 3",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/file_000000002a8471fdb10c97ac0b401d1c.png",
-    "views": 917,
-    "downloads": 0,
-    "date": "2026-05-28",
-    "description": "How to Study the Bible by Apostle Joshua Iyemifokhae teaches believers practical ways to engage Scripture effectively. The message emphasizes consistency, meditation, context, and dependence on the...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/How-to-Study-the-Bible-part-3-by-Apostle-Joshua-Iyemifokhae-.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_how-to-study-the-bible-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_2042.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-study-the-bible-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/How-to-study-your-bible-part-2-by-Apostle-Joshua-Iyemifokhae.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-study-the-bible-by-apostle-joshua-iyemifokhae_part_3",
+        "title": "Part 3",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/How-to-Study-the-Bible-part-3-by-Apostle-Joshua-Iyemifokhae-.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -192,8 +173,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "Overcoming Spiritual Attacks  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae",
+    "title": "Overcoming Spiritual Attacks part 1 to 7 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG-20260625-WA0044.jpg",
@@ -204,108 +185,55 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/Apostle_Joshua_Iyemifokhae_–_How_to_Totally_Stop_Spiritual_Attacks.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/Apostle_Joshua_Iyemifokhae_–_How_to_Totally_Stop_Spiritual_Attacks.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/Apostle_Joshua_Iyemifokhae_–_The_Open_Doors_for_Spiritual_Attacks.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_3",
+        "title": "Part 3",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/Apostle-Joshua-Iyemifokhae-–-The-Armor-of-God-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_4",
+        "title": "Part 4",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_1937.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_5",
+        "title": "Part 5",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/OVERCOMING_SPIRITUAL_ATTACKS_PART_5_BY_APOSTLE_JOSHUA_IYEMIFOKHAE.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_6",
+        "title": "Part 6",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/Overcoming_Spiritual_Attacks_by_Apostle_Joshua_Iyemifokhae3.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_7",
+        "title": "Part 7",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/Overcoming_Spiritual_Attacks_part_7_by_Apostle_Joshua_Iyemifokhae.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "Overcoming Spiritual Attacks  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG-20260625-WA0044.jpg",
-    "views": 1264,
-    "downloads": 0,
-    "date": "2026-05-07",
-    "description": "Overcoming Spiritual Attacks by Apostle Joshua Iyemifokhae teaches believers how to stand firm in spiritual authority and maintain victory in Christ. The message emphasizes prayer, holiness, discer...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/Apostle_Joshua_Iyemifokhae_–_The_Open_Doors_for_Spiritual_Attacks.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_3",
-    "title": "Overcoming Spiritual Attacks  by Apostle Joshua Iyemifokhae part 3",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG-20260625-WA0044.jpg",
-    "views": 1264,
-    "downloads": 0,
-    "date": "2026-05-07",
-    "description": "Overcoming Spiritual Attacks by Apostle Joshua Iyemifokhae teaches believers how to stand firm in spiritual authority and maintain victory in Christ. The message emphasizes prayer, holiness, discer...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/Apostle-Joshua-Iyemifokhae-–-The-Armor-of-God-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_4",
-    "title": "Overcoming Spiritual Attacks  by Apostle Joshua Iyemifokhae part 4",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG-20260625-WA0044.jpg",
-    "views": 1264,
-    "downloads": 0,
-    "date": "2026-05-07",
-    "description": "Overcoming Spiritual Attacks by Apostle Joshua Iyemifokhae teaches believers how to stand firm in spiritual authority and maintain victory in Christ. The message emphasizes prayer, holiness, discer...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_1937.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_5",
-    "title": "Overcoming Spiritual Attacks  by Apostle Joshua Iyemifokhae part 5",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG-20260625-WA0044.jpg",
-    "views": 1264,
-    "downloads": 0,
-    "date": "2026-05-07",
-    "description": "Overcoming Spiritual Attacks by Apostle Joshua Iyemifokhae teaches believers how to stand firm in spiritual authority and maintain victory in Christ. The message emphasizes prayer, holiness, discer...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/OVERCOMING_SPIRITUAL_ATTACKS_PART_5_BY_APOSTLE_JOSHUA_IYEMIFOKHAE.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_6",
-    "title": "Overcoming Spiritual Attacks  by Apostle Joshua Iyemifokhae part 6",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG-20260625-WA0044.jpg",
-    "views": 1264,
-    "downloads": 0,
-    "date": "2026-05-07",
-    "description": "Overcoming Spiritual Attacks by Apostle Joshua Iyemifokhae teaches believers how to stand firm in spiritual authority and maintain victory in Christ. The message emphasizes prayer, holiness, discer...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/Overcoming_Spiritual_Attacks_by_Apostle_Joshua_Iyemifokhae3.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-totally-stop-spiritual-attacks-by-apostle-joshua-iyemifokhae_part_7",
-    "title": "Overcoming Spiritual Attacks  by Apostle Joshua Iyemifokhae part 7",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG-20260625-WA0044.jpg",
-    "views": 1264,
-    "downloads": 0,
-    "date": "2026-05-07",
-    "description": "Overcoming Spiritual Attacks by Apostle Joshua Iyemifokhae teaches believers how to stand firm in spiritual authority and maintain victory in Christ. The message emphasizes prayer, holiness, discer...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/06/Overcoming_Spiritual_Attacks_part_7_by_Apostle_Joshua_Iyemifokhae.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-laws-of-faith-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "The Laws of Faith  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_the-laws-of-faith-part-1-and-2-by-apostle-joshua-iyemifokhae",
+    "title": "The Laws of Faith part 1 and 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/What-Happened-When-You-Got-Born-Again-mp3-image.jpg",
@@ -316,28 +244,25 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_1532.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_the-laws-of-faith-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_1532.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-laws-of-faith-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_1533.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
-    "id": "sermon_the-laws-of-faith-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "The Laws of Faith  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/What-Happened-When-You-Got-Born-Again-mp3-image.jpg",
-    "views": 570,
-    "downloads": 0,
-    "date": "2026-05-04",
-    "description": "The Laws of Faith part 1 and 2 by Apostle Joshua Iyemifokhae teaches the principles that govern how faith works. The message emphasizes believing, speaking, acting, and remaining consistent to...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/05/IMG_1533.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-see-in-the-spirit-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "How to See in the Spirit  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_how-to-see-in-the-spirit-part-1-and-2-by-apostle-joshua-iyemifokhae",
+    "title": "How to See in the Spirit part 1 and 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG-20260428-WA0067.jpg",
@@ -348,23 +273,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG_1402.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-see-in-the-spirit-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "How to See in the Spirit  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG-20260428-WA0067.jpg",
-    "views": 566,
-    "downloads": 0,
-    "date": "2026-04-28",
-    "description": "How to See in the Spirit part 1 and 2 by Apostle Joshua Iyemifokhae teaches believers to develop spiritual perception. The message emphasizes purity, sensitivity, and alignment with God as...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG_1404.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_how-to-see-in-the-spirit-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG_1402.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-see-in-the-spirit-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG_1404.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -400,8 +322,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-pray-and-really-get-results-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "How to Pray and Really Get Results  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_how-to-pray-and-really-get-results-part-1-and-2-by-apostle-joshua-iyemifokhae",
+    "title": "How to Pray and Really Get Results part 1 and 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG-20260421-WA0040.jpg",
@@ -412,23 +334,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/How-to-really-pray-and-get-results-part-1-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-pray-and-really-get-results-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "How to Pray and Really Get Results  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG-20260421-WA0040.jpg",
-    "views": 492,
-    "downloads": 0,
-    "date": "2026-04-21",
-    "description": "How to Pray and Really Get Results part 1 and 2 by Apostle Joshua Iyemifokhae teaches believers to pray with understanding, faith, and alignment. The message emphasizes fervency, consistency, and...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/How-to-Pray-and-Really-Get-Results-Part-2-.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_how-to-pray-and-really-get-results-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/How-to-really-pray-and-get-results-part-1-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-pray-and-really-get-results-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/How-to-Pray-and-Really-Get-Results-Part-2-.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -496,8 +415,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_the-law-of-the-mind-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "The Law of the Mind  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_the-law-of-the-mind-by-apostle-joshua-iyemifokhae",
+    "title": "The Law of the Mind part 1 and 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG-20260406-WA0007.jpg",
@@ -508,23 +427,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/Global-mentorship-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-law-of-the-mind-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "The Law of the Mind  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG-20260406-WA0007.jpg",
-    "views": 335,
-    "downloads": 0,
-    "date": "2026-04-06",
-    "description": "The Law of the Mind by Apostle Joshua Iyemifokhae teaches how thoughts govern actions, outcomes, and spiritual results. The message emphasizes intentional thinking, mental discipline, and alignment...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG_1166.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_the-law-of-the-mind-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/Global-mentorship-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-law-of-the-mind-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/04/IMG_1166.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -576,8 +492,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-build-a-relationship-with-the-holy-spirit-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "How to Build a Relationship with the Holy Spirit  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_how-to-build-a-relationship-with-the-holy-spirit-part-1-2-by-apostle-joshua-iyemifokhae",
+    "title": "How to Build a Relationship with the Holy Spirit part 1 & 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/03/IMG-20260322-WA0035.jpg",
@@ -588,23 +504,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/How-to-Build-a-Relationship-with-the-Holy-Spirit-part-1.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-build-a-relationship-with-the-holy-spirit-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "How to Build a Relationship with the Holy Spirit  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/03/IMG-20260322-WA0035.jpg",
-    "views": 475,
-    "downloads": 0,
-    "date": "2026-03-22",
-    "description": "How to Build a Relationship with the Holy Spirit by Apostle Joshua Iyemifokhae teaches believers how to cultivate daily fellowship with the Holy Spirit. The message emphasizes sensitivity, obedienc...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/How-to-Build-a-Relationship-with-the-Holy-Spirit-part-2.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_how-to-build-a-relationship-with-the-holy-spirit-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/How-to-Build-a-Relationship-with-the-Holy-Spirit-part-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-build-a-relationship-with-the-holy-spirit-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/How-to-Build-a-Relationship-with-the-Holy-Spirit-part-2.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -624,8 +537,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-fast-and-pray-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "How to Fast and Pray  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_how-to-fast-and-pray-part-1-2-by-apostle-joshua-iyemifokhae",
+    "title": "How to Fast and Pray part 1 & 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/03/IMG-20260316-WA0006.jpg",
@@ -636,28 +549,25 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-How-to-Fast-and-Pray-part-1.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_how-to-fast-and-pray-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-How-to-Fast-and-Pray-part-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-fast-and-pray-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-The-Benefits-of-Fasting-part-2.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-fast-and-pray-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "How to Fast and Pray  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/03/IMG-20260316-WA0006.jpg",
-    "views": 536,
-    "downloads": 0,
-    "date": "2026-03-16",
-    "description": "How to Fast and Pray by Apostle Joshua Iyemifokhae teaches believers the right approach to fasting with purpose and spiritual understanding. The message explains how fasting combined with prayer st...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-The-Benefits-of-Fasting-part-2.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-most-holy-faith-part-1-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "The Most Holy Faith  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_the-most-holy-faith-part-1-by-apostle-joshua-iyemifokhae",
+    "title": "The Most Holy Faith part 1 & 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/03/IMG-20260311-WA0024.jpg",
@@ -668,28 +578,25 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-The-Most-Holy-Faith-part-1-2.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_the-most-holy-faith-part-1-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-The-Most-Holy-Faith-part-1-2.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-most-holy-faith-part-1-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-The-Most-Holy-Faith-part-2-.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
-    "id": "sermon_the-most-holy-faith-part-1-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "The Most Holy Faith  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/03/IMG-20260311-WA0024.jpg",
-    "views": 435,
-    "downloads": 0,
-    "date": "2026-03-11",
-    "description": "The Most Holy Faith by Apostle Joshua Iyemifokhae teaches believers the essence of unwavering, pure faith. The message emphasizes living a life fully dependent on God, cultivating trust, obedience,...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/Apostle-Joshua-Iyemifokhae-The-Most-Holy-Faith-part-2-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-hear-the-voice-of-god-part-1-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "How to Hear the Voice of God  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_how-to-hear-the-voice-of-god-part-1-by-apostle-joshua-iyemifokhae",
+    "title": "How to Hear the Voice of God Part 1 & 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/IMG-20260303-WA0066.jpg",
@@ -700,23 +607,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/HOW_TO_HEAR_THE_VOICE_OF_GOD_PART_1_BY_APOSTLE_JOSHUA_IYEMIFOKHAE.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_how-to-hear-the-voice-of-god-part-1-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "How to Hear the Voice of God  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/IMG-20260303-WA0066.jpg",
-    "views": 671,
-    "downloads": 0,
-    "date": "2026-02-28",
-    "description": "How to Hear the Voice of God by Apostle Joshua Iyemifokhae teaches believers the foundational principles of hearing God clearly. The message emphasizes cultivating spiritual sensitivity, recognizin...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/How_to_Hear_the_Voice_of_God_part_2_by_Apostle_Joshua_Iyemifokhae-2.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_how-to-hear-the-voice-of-god-part-1-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/HOW_TO_HEAR_THE_VOICE_OF_GOD_PART_1_BY_APOSTLE_JOSHUA_IYEMIFOKHAE.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-hear-the-voice-of-god-part-1-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/03/How_to_Hear_the_Voice_of_God_part_2_by_Apostle_Joshua_Iyemifokhae-2.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -773,7 +677,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/IMG-20260222-WA0006.jpg",
-    "views": 0,
+    "views": 459,
     "downloads": 0,
     "date": "2026-02-22",
     "description": "Spiritual Upgrades by Apostle Joshua Iyemifokhae introduces the principles of growth, capacity building, and divine advancement. The message teaches believers how to increase spiritual strength, de...",
@@ -789,7 +693,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Sermon-3.png",
-    "views": 507,
+    "views": 0,
     "downloads": 0,
     "date": "2026-02-19",
     "description": "The Mystery Behind Soul Travelling by Apostle Joshua Iyemifokhae unveils the spiritual realities of the soul’s movement beyond the physical body. The message teaches how to discern divine encounter...",
@@ -800,35 +704,32 @@
     "audience": "public"
   },
   {
-    "id": "sermon_weapons-of-war-part-1-to-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "Weapons of war  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_weapons-of-war-part-1-to-2-by-apostle-joshua-iyemifokhae",
+    "title": "Weapons of war part 1 to 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Sermon-2.png",
-    "views": 477,
+    "views": 0,
     "downloads": 0,
     "date": "2026-02-16",
     "description": "Weapons of War by Apostle Joshua Iyemifokhae teaches believers to engage spiritual battles with divine tools, not human strength. The message reveals how prayer, the Word, faith, and authority dism...",
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Weapons-of-War-part-1-by-Apostle-Joshua-Iyemifokhae-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_weapons-of-war-part-1-to-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "Weapons of war  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Sermon-2.png",
-    "views": 477,
-    "downloads": 0,
-    "date": "2026-02-16",
-    "description": "Weapons of War by Apostle Joshua Iyemifokhae teaches believers to engage spiritual battles with divine tools, not human strength. The message reveals how prayer, the Word, faith, and authority dism...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Weapons-of-War-part-2-by-Apostle-Joshua-Iyemifokhae-.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_weapons-of-war-part-1-to-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Weapons-of-War-part-1-by-Apostle-Joshua-Iyemifokhae-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_weapons-of-war-part-1-to-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Weapons-of-War-part-2-by-Apostle-Joshua-Iyemifokhae-.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -837,7 +738,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Sermon-1.png",
-    "views": 752,
+    "views": 0,
     "downloads": 0,
     "date": "2026-02-08",
     "description": "Breaking Demonic Curses by Apostle Joshua Iyemifokhae teaches how believers enforce freedom through Christ’s finished work. The message reveals how curses operate, how they are broken by truth, aut...",
@@ -853,7 +754,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/02/Sermon.png",
-    "views": 612,
+    "views": 0,
     "downloads": 0,
     "date": "2026-02-08",
     "description": "The Need to Pray by Apostle Joshua Iyemifokhae emphasizes prayer as a spiritual necessity, not an option. The message reveals how prayer sustains intimacy with God, enforces spiritual authority, an...",
@@ -869,7 +770,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Sermon-10.png",
-    "views": 808,
+    "views": 0,
     "downloads": 0,
     "date": "2026-01-31",
     "description": "The Hearing Ear by Apostle Joshua Iyemifokhae teaches believers how to cultivate spiritual sensitivity to hear God clearly. The message emphasizes sharpening discernment, silencing distractions, an...",
@@ -885,7 +786,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Sermon-9.png",
-    "views": 872,
+    "views": 0,
     "downloads": 0,
     "date": "2026-01-23",
     "description": "Knowing God vs Knowing About God by Apostle Joshua Iyemifokhae draws a clear distinction between information and intimacy. The message teaches that true spiritual power flows from personal relation...",
@@ -901,7 +802,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Sermon-8.png",
-    "views": 850,
+    "views": 0,
     "downloads": 0,
     "date": "2026-01-19",
     "description": "The Fourth Dimension by Apostle Joshua Iyemifokhae reveals the realm beyond the physical where faith, revelation, and spiritual laws operate. The message teaches believers to engage this dimension ...",
@@ -928,35 +829,32 @@
     "audience": "public"
   },
   {
-    "id": "sermon_the-favour-of-god-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "The Favour of God  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_the-favour-of-god-by-apostle-joshua-iyemifokhae",
+    "title": "The Favour of God part 1 to 2 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Sermon-6.png",
-    "views": 709,
+    "views": 0,
     "downloads": 0,
     "date": "2026-01-18",
     "description": "The Favour of God by Apostle Joshua Iyemifokhae teaches how divine favor operates as a spiritual advantage. The message shows how alignment, obedience, and understanding activate God’s favor to ope...",
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Favour-of-God-by-Apostle-Joshua-Iyemifokhae.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-favour-of-god-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "The Favour of God  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Sermon-6.png",
-    "views": 709,
-    "downloads": 0,
-    "date": "2026-01-18",
-    "description": "The Favour of God by Apostle Joshua Iyemifokhae teaches how divine favor operates as a spiritual advantage. The message shows how alignment, obedience, and understanding activate God’s favor to ope...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Favour-of-God-Part-2-by-Apostle-Joshua-Iyemifokhae-.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_the-favour-of-god-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Favour-of-God-by-Apostle-Joshua-Iyemifokhae.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-favour-of-god-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Favour-of-God-Part-2-by-Apostle-Joshua-Iyemifokhae-.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -976,24 +874,43 @@
     "audience": "public"
   },
   {
-    "id": "sermon_how-to-hear-the-voice-of-god-part-2-by-apostle-joshua-iyemifokhae_part_3",
-    "title": "How To Hear The Voice Of God  By Apostle Joshua Iyemifokhae part 3",
+    "id": "sermon_how-to-hear-the-voice-of-god-part-2-by-apostle-joshua-iyemifokhae",
+    "title": "How To Hear The Voice Of God Part 1 to 3 By Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Sermon.png",
-    "views": 828,
+    "views": 0,
     "downloads": 0,
     "date": "2026-01-07",
     "description": "How to Hear the Voice of God by Apostle Joshua Iyemifokhae deepens the understanding of divine communication. The message teaches how to sharpen spiritual sensitivity, discern God’s voice amid dist...",
     "category": "Faith",
     "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/How_to_Hear_the_Voice_of_God_part_3_by_Apostle_Joshua_Iyemifokhae.mp3",
-    "audios": [],
+    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/How_to_Hear_the_Voice_of_God_Part_2_by_Apostle_Joshua_Iyemifokhae-1.mp3",
+    "audios": [
+      {
+        "id": "sermon_how-to-hear-the-voice-of-god-part-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/How_to_Hear_the_Voice_of_God_Part_2_by_Apostle_Joshua_Iyemifokhae-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-hear-the-voice-of-god-part-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/HOW_TO_HEAR_THE_VOICE_OF_GOD_PART_2_BY_APOSTLE_JOSHUA_IYEMIFOKHAE.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_how-to-hear-the-voice-of-god-part-2-by-apostle-joshua-iyemifokhae_part_3",
+        "title": "Part 3",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/How_to_Hear_the_Voice_of_God_part_3_by_Apostle_Joshua_Iyemifokhae.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
-    "id": "sermon_the-law-of-mind-part-4-by-apostle-joshua-iyemifokhae-2_part_1",
-    "title": "Understanding spiritual warfare  by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_the-law-of-mind-part-4-by-apostle-joshua-iyemifokhae-2",
+    "title": "Understanding spiritual warfare part 1 to 3 by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-5.png",
@@ -1004,39 +921,26 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/UNDERSTANDING_SPIRITUAL_WARFARE_PART_ONE_BY_APOSTLE_JOSHUA_IYEMIFOKHAE.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-law-of-mind-part-4-by-apostle-joshua-iyemifokhae-2_part_2",
-    "title": "Understanding spiritual warfare  by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-5.png",
-    "views": 1398,
-    "downloads": 0,
-    "date": "2025-12-26",
-    "description": "Understanding Spiritual Warfare by Apostle Joshua Iyemifokhae lays the foundation for engaging spiritual battles with knowledge and authority. The message reveals the nature of spiritual conflict, ...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Understanding_Spiritual_Warfare_Part_2_by_Apostle_Joshua_Iyemifokhae-2.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_the-law-of-mind-part-4-by-apostle-joshua-iyemifokhae-2_part_3",
-    "title": "Understanding spiritual warfare  by Apostle Joshua Iyemifokhae part 3",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-5.png",
-    "views": 1398,
-    "downloads": 0,
-    "date": "2025-12-26",
-    "description": "Understanding Spiritual Warfare by Apostle Joshua Iyemifokhae lays the foundation for engaging spiritual battles with knowledge and authority. The message reveals the nature of spiritual conflict, ...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Understanding_Spiritual_Warfare_Part_3_by_Apostle_Joshua_Iyemifokhae.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_the-law-of-mind-part-4-by-apostle-joshua-iyemifokhae-2_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/UNDERSTANDING_SPIRITUAL_WARFARE_PART_ONE_BY_APOSTLE_JOSHUA_IYEMIFOKHAE.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-law-of-mind-part-4-by-apostle-joshua-iyemifokhae-2_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Understanding_Spiritual_Warfare_Part_2_by_Apostle_Joshua_Iyemifokhae-2.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_the-law-of-mind-part-4-by-apostle-joshua-iyemifokhae-2_part_3",
+        "title": "Part 3",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/Understanding_Spiritual_Warfare_Part_3_by_Apostle_Joshua_Iyemifokhae.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -1045,7 +949,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-3.png",
-    "views": 949,
+    "views": 0,
     "downloads": 0,
     "date": "2025-12-22",
     "description": "Prophetic Capital by Apostle Joshua Iyemifokhae teaches how believers build and steward spiritual value through obedience, consecration, revelation, and alignment with God. The message explains how...",
@@ -1077,7 +981,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/IMG-20251214-WA0076-3.jpg",
-    "views": 851,
+    "views": 0,
     "downloads": 0,
     "date": "2025-12-16",
     "description": "Growing Up Spiritually (Part 1) by Apostle Joshua Iyemifokhae teaches the foundations of spiritual maturity. The message challenges believers to move beyond infancy, develop spiritual discipline, a...",
@@ -1109,7 +1013,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/IMG-20251214-WA0076-1.jpg",
-    "views": 664,
+    "views": 0,
     "downloads": 0,
     "date": "2025-12-14",
     "description": "Catching Light from God’s Word by Apostle Joshua Iyemifokhae is a revelatory teaching that explains how divine light is released through Scripture. It shows how understanding God’s Word brings clar...",
@@ -1136,131 +1040,68 @@
     "audience": "public"
   },
   {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae",
+    "title": "Law of Mind Part 1 To 8 By Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
+    "views": 0,
     "downloads": 0,
     "date": "2025-12-14",
     "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/11/THE-RAPTURE-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-1.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
-    "downloads": 0,
-    "date": "2025-12-14",
-    "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/THE-LAW-OF-MIND-PART-2-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-2-1.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_3",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 3",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
-    "downloads": 0,
-    "date": "2025-12-14",
-    "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/THE-LAW-OF-MIND-PART-3-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_4",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 4",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
-    "downloads": 0,
-    "date": "2025-12-14",
-    "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/THE-LAW-OF-MIND-PART-4-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_5",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 5",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
-    "downloads": 0,
-    "date": "2025-12-14",
-    "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/THE-LAW-OF-MIND-PART-5-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_6",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 6",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
-    "downloads": 0,
-    "date": "2025-12-14",
-    "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Law-of-Mind-Part-6-by-Apostle-Joshua-Iyemifokhae-2.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_7",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 7",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
-    "downloads": 0,
-    "date": "2025-12-14",
-    "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Law-of-Mind-Part-7-by-Apostle-Joshua-Iyemifokhae-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_8",
-    "title": "Law of Mind  By Apostle Joshua Iyemifokhae part 8",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/12/Sermon-6.png",
-    "views": 661,
-    "downloads": 0,
-    "date": "2025-12-14",
-    "description": "Law of Mind by Apostle Joshua Iyemifokhae is a foundational teaching that reveals how the mind shapes spiritual growth, behavior, and destiny. It explains the mind as a battleground of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/The-Law-of-Mind-part-8-by-Apostle-Joshua-Iyemifokhae-1.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/11/THE-RAPTURE-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/THE-LAW-OF-MIND-PART-2-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-2-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_3",
+        "title": "Part 3",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/THE-LAW-OF-MIND-PART-3-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_4",
+        "title": "Part 4",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/12/THE-LAW-OF-MIND-PART-4-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_5",
+        "title": "Part 5",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/THE-LAW-OF-MIND-PART-5-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_6",
+        "title": "Part 6",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Law-of-Mind-Part-6-by-Apostle-Joshua-Iyemifokhae-2.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_7",
+        "title": "Part 7",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/01/The-Law-of-Mind-Part-7-by-Apostle-Joshua-Iyemifokhae-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_law-of-mind-part-1-by-apostle-joshua-iyemifokhae_part_8",
+        "title": "Part 8",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2026/02/The-Law-of-Mind-part-8-by-Apostle-Joshua-Iyemifokhae-1.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -1285,7 +1126,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/11/Spiritual-Forcefields-mp3-image.jpg",
-    "views": 1194,
+    "views": 0,
     "downloads": 0,
     "date": "2025-11-02",
     "description": "In Spiritual Force Fields, Apostle Joshua Iyemifokhae unveils the mystery of the invisible energies that surround a believer filled with the Holy Ghost. Every child of God carries a divine...",
@@ -1317,7 +1158,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/10/mentees.jpg",
-    "views": 925,
+    "views": 0,
     "downloads": 0,
     "date": "2025-10-30",
     "description": "The Present Day Glory — Apostle Joshua Iyemifokhae In this powerful message, Apostle Joshua Iyemifokhae unveils the mystery of The Present Day Glory — the dimension of God’s glory available...",
@@ -1328,8 +1169,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_meditation-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "Meditation () By Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_meditation-part-1-and-2-by-apostle-joshua-iyemifokhae",
+    "title": "Meditation (Part 1 and 2) By Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Meditation-Part-1-by-Apostle-Joshua-Iyemifokhae-mp3-image.jpg",
@@ -1340,23 +1181,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Meditation-Part-1-by-Apostle-Joshua-Iyemifokhae.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_meditation-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "Meditation () By Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Meditation-Part-1-by-Apostle-Joshua-Iyemifokhae-mp3-image.jpg",
-    "views": 1751,
-    "downloads": 0,
-    "date": "2025-10-20",
-    "description": "In this deep two-part series, Apostle Joshua Iyemifokhae unveils the mystery of *Meditation* as a spiritual technology for transformation. In Part 1, he lays the foundation—showing how meditation m...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Meditation-Part-2-by-Apostle-Joshua-Iyemifokhae.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_meditation-part-1-and-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Meditation-Part-1-by-Apostle-Joshua-Iyemifokhae.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_meditation-part-1-and-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Meditation-Part-2-by-Apostle-Joshua-Iyemifokhae.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -1381,7 +1219,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Spiritual-Mileage-by-Pastor-Joshua-Iyemifokhae-mp3-image.jpg",
-    "views": 878,
+    "views": 0,
     "downloads": 0,
     "date": "2025-10-18",
     "description": "SPIRITUAL MILEAGE 🔥 Every season of obedience, prayer, and consistency adds to your spiritual mileage. Don’t stop because you don’t see results yet—each moment of faithfulness is building spiritua...",
@@ -1392,8 +1230,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_understanding-fasting-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "Understanding Fasting () by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_understanding-fasting-part-1-2-by-apostle-joshua-iyemifokhae",
+    "title": "Understanding Fasting (Part 1 & 2) by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/10/UNDERSTANDING-FASTING-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-2-mp3-image.jpg",
@@ -1404,23 +1242,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/UNDERSTANDING-FASTING-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-1.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_understanding-fasting-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "Understanding Fasting () by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/10/UNDERSTANDING-FASTING-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-2-mp3-image.jpg",
-    "views": 1266,
-    "downloads": 0,
-    "date": "2025-10-05",
-    "description": "Apostle Joshua Iyemifokhae teaches on the true purpose and power of fasting. In this two-part series, he unveils how fasting aligns your spirit with God, sharpens your discernment, and unlocks...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/UNDERSTANDING-FASTING-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-2.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_understanding-fasting-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/UNDERSTANDING-FASTING-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_understanding-fasting-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/10/UNDERSTANDING-FASTING-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-2.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -1429,7 +1264,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/10/Heath-declare.jpg",
-    "views": 6746,
+    "views": 0,
     "downloads": 0,
     "date": "2025-10-05",
     "description": "A powerful prophetic declaration by Apostle Joshua Iyemifokhae releasing divine healing, strength, and wholeness through the Word of God. This declaration stirs faith, commands restoration, and act...",
@@ -1440,8 +1275,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_understanding-angels-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
-    "title": "Understanding Angels () by Apostle Joshua Iyemifokhae part 1",
+    "id": "sermon_understanding-angels-part-1-2-by-apostle-joshua-iyemifokhae",
+    "title": "Understanding Angels (Part 1 & 2) by Apostle Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/1.jpg",
@@ -1452,23 +1287,20 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/UNDERSTANDING-ANGELS-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-1.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_understanding-angels-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
-    "title": "Understanding Angels () by Apostle Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/1.jpg",
-    "views": 2106,
-    "downloads": 0,
-    "date": "2025-09-28",
-    "description": "Understanding Angels (Part 1 & 2) by Apostle Joshua Iyemifokhae is a revelatory teaching that unveils the role of angels in God’s Kingdom and their ministry in the lives of...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/Understanding-Angels-By-Apostle-Joshua-Iyemifokhae-Part-2.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_understanding-angels-part-1-2-by-apostle-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/UNDERSTANDING-ANGELS-BY-APOSTLE-JOSHUA-IYEMIFOKHAE-PART-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_understanding-angels-part-1-2-by-apostle-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/Understanding-Angels-By-Apostle-Joshua-Iyemifokhae-Part-2.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -1493,7 +1325,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/sight.jpg",
-    "views": 0,
+    "views": 9583,
     "downloads": 0,
     "date": "2025-09-21",
     "description": "Step into greater prophetic clarity and discernment. In this powerful session, Apostle Joshua Iyemifokhae leads declarations that awaken your spiritual eyes, sharpen your vision in the Spirit, and ...",
@@ -1509,7 +1341,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/HOW_TO_RECEIVE_SPIRITUAL_DOWNLOADS_BY_PASTOR_JOSHUA_IYEMIFOKHAE_-mp3-image.jpg",
-    "views": 0,
+    "views": 1809,
     "downloads": 0,
     "date": "2025-09-21",
     "description": "Heaven is constantly speaking, but not everyone knows how to tune in. In this message, Apostle Joshua Iyemifokhae reveals how to position yourself to receive divine downloads — sudden flashes...",
@@ -1525,7 +1357,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/HOW_TO_ACTIVATE_EACH_SPIRITUAL_GIFTS_BY_PASTOR_JOSHUA_IYEMIFOKHAE-mp3-image.jpg",
-    "views": 0,
+    "views": 823,
     "downloads": 0,
     "date": "2025-09-21",
     "description": "Discover how to stir up and activate the gifts of the Spirit that God has placed within you. In this powerful teaching, Apostle Joshua Iyemifokhae unveils biblical keys to unlock...",
@@ -1541,7 +1373,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/ACTIVATING-THE-ECONOMY-OF-FAVOUR.jpg",
-    "views": 0,
+    "views": 1357,
     "downloads": 0,
     "date": "2025-09-14",
     "description": "Activating The Economy of Favour – Pst. Joshua Iyemifokhae In this life-transforming teaching, Pastor Joshua Iyemifokhae unveils the mystery of divine favour as a spiritual economy that changes des...",
@@ -1552,8 +1384,8 @@
     "audience": "public"
   },
   {
-    "id": "sermon_discovering-your-spiritual-gifts-part-1-and-part-2-by-pst-joshua-iyemifokhae_part_1",
-    "title": "Discovering Your Spiritual Gifts ( and ) by Pst. Joshua Iyemifokhae part 1",
+    "id": "sermon_discovering-your-spiritual-gifts-part-1-and-part-2-by-pst-joshua-iyemifokhae",
+    "title": "Discovering Your Spiritual Gifts (Part 1 and Part 2) by Pst. Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/photo_2025-09-11_18-17-13.jpg",
@@ -1564,71 +1396,55 @@
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DISCOVERING_YOUR_SPIRITUAL_GIFT_BY_PASTOR_JOSHUA_IYEMIFOKHAE_PART-1.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_discovering-your-spiritual-gifts-part-1-and-part-2-by-pst-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DISCOVERING_YOUR_SPIRITUAL_GIFT_BY_PASTOR_JOSHUA_IYEMIFOKHAE_PART-1.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_discovering-your-spiritual-gifts-part-1-and-part-2-by-pst-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DISCOVERING_YOUR_SPIRITUAL_GIFT_BY_PASTOR_JOSHUA_IYEMIFOKHAE_PART-2.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
-    "id": "sermon_discovering-your-spiritual-gifts-part-1-and-part-2-by-pst-joshua-iyemifokhae_part_2",
-    "title": "Discovering Your Spiritual Gifts ( and ) by Pst. Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/photo_2025-09-11_18-17-13.jpg",
-    "views": 776,
-    "downloads": 0,
-    "date": "2025-09-14",
-    "description": "Discovering Your Spiritual Gifts (Part 1 & 2) – Pst. Joshua Iyemifokhae In this two-part teaching, Pastor Joshua Iyemifokhae unveils the mystery of spiritual gifts and how every believer is...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DISCOVERING_YOUR_SPIRITUAL_GIFT_BY_PASTOR_JOSHUA_IYEMIFOKHAE_PART-2.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_dreaming-with-god-part-1-to-part-3-by-pst-joshua-iyemifokhae_part_1",
-    "title": "Dreaming with God ( to ) by Pst. Joshua Iyemifokhae part 1",
+    "id": "sermon_dreaming-with-god-part-1-to-part-3-by-pst-joshua-iyemifokhae",
+    "title": "Dreaming with God (Part 1 to Part 3) by Pst. Joshua Iyemifokhae",
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/photo_2025-08-15_18-57-44.jpg",
-    "views": 0,
+    "views": 801,
     "downloads": 0,
     "date": "2025-09-14",
     "description": "Dreaming with God (Part 1 to Part 3) – Pst. Joshua Iyemifokhae In this powerful three-part teaching, Pastor Joshua Iyemifokhae unveils the mystery of partnering with God through the power...",
     "category": "Faith",
     "videoUrl": "",
     "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DREAMING-WITH-GOD-BY-PASTOR-JOSHUA-IYEMIFOKHAE-.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_dreaming-with-god-part-1-to-part-3-by-pst-joshua-iyemifokhae_part_2",
-    "title": "Dreaming with God ( to ) by Pst. Joshua Iyemifokhae part 2",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/photo_2025-08-15_18-57-44.jpg",
-    "views": 0,
-    "downloads": 0,
-    "date": "2025-09-14",
-    "description": "Dreaming with God (Part 1 to Part 3) – Pst. Joshua Iyemifokhae In this powerful three-part teaching, Pastor Joshua Iyemifokhae unveils the mystery of partnering with God through the power...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DREAMING-WITH-GOD-BY-PASTOR-JOSHUA-IYEMIFOKHAE-Pt-2.mp3",
-    "audios": [],
-    "audience": "public"
-  },
-  {
-    "id": "sermon_dreaming-with-god-part-1-to-part-3-by-pst-joshua-iyemifokhae_part_3",
-    "title": "Dreaming with God ( to ) by Pst. Joshua Iyemifokhae part 3",
-    "speaker": "Apostle Joshua Iyemifokhae",
-    "duration": "45:00",
-    "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/photo_2025-08-15_18-57-44.jpg",
-    "views": 0,
-    "downloads": 0,
-    "date": "2025-09-14",
-    "description": "Dreaming with God (Part 1 to Part 3) – Pst. Joshua Iyemifokhae In this powerful three-part teaching, Pastor Joshua Iyemifokhae unveils the mystery of partnering with God through the power...",
-    "category": "Faith",
-    "videoUrl": "",
-    "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DREAMING-WITH-GOD-WITH-JOSHUA-IYEMIFOKHAE-part-3.mp3",
-    "audios": [],
+    "audios": [
+      {
+        "id": "sermon_dreaming-with-god-part-1-to-part-3-by-pst-joshua-iyemifokhae_part_1",
+        "title": "Part 1",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DREAMING-WITH-GOD-BY-PASTOR-JOSHUA-IYEMIFOKHAE-.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_dreaming-with-god-part-1-to-part-3-by-pst-joshua-iyemifokhae_part_2",
+        "title": "Part 2",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DREAMING-WITH-GOD-BY-PASTOR-JOSHUA-IYEMIFOKHAE-Pt-2.mp3",
+        "duration": "45:00"
+      },
+      {
+        "id": "sermon_dreaming-with-god-part-1-to-part-3-by-pst-joshua-iyemifokhae_part_3",
+        "title": "Part 3",
+        "audioUrl": "https://joshuasgeneration.net/wp-content/uploads/2025/09/DREAMING-WITH-GOD-WITH-JOSHUA-IYEMIFOKHAE-part-3.mp3",
+        "duration": "45:00"
+      }
+    ],
     "audience": "public"
   },
   {
@@ -1653,7 +1469,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/photo_2025-08-29_19-59-13.jpg",
-    "views": 0,
+    "views": 876,
     "downloads": 0,
     "date": "2025-09-12",
     "description": "In this prophetic teaching, Pastor Joshua Iyemifokhae reveals the believer’s God-given power and authority in Christ. You will discover how to exercise dominion over spiritual attacks, command situ...",
@@ -1685,7 +1501,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/09/photo_2025-09-05_17-45-03.jpg",
-    "views": 0,
+    "views": 5941,
     "downloads": 0,
     "date": "2025-09-12",
     "description": "Favour Declaration by Pastor Joshua Iyemifokhae Step into a new atmosphere of supernatural favour with this powerful prophetic confession. As you listen and declare these words, you are aligning yo...",
@@ -1717,7 +1533,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/07/Flux_Dev_Joshua_is_seated_and_smiling_2.jpg",
-    "views": 0,
+    "views": 568,
     "downloads": 0,
     "date": "2025-07-22",
     "description": "Unlock the Power of Godly Imagination – Part 2 Your mind is not a playground. It is a spiritual gateway! In this explosive continuation, Pastor Joshua Iyemifokhae dives deeper into...",
@@ -1749,7 +1565,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/07/photo_2025-07-10_13-49-49.webp",
-    "views": 0,
+    "views": 511,
     "downloads": 0,
     "date": "2025-07-10",
     "description": "The Holy Spirit The Holy Spirit is not a feeling. He is not a wind. He is a Person. He is the power, the voice, the fire, and the intelligence...",
@@ -1781,7 +1597,7 @@
     "speaker": "Apostle Joshua Iyemifokhae",
     "duration": "45:00",
     "thumbnail": "https://joshuasgeneration.net/wp-content/uploads/2025/02/photo_2025-07-02_17-45-15.webp",
-    "views": 0,
+    "views": 530,
     "downloads": 0,
     "date": "2025-07-10",
     "description": "🎧 LORD OPEN MY EYES TO SEE In this session, I taught on the mystery of illumination and spiritual sight. Until your eyes are opened, your destiny remains hidden. The...",
