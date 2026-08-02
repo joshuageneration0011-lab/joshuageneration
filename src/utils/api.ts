@@ -293,6 +293,68 @@ export const api = {
     return data.views;
   },
 
+  async incrementBookViews(id: string): Promise<number> {
+    const res = await fetch(`${API_BASE_URL}/api/books/${id}/view`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to increment book views');
+    const data = await res.json();
+    window.dispatchEvent(new Event('books_updated'));
+    return data.views;
+  },
+
+  async incrementBlogPostViews(id: string): Promise<number> {
+    const res = await fetch(`${API_BASE_URL}/api/blog/${id}/view`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to increment blog views');
+    const data = await res.json();
+    window.dispatchEvent(new Event('blog_updated'));
+    return data.views;
+  },
+
+  async getComments(itemType: 'sermon' | 'book' | 'blog', itemId: string): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/api/comments/${itemType}/${itemId}`);
+    if (!res.ok) throw new Error('Failed to retrieve comments');
+    return res.json();
+  },
+
+  async addComment(itemType: 'sermon' | 'book' | 'blog', itemId: string, comment: { name: string; text: string }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/comments/${itemType}/${itemId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(comment),
+    });
+    if (!res.ok) throw new Error('Failed to post comment');
+    return res.json();
+  },
+
+  async getAdminComments(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/comments`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to retrieve admin comments');
+    return res.json();
+  },
+
+  async approveComment(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/comments/${id}/approve`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to approve comment');
+  },
+
+  async deleteComment(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/comments/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete comment');
+  },
+
   async incrementSermonDownloads(id: string): Promise<number> {
     const res = await fetch(`${API_BASE_URL}/api/sermons/${id}/download`, {
       method: 'POST',

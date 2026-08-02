@@ -68,6 +68,7 @@ const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SUBSCRIBERS_FILE = path.join(DATA_DIR, 'subscribers.json');
 const TESTIMONIES_FILE = path.join(DATA_DIR, 'testimonies.json');
+const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 
 // In-memory sessions store
@@ -355,6 +356,10 @@ function initLocalData() {
     fs.writeFileSync(TESTIMONIES_FILE, JSON.stringify(defaultTestimonies, null, 2), 'utf-8');
     console.log('Initialized local testimonies database.');
   }
+  if (!fs.existsSync(COMMENTS_FILE)) {
+    fs.writeFileSync(COMMENTS_FILE, JSON.stringify([], null, 2), 'utf-8');
+    console.log('Initialized local comments database.');
+  }
 }
 
 // --- Combined DB Initializer ---
@@ -435,6 +440,7 @@ async function initDb() {
       try {
         await pool.query("ALTER TABLE books ADD COLUMN IF NOT EXISTS downloads INT DEFAULT 0");
         await pool.query("ALTER TABLE books ADD COLUMN IF NOT EXISTS pdfs JSONB DEFAULT '[]'::jsonb");
+        await pool.query("ALTER TABLE books ADD COLUMN IF NOT EXISTS views INT DEFAULT 0");
       } catch (err) {
         console.warn("Failed to migrate books table:", err.message);
       }
@@ -456,6 +462,12 @@ async function initDb() {
           slug VARCHAR
         );
       `);
+
+      try {
+        await pool.query("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS views INT DEFAULT 0");
+      } catch (err) {
+        console.warn("Failed to migrate blog_posts table:", err.message);
+      }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS radio (
@@ -517,7 +529,7 @@ async function initDb() {
       }
 
       // Safe migration: add new columns first (idempotent), THEN remove old ones
-      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference', 'adsense_auto_code', 'adsense_above_blog_code', 'adsense_center_blog_code', 'adsense_beneath_blog_code']) {
+      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference', 'adsense_auto_code', 'adsense_above_blog_code', 'adsense_center_blog_code', 'adsense_beneath_blog_code', 'filter_words']) {
         try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS "${col}" TEXT DEFAULT ''`); } catch (e) { console.error('Migration error:', e); }
       }
 
@@ -622,6 +634,18 @@ async function initDb() {
           image_url TEXT,
           type VARCHAR DEFAULT 'written',
           date VARCHAR
+        );
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS comments (
+          id VARCHAR PRIMARY KEY,
+          item_type VARCHAR NOT NULL,
+          item_id VARCHAR NOT NULL,
+          name VARCHAR NOT NULL,
+          text TEXT NOT NULL,
+          created_at VARCHAR NOT NULL,
+          status VARCHAR DEFAULT 'approved'
         );
       `);
 
@@ -1436,6 +1460,158 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST Increment Book Views (Public)
+  if (pathname.startsWith('/api/books/') && pathname.endsWith('/view') && method === 'POST') {
+    try {
+      const id = pathname.substring('/api/books/'.length, pathname.length - '/view'.length);
+      let updatedViews = 0;
+      if (pool) {
+        const result = await pool.query('UPDATE books SET views = COALESCE(views, 0) + 1 WHERE id = $1 RETURNING views', [id]);
+        if (result.rowCount > 0) {
+          updatedViews = result.rows[0].views;
+        }
+      } else {
+        const data = JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf-8'));
+        const index = data.findIndex(x => x.id === id);
+        if (index !== -1) {
+          data[index].views = (data[index].views || 0) + 1;
+          updatedViews = data[index].views;
+          fs.writeFileSync(BOOKS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        }
+      }
+      sendJson(res, 200, { success: true, views: updatedViews });
+    } catch (e) {
+      console.error('Failed to increment book views:', e);
+      sendJson(res, 500, { error: 'Failed to increment book views' });
+    }
+    return;
+  }
+
+  // POST Increment Blog Post Views (Public)
+  if (pathname.startsWith('/api/blog/') && pathname.endsWith('/view') && method === 'POST') {
+    try {
+      const id = pathname.substring('/api/blog/'.length, pathname.length - '/view'.length);
+      let updatedViews = 0;
+      if (pool) {
+        const result = await pool.query('UPDATE blog_posts SET views = COALESCE(views, 0) + 1 WHERE id = $1 RETURNING views', [id]);
+        if (result.rowCount > 0) {
+          updatedViews = result.rows[0].views;
+        }
+      } else {
+        const data = JSON.parse(fs.readFileSync(BLOG_FILE, 'utf-8'));
+        const index = data.findIndex(x => x.id === id);
+        if (index !== -1) {
+          data[index].views = (data[index].views || 0) + 1;
+          updatedViews = data[index].views;
+          fs.writeFileSync(BLOG_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        }
+      }
+      sendJson(res, 200, { success: true, views: updatedViews });
+    } catch (e) {
+      console.error('Failed to increment blog post views:', e);
+      sendJson(res, 500, { error: 'Failed to increment blog post views' });
+    }
+    return;
+  }
+
+  // GET Comments for a specific item (Public)
+  if (pathname.startsWith('/api/comments/') && method === 'GET') {
+    try {
+      const parts = pathname.split('/');
+      if (parts.length >= 5) {
+        const itemType = parts[3]; // 'sermon' | 'book' | 'blog'
+        const itemId = parts[4];
+        let comments = [];
+
+        if (pool) {
+          const result = await pool.query(
+            'SELECT * FROM comments WHERE item_type = $1 AND item_id = $2 AND status = \'approved\' ORDER BY created_at DESC',
+            [itemType, itemId]
+          );
+          comments = result.rows;
+        } else {
+          const data = JSON.parse(fs.readFileSync(COMMENTS_FILE, 'utf-8'));
+          comments = data.filter(c => c.item_type === itemType && c.item_id === itemId && c.status === 'approved');
+          comments.sort((a, b) => b.created_at.localeCompare(a.created_at));
+        }
+
+        sendJson(res, 200, comments);
+      } else {
+        sendJson(res, 400, { error: 'Invalid comments route parameters' });
+      }
+    } catch (e) {
+      console.error('Failed to get comments:', e);
+      sendJson(res, 500, { error: 'Failed to get comments' });
+    }
+    return;
+  }
+
+  // POST Comment (Public)
+  if (pathname.startsWith('/api/comments/') && method === 'POST') {
+    try {
+      const parts = pathname.split('/');
+      if (parts.length >= 5) {
+        const itemType = parts[3]; // 'sermon' | 'book' | 'blog'
+        const itemId = parts[4];
+        const { name, text } = await getJsonBody(req);
+        if (!name || !text) {
+          sendJson(res, 400, { error: 'Name and comment text are required' });
+          return;
+        }
+
+        let filterWordsStr = '';
+        if (pool) {
+          const result = await pool.query('SELECT filter_words FROM settings WHERE id = 1');
+          if (result.rowCount > 0) filterWordsStr = result.rows[0].filter_words || '';
+        } else {
+          const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+          filterWordsStr = settings.filter_words || '';
+        }
+
+        const filterWords = filterWordsStr.split(',')
+          .map(w => w.trim().toLowerCase())
+          .filter(Boolean);
+
+        const linkPattern = /https?:\/\/|www\.|[a-z0-9]+\.(com|net|org|edu|gov|mil|biz|info|mobi|name|xyz|ly|gl|co|cc|tv|me)/i;
+        const containsLink = linkPattern.test(text);
+
+        const textLower = text.toLowerCase();
+        const containsBadWord = filterWords.some(word => textLower.includes(word));
+
+        const status = (containsLink || containsBadWord) ? 'blocked' : 'approved';
+
+        const newComment = {
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+          item_type: itemType,
+          item_id: itemId,
+          name: name.trim(),
+          text: text.trim(),
+          created_at: new Date().toISOString(),
+          status: status
+        };
+
+        if (pool) {
+          await pool.query(
+            'INSERT INTO comments (id, item_type, item_id, name, text, created_at, status) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [newComment.id, newComment.item_type, newComment.item_id, newComment.name, newComment.text, newComment.created_at, newComment.status]
+          );
+        } else {
+          const data = JSON.parse(fs.readFileSync(COMMENTS_FILE, 'utf-8'));
+          data.unshift(newComment);
+          fs.writeFileSync(COMMENTS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        }
+
+        sendJson(res, 200, { success: true, comment: newComment });
+      } else {
+        sendJson(res, 400, { error: 'Invalid comments route parameters' });
+      }
+    } catch (e) {
+      console.error('Failed to post comment:', e);
+      sendJson(res, 500, { error: 'Failed to post comment' });
+    }
+    return;
+  }
+
   // POST Increment Sermon Downloads (Public)
   if (pathname.startsWith('/api/sermons/') && pathname.endsWith('/download') && method === 'POST') {
     try {
@@ -1608,6 +1784,7 @@ const server = http.createServer(async (req, res) => {
           selarUrl: row.selar_url,
           pages: row.pages,
           downloads: row.downloads || 0,
+          views: row.views || 0,
           pdfs: row.pdfs ? (typeof row.pdfs === 'string' ? JSON.parse(row.pdfs) : row.pdfs) : (typeof row.chapters === 'string' ? JSON.parse(row.chapters) : row.chapters)
         }));
         sendJson(res, 200, books);
@@ -1639,7 +1816,8 @@ const server = http.createServer(async (req, res) => {
           seoTitle: row.seo_title,
           seoDescription: row.seo_description,
           seoKeywords: row.seo_keywords,
-          slug: row.slug
+          slug: row.slug,
+          views: row.views || 0
         }));
         sendJson(res, 200, posts);
       } else {
@@ -1962,11 +2140,12 @@ const server = http.createServer(async (req, res) => {
         adsense_auto_code: '',
         adsense_above_blog_code: '',
         adsense_center_blog_code: '',
-        adsense_beneath_blog_code: ''
+        adsense_beneath_blog_code: '',
+        filter_words: ''
       };
 
       if (pool) {
-        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code" FROM settings WHERE id = 1');
+        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words" FROM settings WHERE id = 1');
         const row = rows[0] || {};
         const responseData = {};
         for (const key in defaults) {
@@ -2035,11 +2214,12 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/admin/settings' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code" FROM settings WHERE id = 1');
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words" FROM settings WHERE id = 1');
         sendJson(res, 200, result.rows[0] || { 
           flutterwave_prophetic_client_id: '', flutterwave_prophetic_client_secret: '',
           flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '',
-          adsense_auto_code: '', adsense_above_blog_code: '', adsense_center_blog_code: '', adsense_beneath_blog_code: ''
+          adsense_auto_code: '', adsense_above_blog_code: '', adsense_center_blog_code: '', adsense_beneath_blog_code: '',
+          filter_words: ''
         });
       } else {
         const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
@@ -2079,7 +2259,8 @@ const server = http.createServer(async (req, res) => {
             "adsense_auto_code" = $18,
             "adsense_above_blog_code" = $19,
             "adsense_center_blog_code" = $20,
-            "adsense_beneath_blog_code" = $21
+            "adsense_beneath_blog_code" = $21,
+            "filter_words" = $22
            WHERE id = 1`,
           [
             data.flutterwave_prophetic_client_id || '',
@@ -2102,7 +2283,8 @@ const server = http.createServer(async (req, res) => {
             data.adsense_auto_code || '',
             data.adsense_above_blog_code || '',
             data.adsense_center_blog_code || '',
-            data.adsense_beneath_blog_code || ''
+            data.adsense_beneath_blog_code || '',
+            data.filter_words || ''
           ]
         );
       } else {
@@ -2498,8 +2680,8 @@ const server = http.createServer(async (req, res) => {
 
       if (pool) {
         await pool.query(
-          `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, downloads, pdfs)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, downloads, pdfs, views)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
            ON CONFLICT (id) DO UPDATE SET
              title = EXCLUDED.title,
              author = EXCLUDED.author,
@@ -2512,8 +2694,9 @@ const server = http.createServer(async (req, res) => {
              selar_url = EXCLUDED.selar_url,
              pages = EXCLUDED.pages,
              downloads = EXCLUDED.downloads,
-             pdfs = EXCLUDED.pdfs`,
-          [item.id, item.title, item.author, item.coverUrl || '', item.description || '', item.category || '', item.downloadUrl || '', item.rating || 4.8, item.amazonUrl || '', item.selarUrl || '', item.pages || 150, item.downloads || 0, JSON.stringify(item.pdfs || [])]
+             pdfs = EXCLUDED.pdfs,
+             views = EXCLUDED.views`,
+          [item.id, item.title, item.author, item.coverUrl || '', item.description || '', item.category || '', item.downloadUrl || '', item.rating || 4.8, item.amazonUrl || '', item.selarUrl || '', item.pages || 150, item.downloads || 0, JSON.stringify(item.pdfs || []), item.views || 0]
         );
       } else {
         const data = JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf-8'));
@@ -2561,8 +2744,8 @@ const server = http.createServer(async (req, res) => {
 
       if (pool) {
         await pool.query(
-          `INSERT INTO blog_posts (id, title, author, date, read_time, excerpt, image_url, category, content, seo_title, seo_description, seo_keywords, slug)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          `INSERT INTO blog_posts (id, title, author, date, read_time, excerpt, image_url, category, content, seo_title, seo_description, seo_keywords, slug, views)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
            ON CONFLICT (id) DO UPDATE SET
              title = EXCLUDED.title,
              author = EXCLUDED.author,
@@ -2575,8 +2758,9 @@ const server = http.createServer(async (req, res) => {
              seo_title = EXCLUDED.seo_title,
              seo_description = EXCLUDED.seo_description,
              seo_keywords = EXCLUDED.seo_keywords,
-             slug = EXCLUDED.slug`,
-          [item.id, item.title, item.author, item.date, item.readTime, item.excerpt, item.imageUrl, item.category, item.content, item.seoTitle || item.title, item.seoDescription || item.excerpt, item.seoKeywords || '', item.slug || '']
+             slug = EXCLUDED.slug,
+             views = EXCLUDED.views`,
+          [item.id, item.title, item.author, item.date, item.readTime, item.excerpt, item.imageUrl, item.category, item.content, item.seoTitle || item.title, item.seoDescription || item.excerpt, item.seoKeywords || '', item.slug || '', item.views || 0]
         );
       } else {
         const data = JSON.parse(fs.readFileSync(BLOG_FILE, 'utf-8'));
@@ -2961,6 +3145,88 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       console.error('Failed to delete message:', e);
       sendJson(res, 500, { error: 'Failed to delete message' });
+    }
+    return;
+  }
+
+  // GET /api/admin/comments (Protected)
+  if (pathname === '/api/admin/comments' && method === 'GET') {
+    try {
+      let comments = [];
+      if (pool) {
+        const result = await pool.query(`
+          SELECT c.*, 
+                 COALESCE(s.title, b.title, p.title) as item_title
+          FROM comments c
+          LEFT JOIN sermons s ON c.item_type = 'sermon' AND c.item_id = s.id
+          LEFT JOIN books b ON c.item_type = 'book' AND c.item_id = b.id
+          LEFT JOIN blog_posts p ON c.item_type = 'blog' AND c.item_id = p.id
+          ORDER BY c.created_at DESC
+        `);
+        comments = result.rows;
+      } else {
+        const rawComments = JSON.parse(fs.readFileSync(COMMENTS_FILE, 'utf-8'));
+        const sermons = fs.existsSync(SERMONS_FILE) ? JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8')) : [];
+        const books = fs.existsSync(BOOKS_FILE) ? JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf-8')) : [];
+        const posts = fs.existsSync(BLOG_FILE) ? JSON.parse(fs.readFileSync(BLOG_FILE, 'utf-8')) : [];
+
+        const itemTitleMap = {};
+        sermons.forEach(s => { itemTitleMap[`sermon_${s.id}`] = s.title; });
+        books.forEach(b => { itemTitleMap[`book_${b.id}`] = b.title; });
+        posts.forEach(p => { itemTitleMap[`blog_${p.id}`] = p.title; });
+
+        comments = rawComments.map(c => ({
+          ...c,
+          item_title: itemTitleMap[`${c.item_type}_${c.item_id}`] || 'Unknown Item'
+        }));
+      }
+      sendJson(res, 200, comments);
+    } catch (e) {
+      console.error('Failed to get admin comments:', e);
+      sendJson(res, 500, { error: 'Failed to get admin comments' });
+    }
+    return;
+  }
+
+  // PUT /api/admin/comments/:id/approve (Protected)
+  if (pathname.startsWith('/api/admin/comments/') && pathname.endsWith('/approve') && method === 'PUT') {
+    try {
+      const parts = pathname.split('/');
+      const id = parts[parts.length - 2];
+      if (pool) {
+        await pool.query('UPDATE comments SET status = \'approved\' WHERE id = $1', [id]);
+      } else {
+        const data = JSON.parse(fs.readFileSync(COMMENTS_FILE, 'utf-8'));
+        const index = data.findIndex(c => c.id === id);
+        if (index !== -1) {
+          data[index].status = 'approved';
+          fs.writeFileSync(COMMENTS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        }
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to approve comment:', e);
+      sendJson(res, 500, { error: 'Failed to approve comment' });
+    }
+    return;
+  }
+
+  // DELETE /api/admin/comments/:id (Protected)
+  if (pathname.startsWith('/api/admin/comments/') && method === 'DELETE') {
+    try {
+      const parts = pathname.split('/');
+      const id = parts[parts.length - 1];
+      if (pool) {
+        await pool.query('DELETE FROM comments WHERE id = $1', [id]);
+      } else {
+        const data = JSON.parse(fs.readFileSync(COMMENTS_FILE, 'utf-8'));
+        const filtered = data.filter(c => c.id !== id);
+        fs.writeFileSync(COMMENTS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Failed to delete comment:', e);
+      sendJson(res, 500, { error: 'Failed to delete comment' });
     }
     return;
   }

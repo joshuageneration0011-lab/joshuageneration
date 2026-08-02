@@ -1,6 +1,6 @@
 import { resolveApiUrl, api } from '@/utils/api';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { ArrowLeft, Calendar, Clock, Share2, Link, Check, MessageSquare, Heart } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Share2, Link, Check, MessageSquare, Heart, Eye } from 'lucide-react';
 import type { BlogPost } from '@/types';
 import { updatePageSEO } from '@/utils/seo';
 import { isItemLiked, toggleLikeItem } from '@/data/likesStore';
@@ -54,16 +54,66 @@ function AdSlot({ htmlCode }: { htmlCode?: string }) {
 export default function BlogPostReader({ posts, post, onBack, onPostSelect }: BlogPostReaderProps) {
   const [isLiked, setIsLiked] = useState(() => isItemLiked('blog', post.id));
   const [settings, setSettings] = useState<any>(null);
+  const [localViews, setLocalViews] = useState(post.views || 0);
+
+  // Comments System State
+  const [comments, setComments] = useState<any[]>([]);
+  const [newCommentName, setNewCommentName] = useState('');
+  const [newCommentText, setNewCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentSuccess, setCommentSuccess] = useState(false);
 
   useEffect(() => {
     setIsLiked(isItemLiked('blog', post.id));
-  }, [post.id]);
+    setLocalViews(post.views || 0);
+  }, [post.id, post.views]);
 
   useEffect(() => {
     api.getPublicSettings()
       .then(data => setSettings(data))
       .catch(err => console.error('Failed to load public settings for AdSense:', err));
   }, []);
+
+  // Increment views and load comments on mount
+  useEffect(() => {
+    api.incrementBlogPostViews(post.id)
+      .then((newViews) => setLocalViews(newViews))
+      .catch((err) => console.error('Failed to increment post views:', err));
+
+    api.getComments('blog', post.id)
+      .then(data => setComments(data))
+      .catch(err => console.error('Failed to load comments:', err));
+  }, [post.id]);
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentName.trim() || !newCommentText.trim() || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    setCommentSuccess(false);
+
+    try {
+      const res = await api.addComment('blog', post.id, {
+        name: newCommentName.trim(),
+        text: newCommentText.trim()
+      });
+
+      setCommentSuccess(true);
+      setNewCommentText('');
+
+      if (res.comment.status === 'approved') {
+        setComments(prev => [res.comment, ...prev]);
+      } else {
+        alert('Thank you! Your comment has been submitted and is awaiting moderation.');
+      }
+      setTimeout(() => setCommentSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit comment. Please try again.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   // Programmatically inject the center ad block
   useEffect(() => {
@@ -127,53 +177,6 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
   }, [post.id]);
 
   const [copied, setCopied] = useState(false);
-  const [comments, setComments] = useState<{ id: string; name: string; text: string; date: string }[]>([]);
-  const [newCommentName, setNewCommentName] = useState('');
-  const [newCommentText, setNewCommentText] = useState('');
-
-  useEffect(() => {
-    const storageKey = `jg_blog_comments_${post.id}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      setComments(JSON.parse(stored));
-    } else {
-      const initial = [
-        {
-          id: '1',
-          name: 'Sarah Adebayo',
-          text: 'This was such a timely and encouraging word. Thank you for sharing these powerful insights!',
-          date: '2 hours ago'
-        },
-        {
-          id: '2',
-          name: 'Brother David',
-          text: 'Amen! The message on divine authority really resonated with me. God bless the ministry team.',
-          date: 'Yesterday'
-        }
-      ];
-      localStorage.setItem(storageKey, JSON.stringify(initial));
-      setComments(initial);
-    }
-  }, [post.id]);
-
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCommentName.trim() || !newCommentText.trim()) return;
-
-    const newComment = {
-      id: Date.now().toString(),
-      name: newCommentName.trim(),
-      text: newCommentText.trim(),
-      date: 'Just now'
-    };
-
-    const updated = [newComment, ...comments];
-    setComments(updated);
-    localStorage.setItem(`jg_blog_comments_${post.id}`, JSON.stringify(updated));
-
-    setNewCommentName('');
-    setNewCommentText('');
-  };
 
   // Dynamic SEO Configuration for the specific blog post article
   useEffect(() => {
@@ -274,6 +277,11 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
               <span className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4" />
                 {post.readTime}
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1.5">
+                <Eye className="w-4 h-4" />
+                {localViews.toLocaleString()} views
               </span>
             </div>
 
@@ -382,10 +390,10 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      disabled={!newCommentName.trim() || !newCommentText.trim()}
+                      disabled={!newCommentName.trim() || !newCommentText.trim() || isSubmittingComment}
                       className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-royal-blue-600 to-royal-blue-700 hover:from-royal-blue-700 hover:to-royal-blue-800 disabled:opacity-50 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md shadow-royal-blue-500/10 cursor-pointer"
                     >
-                      Post Comment
+                      {isSubmittingComment ? 'Posting...' : 'Post Comment'}
                     </button>
                   </div>
                 </div>
@@ -406,9 +414,11 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
                         <div className="flex-1">
                           <div className="flex items-baseline justify-between mb-1">
                             <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
-                            <span className="text-[10px] font-semibold text-gray-400">{comment.date}</span>
+                            <span className="text-[10px] font-semibold text-gray-400">
+                              {new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
                           </div>
-                          <p className="text-gray-600 text-sm leading-relaxed">{comment.text}</p>
+                          <p className="text-gray-605 text-sm leading-relaxed whitespace-pre-line">{comment.text}</p>
                         </div>
                       </div>
                     );

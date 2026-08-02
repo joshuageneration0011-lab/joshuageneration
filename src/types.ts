@@ -40,6 +40,7 @@ export interface Book {
   downloads?: number;
   pages?: number;
   rating?: number;
+  views?: number;
 }
 
 export interface Event {
@@ -71,6 +72,7 @@ export interface BlogPost {
   seoKeywords?: string;
   slug?: string;
   isDeleted?: boolean;
+  views?: number;
 }
 
 export interface Testimony {
@@ -126,6 +128,7 @@ export interface Settings {
   adsense_above_blog_code?: string;
   adsense_center_blog_code?: string;
   adsense_beneath_blog_code?: string;
+  filter_words?: string;
 }
 
 

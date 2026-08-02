@@ -1,8 +1,9 @@
-import { ArrowLeft, BookOpen, Download, ExternalLink, Heart } from 'lucide-react';
+import { ArrowLeft, BookOpen, Download, ExternalLink, Heart, MessageSquare, Eye } from 'lucide-react';
 import type { Book } from '@/types';
 import { useState, useEffect } from 'react';
 import { isItemLiked, toggleLikeItem } from '@/data/likesStore';
 import { cn } from '@/utils/cn';
+import { api } from '@/utils/api';
 
 interface BookReaderProps {
   book: Book;
@@ -11,10 +12,19 @@ interface BookReaderProps {
 
 export default function BookReader({ book, onBack }: BookReaderProps) {
   const [isLiked, setIsLiked] = useState(() => isItemLiked('book', book.id));
+  const [localViews, setLocalViews] = useState(book.views || 0);
+
+  // Comments State
+  const [comments, setComments] = useState<any[]>([]);
+  const [newCommentName, setNewCommentName] = useState('');
+  const [newCommentText, setNewCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentSuccess, setCommentSuccess] = useState(false);
 
   useEffect(() => {
     setIsLiked(isItemLiked('book', book.id));
-  }, [book.id]);
+    setLocalViews(book.views || 0);
+  }, [book.id, book.views]);
 
   useEffect(() => {
     const handleLikesUpdated = () => {
@@ -23,6 +33,48 @@ export default function BookReader({ book, onBack }: BookReaderProps) {
     window.addEventListener('likes_updated', handleLikesUpdated);
     return () => window.removeEventListener('likes_updated', handleLikesUpdated);
   }, [book.id]);
+
+  useEffect(() => {
+    // Increment book views on load
+    api.incrementBookViews(book.id)
+      .then((newViews) => setLocalViews(newViews))
+      .catch((err) => console.error('Failed to increment book views:', err));
+
+    // Fetch comments
+    api.getComments('book', book.id)
+      .then(data => setComments(data))
+      .catch(err => console.error('Failed to load comments:', err));
+  }, [book.id]);
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentName.trim() || !newCommentText.trim() || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    setCommentSuccess(false);
+
+    try {
+      const res = await api.addComment('book', book.id, {
+        name: newCommentName.trim(),
+        text: newCommentText.trim()
+      });
+
+      setCommentSuccess(true);
+      setNewCommentText('');
+
+      if (res.comment.status === 'approved') {
+        setComments(prev => [res.comment, ...prev]);
+      } else {
+        alert('Thank you! Your comment has been submitted and is awaiting moderation.');
+      }
+      setTimeout(() => setCommentSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit comment. Please try again.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   const pdfs = book.pdfs || [];
 
@@ -98,6 +150,10 @@ export default function BookReader({ book, onBack }: BookReaderProps) {
                   {Number(book.downloads).toLocaleString()} Downloads
                 </div>
               )}
+              <div className="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-bold flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                {localViews.toLocaleString()} Views
+              </div>
             </div>
             <div className="flex items-start justify-between gap-4 mb-2">
               <h1 className="text-3xl sm:text-4xl font-extrabold font-serif leading-tight">
@@ -159,6 +215,84 @@ export default function BookReader({ book, onBack }: BookReaderProps) {
 
           </div>
         </div>
+
+        {/* Comments Section */}
+        <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-200 mt-8">
+          <div className="flex items-center gap-2 mb-6">
+            <MessageSquare className="w-5 h-5 text-royal-blue-600" />
+            <h3 className="text-xl font-bold text-gray-900">
+              Comments ({comments.length})
+            </h3>
+          </div>
+
+          {/* Comment Form */}
+          <form onSubmit={handleAddComment} className="mb-8 bg-gray-55 border border-gray-100 p-6 rounded-2xl">
+            <h4 className="text-sm font-bold text-gray-900 mb-4">Leave a Comment</h4>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label htmlFor="book-comment-name" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Your Name</label>
+                <input
+                  id="book-comment-name"
+                  type="text"
+                  value={newCommentName}
+                  onChange={(e) => setNewCommentName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm transition-all bg-white text-gray-800"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="book-comment-text" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Your Comment</label>
+                <textarea
+                  id="book-comment-text"
+                  rows={4}
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  placeholder="Write your comment here..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm transition-all resize-none bg-white text-gray-800"
+                  required
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={!newCommentName.trim() || !newCommentText.trim() || isSubmittingComment}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-royal-blue-600 to-royal-blue-700 hover:from-royal-blue-700 hover:to-royal-blue-800 disabled:opacity-50 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md shadow-royal-blue-500/10 cursor-pointer border-none"
+                >
+                  {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Comments List */}
+          <div className="space-y-4">
+            {comments.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-4">No comments yet. Share your thoughts with other readers!</p>
+            ) : (
+              comments.map((comment) => {
+                const initials = comment.name ? comment.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                return (
+                  <div key={comment.id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
+                      {initials}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-baseline justify-between mb-1">
+                        <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
+                        <span className="text-[9px] font-semibold text-gray-400">
+                          {new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <p className="text-gray-650 text-xs leading-relaxed whitespace-pre-line">{comment.text}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );

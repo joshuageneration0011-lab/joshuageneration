@@ -1193,6 +1193,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
   const [audioUrl, setAudioUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [views, setViews] = useState('0');
   const [audioUploadWarning, setAudioUploadWarning] = useState('');
 
   // Direct Upload State
@@ -1256,6 +1257,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
     setAudioFile(null);
     setIsUploading(false);
     setUploadProgress(0);
+    setViews('0');
     setIsFormOpen(true);
   };
 
@@ -1272,6 +1274,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
     setVideoUrl(sermon.videoUrl || '');
     setThumbnailSourceMode(sermon.thumbnail && sermon.thumbnail.startsWith('/api/uploads/') ? 'upload' : 'url');
     setAudioSourceMode(sermon.audioUrl && sermon.audioUrl.startsWith('/api/uploads/') ? 'upload' : 'url');
+    setViews(String(sermon.views || '0'));
     
     const hasSeries = sermon.audios && sermon.audios.length > 0;
     setSermonType(hasSeries ? 'series' : 'single');
@@ -1464,7 +1467,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
         thumbnail: finalThumbnail.trim() || 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
         audioUrl: finalAudioUrl.trim(),
         videoUrl: videoUrl.trim(),
-        views: editingSermon ? editingSermon.views : 0,
+        views: Number(views) || 0,
         downloads: editingSermon ? (editingSermon.downloads || 0) : 0,
         audios: sermonType === 'series' ? finalAudiosList : [],
         audience: editingSermon ? (editingSermon.audience || audience) : audience
@@ -1750,7 +1753,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-550 uppercase tracking-wider mb-1.5">Category</label>
                   <select 
@@ -1785,6 +1788,16 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
                     onChange={(e) => setDuration(e.target.value)} 
                     placeholder="45:00"
                     className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-450 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-555 uppercase tracking-wider mb-1.5">Views Override</label>
+                  <input 
+                    type="number" 
+                    value={views} 
+                    onChange={(e) => setViews(e.target.value)} 
+                    placeholder="0"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
                   />
                 </div>
               </div>

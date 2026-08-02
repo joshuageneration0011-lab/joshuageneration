@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Play, Pause, Volume2, VolumeX, Download, Copy,
-  Headphones, Calendar, Eye, Clock, Check, Heart
+  Headphones, Calendar, Eye, Clock, Check, Heart, MessageSquare
 } from 'lucide-react';
 import { isItemLiked, toggleLikeItem } from '@/data/likesStore';
 import type { Sermon } from '@/types';
@@ -24,12 +24,20 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   const [notes, setNotes] = useState('');
   const [localViews, setLocalViews] = useState(sermon.views);
   const [localDownloads, setLocalDownloads] = useState(sermon.downloads || 0);
-  const [hasIncrementedView, setHasIncrementedView] = useState(false);
   const [isLiked, setIsLiked] = useState(() => isItemLiked('sermon', sermon.id));
+
+  // Comments System State
+  const [comments, setComments] = useState<any[]>([]);
+  const [newCommentName, setNewCommentName] = useState('');
+  const [newCommentText, setNewCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentSuccess, setCommentSuccess] = useState(false);
 
   useEffect(() => {
     setIsLiked(isItemLiked('sermon', sermon.id));
-  }, [sermon.id]);
+    setLocalViews(sermon.views);
+    setLocalDownloads(sermon.downloads || 0);
+  }, [sermon.id, sermon.views, sermon.downloads]);
 
   useEffect(() => {
     const handleLikesUpdated = () => {
@@ -38,6 +46,49 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     window.addEventListener('likes_updated', handleLikesUpdated);
     return () => window.removeEventListener('likes_updated', handleLikesUpdated);
   }, [sermon.id]);
+
+  // Load comments and views on mount
+  useEffect(() => {
+    api.incrementSermonViews(sermon.id)
+      .then((newViews) => {
+        setLocalViews(newViews);
+      })
+      .catch((err) => console.error('Failed to increment views:', err));
+
+    api.getComments('sermon', sermon.id)
+      .then(data => setComments(data))
+      .catch(err => console.error('Failed to load comments:', err));
+  }, [sermon.id]);
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentName.trim() || !newCommentText.trim() || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    setCommentSuccess(false);
+
+    try {
+      const res = await api.addComment('sermon', sermon.id, {
+        name: newCommentName.trim(),
+        text: newCommentText.trim()
+      });
+
+      setCommentSuccess(true);
+      setNewCommentText('');
+
+      if (res.comment.status === 'approved') {
+        setComments(prev => [res.comment, ...prev]);
+      } else {
+        alert('Thank you! Your comment has been submitted and is awaiting moderation.');
+      }
+      setTimeout(() => setCommentSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit comment. Please try again.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   // Series additions
   const tracks = (sermon.audios && sermon.audios.length > 0)
@@ -162,7 +213,6 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     localStorage.setItem(`jgen_notes_${sermon.id}`, val);
   };
 
-  // Play/Pause handler
   const togglePlay = () => {
     const media = activeMediaRef.current;
     if (!media) return;
@@ -171,15 +221,6 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
       media.pause();
     } else {
       media.play().catch((err) => console.log('Playback failed:', err));
-      // Increment views on first play
-      if (!hasIncrementedView) {
-        setHasIncrementedView(true);
-        api.incrementSermonViews(sermon.id)
-          .then((newViews) => {
-            setLocalViews(newViews);
-          })
-          .catch((err) => console.error('Failed to increment views:', err));
-      }
     }
     setIsPlaying((prev) => !prev);
   };
@@ -266,7 +307,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
   // Related Sermons (Filter out current, recommend same category/speaker)
   const relatedSermons = sermons
-    .filter((s) => s.id !== sermon.id)
+    .filter((s) => s.id !== sermon.id && (s.audience || 'public') === (sermon.audience || 'public'))
     .slice(0, 4);
 
   return (
@@ -610,8 +651,85 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 value={notes}
                 onChange={(e) => handleNotesChange(e.target.value)}
                 placeholder="Start typing your study notes here during the sermon..."
-                className="w-full min-h-[160px] p-4 bg-gray-50/50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:bg-white transition-all resize-y"
+                className="w-full min-h-[160px] p-4 bg-gray-55/50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:bg-white transition-all resize-y"
               />
+            </div>
+
+            {/* Comments Section */}
+            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100 mt-6">
+              <div className="flex items-center gap-2 mb-6">
+                <MessageSquare className="w-5 h-5 text-royal-blue-600" />
+                <h3 className="text-xl font-bold text-gray-900">
+                  Comments ({comments.length})
+                </h3>
+              </div>
+
+              {/* Comment Form */}
+              <form onSubmit={handleAddComment} className="mb-8 bg-gray-50 border border-gray-100 p-6 rounded-2xl">
+                <h4 className="text-sm font-bold text-gray-900 mb-4">Share Your Thoughts</h4>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label htmlFor="comment-name" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Your Name</label>
+                    <input
+                      id="comment-name"
+                      type="text"
+                      value={newCommentName}
+                      onChange={(e) => setNewCommentName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm transition-all bg-white text-gray-800"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="comment-text" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Your Comment</label>
+                    <textarea
+                      id="comment-text"
+                      rows={4}
+                      value={newCommentText}
+                      onChange={(e) => setNewCommentText(e.target.value)}
+                      placeholder="Write a comment..."
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 text-sm transition-all resize-none bg-white text-gray-800"
+                      required
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={!newCommentName.trim() || !newCommentText.trim() || isSubmittingComment}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-royal-blue-600 to-royal-blue-700 hover:from-royal-blue-700 hover:to-royal-blue-800 disabled:opacity-50 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md shadow-royal-blue-500/10 cursor-pointer border-none"
+                    >
+                      {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              {/* Comments List */}
+              <div className="space-y-4">
+                {comments.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No comments yet. Be the first to share your thoughts!</p>
+                ) : (
+                  comments.map((comment) => {
+                    const initials = comment.name ? comment.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                    return (
+                      <div key={comment.id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
+                          {initials}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
+                            <span className="text-[9px] font-semibold text-gray-400">
+                              {new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                          <p className="text-gray-650 text-xs leading-relaxed whitespace-pre-line">{comment.text}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
           </div>
