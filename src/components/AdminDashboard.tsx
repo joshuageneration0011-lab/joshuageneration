@@ -2490,7 +2490,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
           <div className="relative min-h-screen flex items-center justify-center p-4">
-            <div className="relative bg-white dark:bg-gray-900 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 space-y-6">
+            <div className="relative bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 space-y-6">
               <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 className="text-lg font-bold text-gray-900">
                   {editingBook ? 'Edit Book Details' : 'Add New Book'}
@@ -2783,7 +2783,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       {bookToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBookToDelete(null)} />
-          <div className="relative bg-white dark:bg-gray-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center space-y-4">
+          <div className="relative bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center space-y-4">
             <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto text-red-500">
               <AlertTriangle className="w-6 h-6" />
             </div>

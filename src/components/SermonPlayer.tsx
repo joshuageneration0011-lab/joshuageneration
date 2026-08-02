@@ -47,6 +47,54 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const activeTrack = tracks[currentTrackIndex] || tracks[0];
 
+  const formatTrackTitle = (title: string, showDownloadWord: boolean = false) => {
+    let clean = title.trim();
+    if (/^part\s+\d+/i.test(clean)) {
+      const match = clean.match(/^part\s+(\d+)/i);
+      if (match) {
+        return showDownloadWord ? `Download Part ${match[1]}` : `Part ${match[1]}`;
+      }
+    }
+    if (/^full\s+message/i.test(clean)) {
+      return showDownloadWord ? "Download Full Message" : "Full Message";
+    }
+    return clean.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+
+  const getDownloadFilename = (trackTitle: string) => {
+    const cleanSermonTitle = sermon.title
+      .replace(/\s+part\s+\d+\s+to\s+\d+.*/i, '')
+      .replace(/\s+by\s+(Apostle|Pst|Pastor).*/i, '')
+      .trim();
+    
+    let trackPart = trackTitle.trim();
+    if (/^part\s+\d+/i.test(trackPart)) {
+      const match = trackPart.match(/^part\s+(\d+)/i);
+      if (match) {
+        trackPart = `Part_${match[1]}`;
+      }
+    } else {
+      trackPart = trackPart.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('_');
+    }
+
+    const sermonPart = cleanSermonTitle
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join('_')
+      .replace(/[^a-zA-Z0-9_]/g, '');
+
+    let filename = '';
+    if (sermonPart.toLowerCase().includes(trackPart.toLowerCase()) || trackPart.toLowerCase().includes(sermonPart.toLowerCase())) {
+      filename = `${sermonPart}.mp3`;
+    } else {
+      filename = `${trackPart}_${sermonPart}.mp3`;
+    }
+
+    // Explicitly capitalize 'God'
+    filename = filename.replace(/\bgod\b/gi, 'God');
+    return filename;
+  };
+
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const activeMediaRef = audioRef;
@@ -98,7 +146,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
       setTimeout(() => {
         const link = document.createElement('a');
         link.href = resolveApiUrl(track.audioUrl);
-        link.setAttribute('download', `${track.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`);
+        link.setAttribute('download', getDownloadFilename(track.title));
         link.setAttribute('target', '_blank');
         link.setAttribute('rel', 'noopener noreferrer');
         document.body.appendChild(link);
@@ -285,7 +333,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 <p className="text-white text-base font-bold text-center z-10 max-w-xs leading-snug">{sermon.title}</p>
                 {sermon.audios && sermon.audios.length > 0 && (
                   <p className="text-amber-400 text-xs font-bold mt-1 z-10">
-                    Playing: {activeTrack.title}
+                    Playing: {formatTrackTitle(activeTrack.title)}
                   </p>
                 )}
                 <p className="text-royal-blue-300 text-xs mt-1.5 z-10">{sermon.speaker}</p>
@@ -354,12 +402,12 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                     {activeTrack.audioUrl && (
                       <a
                         href={resolveApiUrl(activeTrack.audioUrl)}
-                        download={`${activeTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                        download={getDownloadFilename(activeTrack.title)}
                         onClick={handleDownloadIncrement}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/90 hover:text-white transition-all text-xs font-semibold"
-                        title={`Download ${activeTrack.title}`}
+                        title={`Download ${formatTrackTitle(activeTrack.title)}`}
                       >
                         <Download className="w-3.5 h-3.5" />
                         Download ({localDownloads || 0})
@@ -438,7 +486,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                           
                           <div className="min-w-0">
                             <p className={cn('text-sm font-bold truncate max-w-[280px]', isActive ? 'text-royal-blue-700' : 'text-gray-900')}>
-                              {track.title}
+                              {formatTrackTitle(track.title, true)}
                             </p>
                             <span className="text-[10px] text-gray-400 font-semibold">{track.duration}</span>
                           </div>
@@ -446,12 +494,12 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
                         <a
                           href={resolveApiUrl(track.audioUrl)}
-                          download={`${track.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                          download={getDownloadFilename(track.title)}
                           onClick={handleDownloadIncrement}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-2 rounded-lg hover:bg-gray-100 text-gray-450 hover:text-gray-700 transition-colors"
-                          title={`Download ${track.title}`}
+                          title={`Download ${formatTrackTitle(track.title)}`}
                         >
                           <Download className="w-4 h-4" />
                         </a>
@@ -521,7 +569,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 {activeTrack.audioUrl && (
                   <a
                     href={resolveApiUrl(activeTrack.audioUrl)}
-                    download={`${activeTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sermon.mp3`}
+                    download={getDownloadFilename(activeTrack.title)}
                     onClick={handleDownloadIncrement}
                     target="_blank"
                     rel="noopener noreferrer"

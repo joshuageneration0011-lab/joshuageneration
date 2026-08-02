@@ -32,3 +32,7 @@ scripts/remote_*.js
 scripts/show_*.js
 scripts/view_*.js
 /*.py
+
+# Private sermons and media files
+public/sermons/private_*
+public/thumbnails/private_*

@@ -4,13 +4,17 @@ const { Pool } = pkg;
 import path from 'path';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env file
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const vapidPublicKey = 'BJBaNfrwFP_ZX_Awp6_rgOoWJt42KKagStsZfInoih_gZyK7dDDogJA_2cm0JCNDY0erJ7g7_WRr8Xe3m_wZjls';
 const vapidPrivateKey = 'aKHYYiUWorSmhB8bGJc8lTlBDeP-1bgOd1QHU-MMzxo';
 webpush.setVapidDetails('mailto:hello@joshuagen.org', vapidPublicKey, vapidPrivateKey);
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
@@ -87,9 +91,28 @@ async function syncData() {
 
   // 2. Sync Sermons
   const sermonsFile = path.join(__dirname, 'data', 'sermons.json');
+  const privateSermonsFile = path.join(__dirname, 'private_sermons.json');
+  
+  let sermons = [];
   if (fs.existsSync(sermonsFile)) {
     try {
-      const sermons = JSON.parse(fs.readFileSync(sermonsFile, 'utf-8'));
+      sermons = JSON.parse(fs.readFileSync(sermonsFile, 'utf-8'));
+    } catch (e) {
+      console.error('Failed to parse sermons.json:', e);
+    }
+  }
+  
+  if (fs.existsSync(privateSermonsFile)) {
+    try {
+      const privateSermons = JSON.parse(fs.readFileSync(privateSermonsFile, 'utf-8'));
+      sermons = sermons.concat(privateSermons);
+    } catch (e) {
+      console.error('Failed to parse private_sermons.json:', e);
+    }
+  }
+
+  if (sermons.length > 0) {
+    try {
       const jsonIds = sermons.map(s => s.id.toString());
       
       const dbSermons = await pool.query('SELECT id FROM sermons');
@@ -105,15 +128,18 @@ async function syncData() {
         const check = await pool.query('SELECT id FROM sermons WHERE id = $1', [s.id]);
         if (check.rowCount === 0) {
           await pool.query(
-            `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-            [s.id, s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl || s.video_url, s.audioUrl || s.audio_url]
+            `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url, audios, audience)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            [s.id, s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl || s.video_url, s.audioUrl || s.audio_url, JSON.stringify(s.audios || []), s.audience || 'public']
           );
-          await sendPushNotification('New Sermon', s.title, `https://joshuasgeneration.com/sermon/${s.id}`);
+          // Only send push notifications for new public/non-private sermons
+          if (s.audience === 'public' || !s.audience) {
+            await sendPushNotification('New Sermon', s.title, `https://joshuasgeneration.com/sermon/${s.id}`);
+          }
         } else {
           await pool.query(
-            `UPDATE sermons SET title=$1, speaker=$2, duration=$3, thumbnail=$4, views=$5, downloads=$6, date=$7, description=$8, category=$9, video_url=$10, audio_url=$11 WHERE id=$12`,
-            [s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl || s.video_url, s.audioUrl || s.audio_url, s.id]
+            `UPDATE sermons SET title=$1, speaker=$2, duration=$3, thumbnail=$4, views=$5, downloads=$6, date=$7, description=$8, category=$9, video_url=$10, audio_url=$11, audios=$12, audience=$13 WHERE id=$14`,
+            [s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl || s.video_url, s.audioUrl || s.audio_url, JSON.stringify(s.audios || []), s.audience || 'public', s.id]
           );
         }
       }
