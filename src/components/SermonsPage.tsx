@@ -42,7 +42,7 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
 
   useEffect(() => {
     if (!audience || audience === 'public') {
-      setLocalSermons(sermons);
+      setLocalSermons(sermons.filter(s => s.audience === 'public' || !s.audience));
       setLocalLoading(isLoading);
     } else {
       setLocalLoading(true);

@@ -23,7 +23,8 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll, is
     return () => window.removeEventListener('likes_updated', handleLikesUpdated);
   }, []);
 
-  const featured = [...sermons]
+  const featured = sermons
+    .filter(s => s.audience === 'public' || !s.audience)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 8);
 
