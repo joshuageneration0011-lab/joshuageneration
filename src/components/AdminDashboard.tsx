@@ -4488,7 +4488,7 @@ function ModerationTab() {
 
 // ====== SETTINGS TAB ======
 function SettingsTab() {
-  const [activeSetting, setActiveSetting] = useState<'general' | 'home' | 'contact' | 'notifications' | 'appearance' | 'security' | 'integrations'>('general');
+  const [activeSetting, setActiveSetting] = useState<'general' | 'home' | 'contact' | 'notifications' | 'appearance' | 'security' | 'integrations' | 'adsense'>('general');
   
   // Flutterwave V4 Settings State
   const [propheticClientId, setPropheticClientId] = useState('');
@@ -4497,6 +4497,12 @@ function SettingsTab() {
   const [missionClientSecret, setMissionClientSecret] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Google Adsense State
+  const [adsenseAutoCode, setAdsenseAutoCode] = useState('');
+  const [adsenseAboveBlogCode, setAdsenseAboveBlogCode] = useState('');
+  const [adsenseCenterBlogCode, setAdsenseCenterBlogCode] = useState('');
+  const [adsenseBeneathBlogCode, setAdsenseBeneathBlogCode] = useState('');
 
   // Contact & Social Settings State
   const [contactEmail, setContactEmail] = useState('');
@@ -4534,6 +4540,10 @@ function SettingsTab() {
         setHomeSubheading(data.homeSubheading || '');
         setHomeBibleVerse(data.homeBibleVerse || '');
         setHomeBibleReference(data.homeBibleReference || '');
+        setAdsenseAutoCode(data.adsense_auto_code || '');
+        setAdsenseAboveBlogCode(data.adsense_above_blog_code || '');
+        setAdsenseCenterBlogCode(data.adsense_center_blog_code || '');
+        setAdsenseBeneathBlogCode(data.adsense_beneath_blog_code || '');
       } catch (err) {
         console.error('Failed to fetch settings:', err);
       }
@@ -4558,6 +4568,10 @@ function SettingsTab() {
         socialTwitter,
         socialInstagram,
         socialYoutube, homeHeadlinePrefix, homeHeadlineHighlight, homeHeadlineSuffix, homeSubheading, homeBibleVerse, homeBibleReference,
+        adsense_auto_code: adsenseAutoCode,
+        adsense_above_blog_code: adsenseAboveBlogCode,
+        adsense_center_blog_code: adsenseCenterBlogCode,
+        adsense_beneath_blog_code: adsenseBeneathBlogCode
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -4576,6 +4590,7 @@ function SettingsTab() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Sun },
     { id: 'security', label: 'Security', icon: Shield },
+    { id: 'adsense', label: 'Google AdSense', icon: DollarSign },
   ] as const;
 
   return (
@@ -4964,6 +4979,72 @@ function SettingsTab() {
           </>
         )}
 
+        {activeSetting === 'adsense' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-6">Google AdSense Configuration</h3>
+            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-3xl">
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
+                  <h4 className="font-semibold text-gray-800 text-sm mb-2">Google AdSense Auto Ads</h4>
+                  <p className="text-xs text-gray-500 mb-3">Paste your AdSense auto ads script tag here. This code will load ads automatically across the website pages.</p>
+                  <textarea
+                    value={adsenseAutoCode}
+                    onChange={(e) => setAdsenseAutoCode(e.target.value)}
+                    rows={4}
+                    placeholder="<!-- Paste Auto Ads Script Tag here -->"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-mono bg-white text-gray-800 focus:ring-2 focus:ring-royal-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
+                    <h4 className="font-semibold text-gray-800 text-sm mb-2">Above Blogs / Posts Ad Code</h4>
+                    <p className="text-xs text-gray-500 mb-3">This ad will display at the top of individual blog pages, just above the main title.</p>
+                    <textarea
+                      value={adsenseAboveBlogCode}
+                      onChange={(e) => setAdsenseAboveBlogCode(e.target.value)}
+                      rows={4}
+                      placeholder="<!-- Paste Ad Unit Code here -->"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-mono bg-white text-gray-800 focus:ring-2 focus:ring-royal-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
+                    <h4 className="font-semibold text-gray-800 text-sm mb-2">Center of Blogs / Posts Ad Code</h4>
+                    <p className="text-xs text-gray-500 mb-3">This ad will automatically inject into the center paragraph of individual blog post bodies.</p>
+                    <textarea
+                      value={adsenseCenterBlogCode}
+                      onChange={(e) => setAdsenseCenterBlogCode(e.target.value)}
+                      rows={4}
+                      placeholder="<!-- Paste Ad Unit Code here -->"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-mono bg-white text-gray-800 focus:ring-2 focus:ring-royal-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
+                    <h4 className="font-semibold text-gray-800 text-sm mb-2">Beneath Blogs / Posts Ad Code</h4>
+                    <p className="text-xs text-gray-500 mb-3">This ad will display immediately below the blog post content, before comments.</p>
+                    <textarea
+                      value={adsenseBeneathBlogCode}
+                      onChange={(e) => setAdsenseBeneathBlogCode(e.target.value)}
+                      rows={4}
+                      placeholder="<!-- Paste Ad Unit Code here -->"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-mono bg-white text-gray-800 focus:ring-2 focus:ring-royal-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+                <button type="submit" disabled={isSaving} className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer border-none">
+                  {isSaving ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</> : 'Save AdSense Codes'}
+                </button>
+                {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved Successfully</span>}
+                {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
+              </div>
+            </form>
+          </div>
+        )}
 
       </div>
     </div>

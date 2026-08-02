@@ -122,6 +122,10 @@ export interface Settings {
   homeSubheading?: string;
   homeBibleVerse?: string;
   homeBibleReference?: string;
+  adsense_auto_code?: string;
+  adsense_above_blog_code?: string;
+  adsense_center_blog_code?: string;
+  adsense_beneath_blog_code?: string;
 }
 
 

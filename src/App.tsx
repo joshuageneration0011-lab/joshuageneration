@@ -105,6 +105,32 @@ export default function App() {
     };
   }, []);
 
+  // Load Google AdSense Auto Ads
+  useEffect(() => {
+    const loadAdSenseAuto = async () => {
+      try {
+        const settings = await api.getPublicSettings();
+        if (settings.adsense_auto_code) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = settings.adsense_auto_code;
+          const scriptTags = tempDiv.getElementsByTagName('script');
+          for (let i = 0; i < scriptTags.length; i++) {
+            const script = document.createElement('script');
+            Array.from(scriptTags[i].attributes).forEach(attr => {
+              script.setAttribute(attr.name, attr.value);
+            });
+            script.id = 'adsense-auto-script';
+            script.innerHTML = scriptTags[i].innerHTML;
+            document.head.appendChild(script);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load AdSense Auto Ads:', err);
+      }
+    };
+    loadAdSenseAuto();
+  }, []);
+
   // Listen for navigation selections from Love Popup
   useEffect(() => {
     const handleSelectSermon = (e: any) => {

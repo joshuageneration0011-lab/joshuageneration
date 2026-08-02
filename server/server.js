@@ -37,7 +37,7 @@ try {
   console.warn('Warning: Failed to load .env file:', err.message);
 }
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 let DATA_DIR = process.env.JG_DATA_DIR || path.join(__dirname, 'data');
 
 // Ensure database directory exists for local fallback
@@ -517,7 +517,7 @@ async function initDb() {
       }
 
       // Safe migration: add new columns first (idempotent), THEN remove old ones
-      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference']) {
+      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference', 'adsense_auto_code', 'adsense_above_blog_code', 'adsense_center_blog_code', 'adsense_beneath_blog_code']) {
         try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS "${col}" TEXT DEFAULT ''`); } catch (e) { console.error('Migration error:', e); }
       }
 
@@ -1958,11 +1958,15 @@ const server = http.createServer(async (req, res) => {
         homeHeadlineSuffix: ' of God',
         homeSubheading: 'A digital ministry where faith comes alive — through powerful audio sermons, life-changing books, and a growing global community of believers.',
         homeBibleVerse: 'Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.',
-        homeBibleReference: 'Joshua 1:9'
+        homeBibleReference: 'Joshua 1:9',
+        adsense_auto_code: '',
+        adsense_above_blog_code: '',
+        adsense_center_blog_code: '',
+        adsense_beneath_blog_code: ''
       };
 
       if (pool) {
-        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
+        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code" FROM settings WHERE id = 1');
         const row = rows[0] || {};
         const responseData = {};
         for (const key in defaults) {
@@ -2031,10 +2035,11 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/admin/settings' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code" FROM settings WHERE id = 1');
         sendJson(res, 200, result.rows[0] || { 
           flutterwave_prophetic_client_id: '', flutterwave_prophetic_client_secret: '',
-          flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '' 
+          flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '',
+          adsense_auto_code: '', adsense_above_blog_code: '', adsense_center_blog_code: '', adsense_beneath_blog_code: ''
         });
       } else {
         const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
@@ -2057,13 +2062,47 @@ const server = http.createServer(async (req, res) => {
             flutterwave_prophetic_client_id = $1, 
             flutterwave_prophetic_client_secret = $2,
             flutterwave_mission_client_id = $3, 
-            flutterwave_mission_client_secret = $4 
+            flutterwave_mission_client_secret = $4,
+            "contactEmail" = $5,
+            "contactPhone" = $6,
+            "contactAddress" = $7,
+            "socialFacebook" = $8,
+            "socialTwitter" = $9,
+            "socialInstagram" = $10,
+            "socialYoutube" = $11,
+            "homeHeadlinePrefix" = $12,
+            "homeHeadlineHighlight" = $13,
+            "homeHeadlineSuffix" = $14,
+            "homeSubheading" = $15,
+            "homeBibleVerse" = $16,
+            "homeBibleReference" = $17,
+            "adsense_auto_code" = $18,
+            "adsense_above_blog_code" = $19,
+            "adsense_center_blog_code" = $20,
+            "adsense_beneath_blog_code" = $21
            WHERE id = 1`,
           [
             data.flutterwave_prophetic_client_id || '',
             data.flutterwave_prophetic_client_secret || '',
             data.flutterwave_mission_client_id || '',
-            data.flutterwave_mission_client_secret || ''
+            data.flutterwave_mission_client_secret || '',
+            data.contactEmail || '',
+            data.contactPhone || '',
+            data.contactAddress || '',
+            data.socialFacebook || '',
+            data.socialTwitter || '',
+            data.socialInstagram || '',
+            data.socialYoutube || '',
+            data.homeHeadlinePrefix || '',
+            data.homeHeadlineHighlight || '',
+            data.homeHeadlineSuffix || '',
+            data.homeSubheading || '',
+            data.homeBibleVerse || '',
+            data.homeBibleReference || '',
+            data.adsense_auto_code || '',
+            data.adsense_above_blog_code || '',
+            data.adsense_center_blog_code || '',
+            data.adsense_beneath_blog_code || ''
           ]
         );
       } else {

@@ -1,5 +1,5 @@
-import { resolveApiUrl } from '@/utils/api';
-import { useState, useMemo, useEffect } from 'react';
+import { resolveApiUrl, api } from '@/utils/api';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { ArrowLeft, Calendar, Clock, Share2, Link, Check, MessageSquare, Heart } from 'lucide-react';
 import type { BlogPost } from '@/types';
 import { updatePageSEO } from '@/utils/seo';
@@ -13,12 +13,110 @@ interface BlogPostReaderProps {
   onPostSelect: (post: BlogPost) => void;
 }
 
+function AdSlot({ htmlCode }: { htmlCode?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!htmlCode || !containerRef.current) return;
+
+    containerRef.current.innerHTML = '';
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlCode, 'text/html');
+
+    const nodes = Array.from(doc.body.childNodes);
+    nodes.forEach(node => {
+      if (node.nodeName === 'SCRIPT') {
+        const script = document.createElement('script');
+        Array.from((node as HTMLElement).attributes).forEach(attr => {
+          script.setAttribute(attr.name, attr.value);
+        });
+        script.innerHTML = (node as HTMLElement).innerHTML;
+        containerRef.current?.appendChild(script);
+      } else {
+        containerRef.current?.appendChild(node.cloneNode(true));
+      }
+    });
+
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.warn('AdSense push warning:', e);
+    }
+  }, [htmlCode]);
+
+  if (!htmlCode) return null;
+
+  return (
+    <div ref={containerRef} className="my-6 flex justify-center w-full overflow-hidden" />
+  );
+}
+
 export default function BlogPostReader({ posts, post, onBack, onPostSelect }: BlogPostReaderProps) {
   const [isLiked, setIsLiked] = useState(() => isItemLiked('blog', post.id));
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     setIsLiked(isItemLiked('blog', post.id));
   }, [post.id]);
+
+  useEffect(() => {
+    api.getPublicSettings()
+      .then(data => setSettings(data))
+      .catch(err => console.error('Failed to load public settings for AdSense:', err));
+  }, []);
+
+  // Programmatically inject the center ad block
+  useEffect(() => {
+    if (!settings?.adsense_center_blog_code) return;
+
+    // Find the main article element
+    const article = document.querySelector('article.prose');
+    if (!article) return;
+
+    // Remove any existing center ad container first
+    const existing = document.getElementById('adsense-center-container');
+    if (existing) existing.remove();
+
+    // Find all paragraph elements in the article
+    const paragraphs = article.querySelectorAll('p');
+    if (paragraphs.length === 0) return;
+
+    // Pick the middle paragraph
+    const middleIndex = Math.floor(paragraphs.length / 2);
+    const targetParagraph = paragraphs[middleIndex];
+
+    // Create a container for the center ad
+    const adContainer = document.createElement('div');
+    adContainer.id = 'adsense-center-container';
+    adContainer.className = 'my-8 flex justify-center w-full overflow-hidden';
+    
+    // Insert Ad HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(settings.adsense_center_blog_code, 'text/html');
+    const nodes = Array.from(doc.body.childNodes);
+    nodes.forEach(node => {
+      if (node.nodeName === 'SCRIPT') {
+        const script = document.createElement('script');
+        Array.from((node as HTMLElement).attributes).forEach(attr => {
+          script.setAttribute(attr.name, attr.value);
+        });
+        script.innerHTML = (node as HTMLElement).innerHTML;
+        adContainer.appendChild(script);
+      } else {
+        adContainer.appendChild(node.cloneNode(true));
+      }
+    });
+
+    // Insert the ad container right after the target paragraph
+    targetParagraph.parentNode?.insertBefore(adContainer, targetParagraph.nextSibling);
+
+    // Trigger adsbygoogle push
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.warn('AdSense push center warning:', e);
+    }
+  }, [post.id, settings]);
 
   useEffect(() => {
     const handleLikesUpdated = () => {
@@ -140,6 +238,8 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
           
           {/* Main Article Content */}
           <div className="lg:col-span-2">
+            <AdSlot htmlCode={settings?.adsense_above_blog_code} />
+
             <span className="inline-block px-3 py-1 rounded-full bg-royal-blue-50 text-royal-blue-600 text-xs font-extrabold tracking-wide uppercase mb-4">
               {post.category}
             </span>
@@ -191,6 +291,8 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
               className="prose max-w-none text-gray-700 leading-relaxed text-justify font-serif text-lg selection:bg-royal-blue-100/60"
               dangerouslySetInnerHTML={{ __html: post.content || post.excerpt }}
             />
+
+            <AdSlot htmlCode={settings?.adsense_beneath_blog_code} />
 
             {/* Inlined Share Box */}
             <div className="border-t border-b border-gray-100 py-6 my-10 flex flex-wrap items-center justify-between gap-4">
