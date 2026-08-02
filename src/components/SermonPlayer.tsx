@@ -91,14 +91,19 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   };
 
   // Series additions
-  const tracks = (sermon.audios && sermon.audios.length > 0)
+  const rawAudios = Array.isArray(sermon.audios)
     ? sermon.audios
-    : [{ id: sermon.id, title: sermon.title, duration: sermon.duration, audioUrl: sermon.audioUrl }];
+    : (typeof sermon.audios === 'string' ? JSON.parse(sermon.audios) : []);
+
+  const tracks = (rawAudios && rawAudios.length > 0)
+    ? rawAudios
+    : [{ id: sermon.id, title: sermon.title || '', duration: sermon.duration || '', audioUrl: sermon.audioUrl || '' }];
 
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const activeTrack = tracks[currentTrackIndex] || tracks[0];
+  const activeTrack = tracks[currentTrackIndex] || tracks[0] || { id: sermon.id, title: sermon.title || '', duration: sermon.duration || '', audioUrl: sermon.audioUrl || '' };
 
-  const formatTrackTitle = (title: string, showDownloadWord: boolean = false) => {
+  const formatTrackTitle = (title: string | undefined | null, showDownloadWord: boolean = false) => {
+    if (!title) return '';
     let clean = title.trim();
     if (/^part\s+\d+/i.test(clean)) {
       const match = clean.match(/^part\s+(\d+)/i);
@@ -112,13 +117,13 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     return clean.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
-  const getDownloadFilename = (trackTitle: string) => {
-    const cleanSermonTitle = sermon.title
+  const getDownloadFilename = (trackTitle: string | undefined | null) => {
+    const cleanSermonTitle = (sermon.title || '')
       .replace(/\s+part\s+\d+\s+to\s+\d+.*/i, '')
       .replace(/\s+by\s+(Apostle|Pst|Pastor).*/i, '')
       .trim();
     
-    let trackPart = trackTitle.trim();
+    let trackPart = (trackTitle || '').trim();
     if (/^part\s+\d+/i.test(trackPart)) {
       const match = trackPart.match(/^part\s+(\d+)/i);
       if (match) {
@@ -706,11 +711,19 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
               {/* Comments List */}
               <div className="space-y-4">
-                {comments.length === 0 ? (
+                {!Array.isArray(comments) || comments.length === 0 ? (
                   <p className="text-gray-400 text-sm text-center py-4">No comments yet. Be the first to share your thoughts!</p>
                 ) : (
                   comments.map((comment) => {
+                    if (!comment) return null;
                     const initials = comment.name ? comment.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                    let formattedDate = '';
+                    if (comment.created_at) {
+                      const d = new Date(comment.created_at);
+                      if (!isNaN(d.getTime())) {
+                        formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                      }
+                    }
                     return (
                       <div key={comment.id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
                         <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
@@ -719,9 +732,11 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                         <div className="flex-1">
                           <div className="flex items-baseline justify-between mb-1">
                             <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
-                            <span className="text-[9px] font-semibold text-gray-400">
-                              {new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </span>
+                            {formattedDate && (
+                              <span className="text-[9px] font-semibold text-gray-400">
+                                {formattedDate}
+                              </span>
+                            )}
                           </div>
                           <p className="text-gray-650 text-xs leading-relaxed whitespace-pre-line">{comment.text}</p>
                         </div>

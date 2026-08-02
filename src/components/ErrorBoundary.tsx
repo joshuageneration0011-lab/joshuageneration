@@ -6,16 +6,18 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  error: Error | null;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false
+    hasError: false,
+    error: null
   };
 
-  public static getDerivedStateFromError(_: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI.
-    return { hasError: true };
+    return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -34,7 +36,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
+        <div className="min-h-screen bg-gray-55 flex items-center justify-center p-4 font-sans">
           <div className="text-center space-y-4 max-w-md bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-2">
               <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -45,12 +47,23 @@ export default class ErrorBoundary extends Component<Props, State> {
             <p className="text-gray-500 text-sm leading-relaxed">
               We encountered an issue while loading this page. This usually happens when the application has been updated in the background.
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-6 py-2.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
-            >
-              Reload Page
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-6 py-2.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white font-semibold rounded-xl transition-colors shadow-sm cursor-pointer border-none"
+              >
+                Reload Page
+              </button>
+              
+              {this.state.error && (
+                <details className="mt-4 text-left bg-gray-55 p-3 rounded-xl border border-gray-200">
+                  <summary className="text-xs font-semibold text-gray-500 cursor-pointer select-none">Error Details</summary>
+                  <pre className="mt-2 text-[10px] font-mono text-red-650 overflow-x-auto whitespace-pre-wrap leading-normal">
+                    {this.state.error.stack || this.state.error.message}
+                  </pre>
+                </details>
+              )}
+            </div>
           </div>
         </div>
       );

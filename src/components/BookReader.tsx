@@ -267,22 +267,32 @@ export default function BookReader({ book, onBack }: BookReaderProps) {
 
           {/* Comments List */}
           <div className="space-y-4">
-            {comments.length === 0 ? (
+            {!Array.isArray(comments) || comments.length === 0 ? (
               <p className="text-gray-400 text-sm text-center py-4">No comments yet. Share your thoughts with other readers!</p>
             ) : (
               comments.map((comment) => {
+                if (!comment) return null;
                 const initials = comment.name ? comment.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                let formattedDate = '';
+                if (comment.created_at) {
+                  const d = new Date(comment.created_at);
+                  if (!isNaN(d.getTime())) {
+                    formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                  }
+                }
                 return (
-                  <div key={comment.id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                  <div key={comment.id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-55 transition-colors border border-transparent hover:border-gray-100">
                     <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
                       {initials}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-baseline justify-between mb-1">
                         <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
-                        <span className="text-[9px] font-semibold text-gray-400">
-                          {new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
+                        {formattedDate && (
+                          <span className="text-[9px] font-semibold text-gray-400">
+                            {formattedDate}
+                          </span>
+                        )}
                       </div>
                       <p className="text-gray-650 text-xs leading-relaxed whitespace-pre-line">{comment.text}</p>
                     </div>
