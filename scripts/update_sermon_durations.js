@@ -1,128 +1,105 @@
-import pg from 'pg';
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import { exec } from 'child_process';
+import util from 'util';
 
-const execFileAsync = promisify(execFile);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const execPromise = util.promisify(exec);
+const sermonsFilePath = './server/data/sermons.json';
 
-function loadEnv() {
-  const serverDir = path.resolve(__dirname, '..');
-  const envPath = path.join(serverDir, '.env');
-  if (!fs.existsSync(envPath)) return;
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  envContent.split(/\r?\n/).forEach(line => {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
-      const index = trimmed.indexOf('=');
-      const key = trimmed.substring(0, index).trim();
-      let value = trimmed.substring(index + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      if (!process.env[key]) process.env[key] = value;
-    }
-  });
-}
-
-loadEnv();
-
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-// Format seconds into H:MM:SS or MM:SS
 function formatDuration(totalSeconds) {
-  const secs = Math.round(parseFloat(totalSeconds));
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  if (isNaN(totalSeconds) || totalSeconds <= 0) return '45:00';
+  const hrs = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  
+  const minsStr = mins.toString().padStart(2, '0');
+  const secsStr = secs.toString().padStart(2, '0');
+  
+  if (hrs > 0) {
+    return `${hrs}:${minsStr}:${secsStr}`;
   }
-  return `${m}:${String(s).padStart(2, '0')}`;
+  return `${mins}:${secsStr}`;
 }
 
-// Get duration via ffprobe — reads only the container headers, not the full file
-async function getDurationFromUrl(audioUrl) {
+async function getUrlDuration(url) {
   try {
-    const { stdout } = await execFileAsync('ffprobe', [
-      '-v', 'quiet',
-      '-print_format', 'json',
-      '-show_format',
-      audioUrl
-    ], { timeout: 30000 });
-
-    const data = JSON.parse(stdout);
-    const durationSecs = data?.format?.duration;
-    if (durationSecs && parseFloat(durationSecs) > 0) {
-      return formatDuration(durationSecs);
+    const cmd = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${url}"`;
+    const { stdout } = await execPromise(cmd);
+    const secVal = parseFloat(stdout.trim());
+    if (!isNaN(secVal) && secVal > 0) {
+      return secVal;
     }
-    return null;
   } catch (err) {
-    return null;
+    // Fail silently, returning fallback 0
   }
+  return 0;
+}
+
+// Concurrency pool helper
+async function mapLimit(items, limit, fn) {
+  const results = [];
+  const executing = new Set();
+  
+  for (const item of items) {
+    const p = Promise.resolve().then(() => fn(item));
+    results.push(p);
+    executing.add(p);
+    
+    const clean = () => executing.delete(p);
+    p.then(clean, clean);
+    
+    if (executing.size >= limit) {
+      await Promise.race(executing);
+    }
+  }
+  return Promise.all(results);
 }
 
 async function run() {
-  try {
-    // Get all sermons — prioritise ones still with the default duration
-    const res = await pool.query(
-      `SELECT id, title, audio_url, duration FROM sermons 
-       WHERE audio_url IS NOT NULL AND audio_url != ''
-       ORDER BY 
-         CASE WHEN duration = '45:00' THEN 0 ELSE 1 END,
-         date DESC`
-    );
-
-    const total = res.rows.length;
-    console.log(`Found ${total} sermons to process.\n`);
-
-    let updated = 0;
-    let failed = 0;
-    let skipped = 0;
-
-    for (let i = 0; i < res.rows.length; i++) {
-      const row = res.rows[i];
-      const num = `[${i + 1}/${total}]`;
-
-      // Skip sermons that already have an accurate custom duration
-      // (anything not exactly '45:00' was likely set deliberately or previously probed)
-      if (row.duration && row.duration !== '45:00' && row.duration !== '') {
-        console.log(`${num} SKIP  "${row.title}" — already has duration: ${row.duration}`);
-        skipped++;
-        continue;
-      }
-
-      process.stdout.write(`${num} Probing "${row.title}"... `);
-      const duration = await getDurationFromUrl(row.audio_url);
-
-      if (duration) {
-        await pool.query('UPDATE sermons SET duration = $1 WHERE id = $2', [duration, row.id]);
-        console.log(`=> ${duration}`);
-        updated++;
+  console.log('Reading public sermons...');
+  const sermons = JSON.parse(fs.readFileSync(sermonsFilePath, 'utf8'));
+  console.log(`Processing ${sermons.length} public sermons for exact durations...`);
+  
+  let processed = 0;
+  
+  await mapLimit(sermons, 8, async (sermon) => {
+    try {
+      if (sermon.audios && sermon.audios.length > 0) {
+        console.log(`-> Fetching part durations for series: "${sermon.title}"`);
+        let totalSeconds = 0;
+        
+        for (const track of sermon.audios) {
+          if (track.audioUrl) {
+            const sec = await getUrlDuration(track.audioUrl);
+            track.duration = formatDuration(sec);
+            totalSeconds += sec;
+          } else {
+            track.duration = '45:00';
+          }
+        }
+        
+        sermon.duration = formatDuration(totalSeconds);
+        console.log(`   Unified Duration: ${sermon.duration} (parts: ${sermon.audios.length})`);
       } else {
-        console.log(`FAILED (keeping ${row.duration})`);
-        failed++;
+        if (sermon.audioUrl) {
+          const sec = await getUrlDuration(sermon.audioUrl);
+          sermon.duration = formatDuration(sec);
+        } else {
+          sermon.duration = '45:00';
+        }
+        console.log(`-> Standalone Duration: ${sermon.duration} for "${sermon.title}"`);
       }
-
-      // Small pause between requests to avoid hammering the WP server
-      await new Promise(r => setTimeout(r, 300));
+    } catch (e) {
+      console.error(`Error on "${sermon.title}":`, e.message);
     }
-
-    console.log(`\n${'='.repeat(55)}`);
-    console.log(`Done! Updated: ${updated} | Failed: ${failed} | Skipped: ${skipped}`);
-    console.log(`Total sermons: ${total}`);
-
-  } catch (err) {
-    console.error('Fatal error:', err.message);
-  } finally {
-    await pool.end();
-  }
+    
+    processed++;
+    if (processed % 10 === 0) {
+      console.log(`=== Progress: ${processed}/${sermons.length} completed ===`);
+    }
+  });
+  
+  fs.writeFileSync(sermonsFilePath, JSON.stringify(sermons, null, 2), 'utf8');
+  console.log('\nSaved all updated durations to server/data/sermons.json!');
 }
 
 run();
