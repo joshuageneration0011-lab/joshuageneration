@@ -2272,12 +2272,13 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const [enablePdf, setEnablePdf] = useState(true);
   const [uploadingPdfIndex, setUploadingPdfIndex] = useState<number | null>(null);
   const [pdfProgress, setPdfProgress] = useState(0);
-  const [enableAmazon, setEnableAmazon] = useState(false);
+   const [enableAmazon, setEnableAmazon] = useState(false);
   const [amazonUrl, setAmazonUrl] = useState('');
   const [enableSelar, setEnableSelar] = useState(false);
   const [selarUrl, setSelarUrl] = useState('');
   const [pages, setPages] = useState('150');
   const [downloads, setDownloads] = useState('0');
+  const [bookViews, setBookViews] = useState('0');
   
 
   const openNewForm = () => {
@@ -2288,6 +2289,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setDescription('');
     setCoverUrl('');
     setPdfsInput([]);
+    setBookViews('0');
     setImageSourceMode('upload');
     setEnableAmazon(false);
     setAmazonUrl('');
@@ -2315,6 +2317,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     setSelarUrl(book.selarUrl || '');
     setPages(String(book.pages || '150'));
     setDownloads(String(book.downloads || '0'));
+    setBookViews(String(book.views || '0'));
     
     const hasPdfs = !!book.pdfs && book.pdfs.length > 0;
     setEnablePdf(hasPdfs);
@@ -2408,6 +2411,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
       
       pages: Number(pages) || 150,
       downloads: Number(downloads) || 0,
+      views: Number(bookViews) || 0,
       rating: editingBook ? (editingBook as any).rating || 4.8 : 4.8,
       amazonUrl: enableAmazon ? amazonUrl.trim() : undefined,
       selarUrl: enableSelar ? selarUrl.trim() : undefined,
@@ -2469,7 +2473,10 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                 </div>
                 
                 <div className="flex flex-col gap-1 mt-2 text-[10px] text-gray-400">
-                  <span>Pages: {book.pages || 150}</span>
+                  <div className="flex items-center gap-3">
+                    <span>Pages: {book.pages || 150}</span>
+                    <span>Views: {(book.views || 0).toLocaleString()}</span>
+                  </div>
                   {book.amazonUrl && (
                     <span className="truncate text-gray-500">Amazon: <a href={book.amazonUrl} target="_blank" rel="noopener noreferrer" className="text-royal-blue-600 hover:underline">{book.amazonUrl}</a></span>
                   )}
@@ -2540,7 +2547,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</label>
                     <select
@@ -2554,6 +2561,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                       <option value="Spiritual Growth">Spiritual Growth</option>
                       <option value="Healing">Healing</option>
                       <option value="Faith">Faith</option>
+                      <option value="Bible Plan">Bible Plan</option>
                     </select>
                   </div>
 
@@ -2575,6 +2583,17 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
                       value={downloads}
                       onChange={(e) => setDownloads(e.target.value)}
                       placeholder="e.g. 1500"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Views Count</label>
+                    <input
+                      type="number"
+                      value={bookViews}
+                      onChange={(e) => setBookViews(e.target.value)}
+                      placeholder="e.g. 5000"
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 focus:outline-none"
                     />
                   </div>

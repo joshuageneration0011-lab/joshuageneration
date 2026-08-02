@@ -169,14 +169,46 @@ async function syncData() {
         const check = await pool.query('SELECT id FROM books WHERE id = $1', [b.id]);
         if (check.rowCount === 0) {
           await pool.query(
-            `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, chapters)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-            [b.id, b.title, b.author, b.coverUrl || b.cover_url, b.description, b.category, b.downloadUrl || b.download_url, b.rating || 4.8, b.amazonUrl || b.amazon_url || '', b.selarUrl || b.selar_url || '', b.pages || 150, JSON.stringify(b.chapters || [])]
+            `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, chapters, downloads, pdfs, views)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [
+              b.id,
+              b.title,
+              b.author,
+              b.coverUrl || b.cover_url,
+              b.description,
+              b.category,
+              b.downloadUrl || b.download_url,
+              b.rating || 4.8,
+              b.amazonUrl || b.amazon_url || '',
+              b.selarUrl || b.selar_url || '',
+              b.pages || 150,
+              JSON.stringify(b.chapters || []),
+              b.downloads || 0,
+              JSON.stringify(b.pdfs || []),
+              b.views || 0
+            ]
           );
         } else {
           await pool.query(
-            `UPDATE books SET title=$1, author=$2, cover_url=$3, description=$4, category=$5, download_url=$6, rating=$7, amazon_url=$8, selar_url=$9, pages=$10, chapters=$11 WHERE id=$12`,
-            [b.title, b.author, b.coverUrl || b.cover_url, b.description, b.category, b.downloadUrl || b.download_url, b.rating || 4.8, b.amazonUrl || b.amazon_url || '', b.selarUrl || b.selar_url || '', b.pages || 150, JSON.stringify(b.chapters || []), b.id]
+            `UPDATE books SET title=$1, author=$2, cover_url=$3, description=$4, category=$5, download_url=$6, rating=$7, amazon_url=$8, selar_url=$9, pages=$10, chapters=$11, downloads=$12, pdfs=$13, views=$14 WHERE id=$15`,
+            [
+              b.title,
+              b.author,
+              b.coverUrl || b.cover_url,
+              b.description,
+              b.category,
+              b.downloadUrl || b.download_url,
+              b.rating || 4.8,
+              b.amazonUrl || b.amazon_url || '',
+              b.selarUrl || b.selar_url || '',
+              b.pages || 150,
+              JSON.stringify(b.chapters || []),
+              b.downloads || 0,
+              JSON.stringify(b.pdfs || []),
+              b.views || 0,
+              b.id
+            ]
           );
         }
       }

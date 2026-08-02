@@ -1,6 +1,6 @@
 import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Download, BookOpen, SlidersHorizontal, ExternalLink, Heart } from 'lucide-react';
+import { Search, Download, BookOpen, SlidersHorizontal, ExternalLink, Heart, Eye } from 'lucide-react';
 import type { Book } from '@/types';
 import { cn } from '@/utils/cn';
 import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
@@ -175,9 +175,15 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
 
                 {/* Details info */}
                 <div className="p-5 flex flex-col flex-grow">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-gold-600 mb-1">
-                    {book.category}
-                  </span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-gold-600">
+                      {book.category}
+                    </span>
+                    <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1" title={`${(book.views || 0).toLocaleString()} views`}>
+                      <Eye className="w-3.5 h-3.5 text-gray-400" />
+                      {(book.views || 0).toLocaleString()}
+                    </span>
+                  </div>
                   
                   <h3 className="text-base font-bold text-gray-900 group-hover:text-royal-blue-600 transition-colors line-clamp-2 leading-snug mb-1">
                     {book.title}
