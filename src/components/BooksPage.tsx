@@ -28,7 +28,7 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
   const categories = useMemo(() => {
     const list = new Set(books.map((b) => b.category));
     return ['All', ...Array.from(list)];
-  }, []);
+  }, [books]);
 
   // Filter books
   const filteredBooks = useMemo(() => {
@@ -40,7 +40,7 @@ export default function BooksPage({ books, onBookSelect }: BooksPageProps) {
       const matchesCategory = selectedCategory === 'All' || book.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [books, searchQuery, selectedCategory]);
 
   const handleDownload = (book: Book, e: React.MouseEvent) => {
     e.stopPropagation();
