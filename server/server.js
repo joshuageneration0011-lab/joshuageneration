@@ -3449,10 +3449,12 @@ const server = http.createServer(async (req, res) => {
           fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2));
         }
       }
-      sendJson(res, 200, { success: true });
     } catch (e) {
       console.error('Failed to delete message:', e);
-  // GET /api/admin/comment-settings
+      sendJson(res, 500, { error: 'Failed to delete message' });
+    }
+    return;
+  }
   if (pathname === '/api/admin/comment-settings' && method === 'GET') {
     try {
       const commentSettingsFile = path.join(DATA_DIR, 'comment_settings.json');
