@@ -1,0 +1,17 @@
+{
+  "name": "joshuageneration-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "pg": "^8.11.3",
+    "ssh2": "^1.17.0",
+    "web-push": "^3.6.7"
+  }
+}

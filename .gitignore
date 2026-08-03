@@ -1,0 +1,38 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production build output
+dist/
+dist-ssr/
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Server local JSON database data
+server/data/
+
+# Editor and system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+scripts/find_*.js
+scripts/list_*.js
+scripts/ingest_*.js
+scripts/read_*.js
+scripts/remote_*.js
+scripts/show_*.js
+scripts/view_*.js
+/*.py
+
+# Private sermons and media files
+public/sermons/private_*
+public/thumbnails/private_*
