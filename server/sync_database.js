@@ -90,26 +90,42 @@ async function syncData() {
   }
 
   // 2. Sync Sermons
+  const defaultDataFile = path.join(__dirname, 'default_data.json');
   const sermonsFile = path.join(__dirname, 'data', 'sermons.json');
   const privateSermonsFile = path.join(__dirname, 'private_sermons.json');
   
-  let sermons = [];
+  let sermonsMap = new Map();
+
+  if (fs.existsSync(defaultDataFile)) {
+    try {
+      const defaultData = JSON.parse(fs.readFileSync(defaultDataFile, 'utf-8'));
+      if (defaultData.sermons && Array.isArray(defaultData.sermons)) {
+        defaultData.sermons.forEach(s => sermonsMap.set(s.id.toString(), s));
+      }
+    } catch (e) {
+      console.error('Failed to parse default_data.json:', e);
+    }
+  }
+
   if (fs.existsSync(sermonsFile)) {
     try {
-      sermons = JSON.parse(fs.readFileSync(sermonsFile, 'utf-8'));
+      const list = JSON.parse(fs.readFileSync(sermonsFile, 'utf-8'));
+      list.forEach(s => sermonsMap.set(s.id.toString(), s));
     } catch (e) {
       console.error('Failed to parse sermons.json:', e);
     }
   }
-  
+
   if (fs.existsSync(privateSermonsFile)) {
     try {
-      const privateSermons = JSON.parse(fs.readFileSync(privateSermonsFile, 'utf-8'));
-      sermons = sermons.concat(privateSermons);
+      const list = JSON.parse(fs.readFileSync(privateSermonsFile, 'utf-8'));
+      list.forEach(s => sermonsMap.set(s.id.toString(), s));
     } catch (e) {
       console.error('Failed to parse private_sermons.json:', e);
     }
   }
+
+  let sermons = Array.from(sermonsMap.values());
 
   if (sermons.length > 0) {
     try {

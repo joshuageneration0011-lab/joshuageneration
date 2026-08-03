@@ -61,7 +61,7 @@ const getPageFromPath = (): Page => {
   if (rawPath.startsWith('sermon/')) return 'sermon-player';
   if (rawPath.startsWith('books/')) return 'book-details';
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'counter', 'encounter', 'encounters', 'daily-devotional', 'events'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -882,6 +882,30 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
 
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'events' || currentPage === 'counter' || currentPage === 'encounter' || currentPage === 'encounters') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <main className="pt-20">
+          <Suspense fallback={<PageLoader />}>
+            <EventsSection events={events} />
+            <StatsSection
+              sermonsCount={stats?.sermons}
+              booksCount={stats?.books}
+              membersCount={stats?.members}
+            />
+          </Suspense>
+        </main>
+        <Footer onNavigate={navigate} />
         <NewsletterPopup />
       </div>
     );
