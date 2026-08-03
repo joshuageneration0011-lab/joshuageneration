@@ -99,7 +99,7 @@ export default function AdminDashboard({
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
     { id: 'donations', label: 'Donations', icon: DollarSign },
     { id: 'prayer', label: 'Prayer', icon: Heart },
-    { id: 'moderation', label: 'Moderation', icon: Shield },
+    { id: 'moderation', label: 'Comments & Moderation', icon: Shield },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -4887,6 +4887,7 @@ function SettingsTab() {
 
   const settings = [
     { id: 'general', label: 'General', icon: Settings },
+    { id: 'comments', label: 'Comments & Filter Words', icon: Shield },
     { id: 'home', label: 'Homepage Edit', icon: Home },
     { id: 'contact', label: 'Contact Info', icon: Mail },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -4908,7 +4909,7 @@ function SettingsTab() {
           return (
             <button
               key={s.id}
-              onClick={() => setActiveSetting(s.id)}
+              onClick={() => setActiveSetting(s.id as any)}
               className={cn(
                 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm',
                 activeSetting === s.id
@@ -4924,6 +4925,7 @@ function SettingsTab() {
       </div>
 
       <div className="rounded-2xl bg-white border border-gray-200 p-6 space-y-6 shadow-sm">
+        {activeSetting === 'comments' && <ModerationTab />}
         {activeSetting === 'general' && (
           <>
             <h3 className="text-gray-900 font-bold text-lg">General Settings</h3>
