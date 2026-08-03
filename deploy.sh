@@ -5,7 +5,8 @@ cd /var/www/joshuageneration
 
 # Pull latest changes from GitHub
 echo "Pulling latest changes from Git..."
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 
 # Build Frontend
 echo "Building frontend..."
