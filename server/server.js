@@ -4,6 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
+import { DEFAULT_PRIVACY_POLICY, DEFAULT_TERMS_OF_SERVICE } from './legal_defaults.js';
 
 const vapidPublicKey = 'BJBaNfrwFP_ZX_Awp6_rgOoWJt42KKagStsZfInoih_gZyK7dDDogJA_2cm0JCNDY0erJ7g7_WRr8Xe3m_wZjls';
 const vapidPrivateKey = 'aKHYYiUWorSmhB8bGJc8lTlBDeP-1bgOd1QHU-MMzxo';
@@ -529,7 +530,7 @@ async function initDb() {
       }
 
       // Safe migration: add new columns first (idempotent), THEN remove old ones
-      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference', 'adsense_auto_code', 'adsense_above_blog_code', 'adsense_center_blog_code', 'adsense_beneath_blog_code', 'filter_words']) {
+      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference', 'adsense_auto_code', 'adsense_above_blog_code', 'adsense_center_blog_code', 'adsense_beneath_blog_code', 'filter_words', 'privacyPolicy', 'termsOfService']) {
         try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS "${col}" TEXT DEFAULT ''`); } catch (e) { console.error('Migration error:', e); }
       }
 
@@ -2141,11 +2142,13 @@ const server = http.createServer(async (req, res) => {
         adsense_above_blog_code: '',
         adsense_center_blog_code: '',
         adsense_beneath_blog_code: '',
-        filter_words: ''
+        filter_words: '',
+        privacyPolicy: DEFAULT_PRIVACY_POLICY,
+        termsOfService: DEFAULT_TERMS_OF_SERVICE
       };
 
       if (pool) {
-        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words" FROM settings WHERE id = 1');
+        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words", "privacyPolicy", "termsOfService" FROM settings WHERE id = 1');
         const row = rows[0] || {};
         const responseData = {};
         for (const key in defaults) {
@@ -2214,15 +2217,21 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/admin/settings' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words" FROM settings WHERE id = 1');
-        sendJson(res, 200, result.rows[0] || { 
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words", "privacyPolicy", "termsOfService" FROM settings WHERE id = 1');
+        const row = result.rows[0] || {};
+        const responseData = {
           flutterwave_prophetic_client_id: '', flutterwave_prophetic_client_secret: '',
           flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '',
           adsense_auto_code: '', adsense_above_blog_code: '', adsense_center_blog_code: '', adsense_beneath_blog_code: '',
-          filter_words: ''
-        });
+          filter_words: '', ...row
+        };
+        if (!responseData.privacyPolicy) responseData.privacyPolicy = DEFAULT_PRIVACY_POLICY;
+        if (!responseData.termsOfService) responseData.termsOfService = DEFAULT_TERMS_OF_SERVICE;
+        sendJson(res, 200, responseData);
       } else {
         const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        if (!data.privacyPolicy) data.privacyPolicy = DEFAULT_PRIVACY_POLICY;
+        if (!data.termsOfService) data.termsOfService = DEFAULT_TERMS_OF_SERVICE;
         sendJson(res, 200, data);
       }
     } catch (e) {
@@ -2260,7 +2269,9 @@ const server = http.createServer(async (req, res) => {
             "adsense_above_blog_code" = $19,
             "adsense_center_blog_code" = $20,
             "adsense_beneath_blog_code" = $21,
-            "filter_words" = $22
+            "filter_words" = $22,
+            "privacyPolicy" = $23,
+            "termsOfService" = $24
            WHERE id = 1`,
           [
             data.flutterwave_prophetic_client_id || '',
@@ -2284,7 +2295,9 @@ const server = http.createServer(async (req, res) => {
             data.adsense_above_blog_code || '',
             data.adsense_center_blog_code || '',
             data.adsense_beneath_blog_code || '',
-            data.filter_words || ''
+            data.filter_words || '',
+            data.privacyPolicy || '',
+            data.termsOfService || ''
           ]
         );
       } else {

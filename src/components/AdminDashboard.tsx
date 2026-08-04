@@ -4553,6 +4553,26 @@ function SettingsTab() {
   const [homeSubheading, setHomeSubheading] = useState('');
   const [homeBibleVerse, setHomeBibleVerse] = useState('');
   const [homeBibleReference, setHomeBibleReference] = useState('');
+  const [legalSubTab, setLegalSubTab] = useState<'privacy' | 'terms'>('privacy');
+  const [privacySections, setPrivacySections] = useState({
+    introduction: '',
+    collection: '',
+    usage: '',
+    protection: '',
+    cookies: '',
+    rights: '',
+    contact: ''
+  });
+  const [termsSections, setTermsSections] = useState({
+    acceptance: '',
+    offerings: '',
+    downloads: '',
+    giving: '',
+    conduct: '',
+    copyright: '',
+    disclaimer: '',
+    governing: ''
+  });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -4579,6 +4599,40 @@ function SettingsTab() {
         setAdsenseAboveBlogCode(data.adsense_above_blog_code || '');
         setAdsenseCenterBlogCode(data.adsense_center_blog_code || '');
         setAdsenseBeneathBlogCode(data.adsense_beneath_blog_code || '');
+        try {
+          const parsedPrivacy = typeof data.privacyPolicy === 'string' ? JSON.parse(data.privacyPolicy) : data.privacyPolicy;
+          if (parsedPrivacy && typeof parsedPrivacy === 'object') {
+            setPrivacySections({
+              introduction: parsedPrivacy.introduction || '',
+              collection: parsedPrivacy.collection || '',
+              usage: parsedPrivacy.usage || '',
+              protection: parsedPrivacy.protection || '',
+              cookies: parsedPrivacy.cookies || '',
+              rights: parsedPrivacy.rights || '',
+              contact: parsedPrivacy.contact || ''
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to parse privacy policy JSON:', e);
+        }
+
+        try {
+          const parsedTerms = typeof data.termsOfService === 'string' ? JSON.parse(data.termsOfService) : data.termsOfService;
+          if (parsedTerms && typeof parsedTerms === 'object') {
+            setTermsSections({
+              acceptance: parsedTerms.acceptance || '',
+              offerings: parsedTerms.offerings || '',
+              downloads: parsedTerms.downloads || '',
+              giving: parsedTerms.giving || '',
+              conduct: parsedTerms.conduct || '',
+              copyright: parsedTerms.copyright || '',
+              disclaimer: parsedTerms.disclaimer || '',
+              governing: parsedTerms.governing || ''
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to parse terms of service JSON:', e);
+        }
       } catch (err) {
         console.error('Failed to fetch settings:', err);
       }
@@ -4606,7 +4660,9 @@ function SettingsTab() {
         adsense_auto_code: adsenseAutoCode,
         adsense_above_blog_code: adsenseAboveBlogCode,
         adsense_center_blog_code: adsenseCenterBlogCode,
-        adsense_beneath_blog_code: adsenseBeneathBlogCode
+        adsense_beneath_blog_code: adsenseBeneathBlogCode,
+        privacyPolicy: JSON.stringify(privacySections),
+        termsOfService: JSON.stringify(termsSections)
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -4626,6 +4682,7 @@ function SettingsTab() {
     { id: 'appearance', label: 'Appearance', icon: Sun },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'adsense', label: 'Google AdSense', icon: DollarSign },
+    { id: 'legal', label: 'Legal Pages', icon: FileText },
   ] as const;
 
   return (
@@ -5073,6 +5130,104 @@ function SettingsTab() {
               <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
                 <button type="submit" disabled={isSaving} className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer border-none">
                   {isSaving ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</> : 'Save AdSense Codes'}
+                </button>
+                {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved Successfully</span>}
+                {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}
+              </div>
+            </form>
+          </div>
+        )}
+
+        {activeSetting === 'legal' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Legal Pages Configuration</h3>
+                <p className="text-xs text-gray-500">Edit the plain text content of individual legal page sections without touching HTML codes.</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLegalSubTab('privacy')}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-solid cursor-pointer",
+                    legalSubTab === 'privacy'
+                      ? "bg-royal-blue-600 text-white border-royal-blue-600 shadow-sm"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  )}
+                >
+                  Privacy Policy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLegalSubTab('terms')}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-solid cursor-pointer",
+                    legalSubTab === 'terms'
+                      ? "bg-royal-blue-600 text-white border-royal-blue-600 shadow-sm"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  )}
+                >
+                  Terms of Service
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+              {legalSubTab === 'privacy' && (
+                <div className="space-y-6">
+                  {[
+                    { key: 'introduction', label: 'Section 1: Introduction & Scope' },
+                    { key: 'collection', label: 'Section 2: Information We Collect' },
+                    { key: 'usage', label: 'Section 3: How We Use Your Information' },
+                    { key: 'protection', label: 'Section 4: Data Protection & Sharing' },
+                    { key: 'cookies', label: 'Section 5: Cookies & Tracking' },
+                    { key: 'rights', label: 'Section 6: Your Rights & Control' },
+                    { key: 'contact', label: 'Section 7: Contact & Support' }
+                  ].map(({ key, label }) => (
+                    <div key={key} className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
+                      <h4 className="font-semibold text-gray-800 text-sm mb-2">{label}</h4>
+                      <textarea
+                        value={privacySections[key as keyof typeof privacySections]}
+                        onChange={(e) => setPrivacySections(prev => ({ ...prev, [key]: e.target.value }))}
+                        rows={6}
+                        placeholder={`Enter content for ${label}...`}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm font-sans bg-white text-gray-800 focus:ring-2 focus:ring-royal-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {legalSubTab === 'terms' && (
+                <div className="space-y-6">
+                  {[
+                    { key: 'acceptance', label: 'Section 1: Acceptance of Terms' },
+                    { key: 'offerings', label: 'Section 2: Ministry Digital Offerings' },
+                    { key: 'downloads', label: 'Section 3: Digital Products & Books' },
+                    { key: 'giving', label: 'Section 4: Giving & Partnership' },
+                    { key: 'conduct', label: 'Section 5: Community Code of Conduct' },
+                    { key: 'copyright', label: 'Section 6: Copyright & Intellectual Property' },
+                    { key: 'disclaimer', label: 'Section 7: Disclaimer & Limitation of Liability' },
+                    { key: 'governing', label: 'Section 8: Governing Law' }
+                  ].map(({ key, label }) => (
+                    <div key={key} className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
+                      <h4 className="font-semibold text-gray-800 text-sm mb-2">{label}</h4>
+                      <textarea
+                        value={termsSections[key as keyof typeof termsSections]}
+                        onChange={(e) => setTermsSections(prev => ({ ...prev, [key]: e.target.value }))}
+                        rows={6}
+                        placeholder={`Enter content for ${label}...`}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm font-sans bg-white text-gray-800 focus:ring-2 focus:ring-royal-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+                <button type="submit" disabled={isSaving} className="px-5 py-2.5 rounded-xl bg-royal-blue-600 text-white text-xs font-semibold hover:bg-royal-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer border-none">
+                  {isSaving ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</> : 'Save Legal Policies'}
                 </button>
                 {saveStatus === 'success' && <span className="text-emerald-600 text-xs font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Saved Successfully</span>}
                 {saveStatus === 'error' && <span className="text-red-600 text-xs font-medium flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Error saving</span>}

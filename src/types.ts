@@ -129,6 +129,8 @@ export interface Settings {
   adsense_center_blog_code?: string;
   adsense_beneath_blog_code?: string;
   filter_words?: string;
+  privacyPolicy?: string;
+  termsOfService?: string;
 }
 
 
