@@ -254,10 +254,10 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                 <Heart className="w-6 h-6 text-gold-400" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold font-cormorant tracking-tight mb-4">
-                Partner with us in spreading the Gospel
+                This is a Fertile Ground
               </h2>
               <p className="text-white/75 text-sm leading-relaxed mb-6">
-                Your generosity powers our global outreach programs, conference events, digital resources, and local community support. Together, we are raising a generation of purpose-driven believers.
+                Giving is an act of worship that demonstrates your trust in God as your provider. It is an expression of gratitude, love, and obedience that honors Him, advances His Kingdom, and positions your heart to receive His continued provision and blessing according to His will and promises.
               </p>
               
               <blockquote className="border-l-2 border-gold-400 pl-4 py-1 mb-8 italic text-xs text-white/70">
