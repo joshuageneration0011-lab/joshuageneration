@@ -1895,7 +1895,9 @@ const server = http.createServer(async (req, res) => {
       }
 
       const txRef = 'JG-TXN-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-      const callbackUrl = 'https://joshuasgeneration.com/#payment-callback';
+      const host = req.headers.host || 'joshuasgeneration.com';
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const callbackUrl = `${protocol}://${host}/donate`;
 
       console.log(`Initiating Standard Checkout payment link via V3 API with currency ${currency}...`);
       
@@ -2396,8 +2398,8 @@ const server = http.createServer(async (req, res) => {
 
   // GET Donations (Superadmin only)
   if (pathname === '/api/donations' && method === 'GET') {
-    if (user.role !== 'superadmin') {
-      sendJson(res, 403, { error: 'Superadmin access required' });
+    if (user.role !== 'superadmin' && user.role !== 'admin') {
+      sendJson(res, 403, { error: 'Superadmin or Admin access required' });
       return;
     }
     try {

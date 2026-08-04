@@ -103,9 +103,11 @@ export default function AdminDashboard({
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const visibleSidebarItems = userRole === 'superadmin' 
-    ? sidebarItems 
-    : sidebarItems.filter(item => item.id !== 'donations' && item.id !== 'settings');
+  const visibleSidebarItems = sidebarItems.filter(item => {
+    if (item.id === 'donations') return userRole === 'superadmin' || userRole === 'admin';
+    if (item.id === 'settings') return userRole === 'superadmin';
+    return true;
+  });
 
   const handleLogout = () => {
     api.logout();
@@ -460,7 +462,7 @@ function SubscribersTab() {
 
 function DashboardTab({ posts, onTabChange, donations, sermons, users, events, books }: DashboardTabProps) {
   const userRole = api.getRole();
-  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
+  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>((userRole === 'superadmin' || userRole === 'admin') ? 'donations' : 'members');
 
   // Exact data from state / database
   const totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
@@ -494,7 +496,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
           { label: 'Sermon Views', value: totalSermonViews.toLocaleString(), change: '+0.0%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
           { label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true, superadminOnly: true },
           { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
-        ].filter(stat => !stat.superadminOnly || userRole === 'superadmin').map((stat) => (
+        ].filter(stat => !stat.superadminOnly || userRole === 'superadmin' || userRole === 'admin').map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-4">
               <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center', stat.color)}>
@@ -516,7 +518,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
         {/* Left Column (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart */}
-          {(userRole === 'superadmin') && (
+          {(userRole === 'superadmin' || userRole === 'admin') && (
             <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
@@ -540,7 +542,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
           <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
               <div className="flex gap-4">
-                {(userRole === 'superadmin') && (
+                {(userRole === 'superadmin' || userRole === 'admin') && (
                   <button
                     onClick={() => setActiveListTab('donations')}
                     className={cn(
@@ -820,14 +822,14 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Joined</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sermons</th>
-                {userRole === 'superadmin' && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Donations</th>}
+                {(userRole === 'superadmin' || userRole === 'admin') && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Donations</th>}
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={userRole === 'superadmin' ? 7 : 6} className="text-center py-8 text-gray-500 text-sm">
+                  <td colSpan={(userRole === 'superadmin' || userRole === 'admin') ? 7 : 6} className="text-center py-8 text-gray-500 text-sm">
                     No members found matching your search.
                   </td>
                 </tr>
@@ -864,7 +866,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{user.joined}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{user.sermons}</td>
-                    {userRole === 'superadmin' && <td className="px-4 py-3 text-emerald-600 text-xs font-semibold">${user.donations.toLocaleString()}</td>}
+                    {(userRole === 'superadmin' || userRole === 'admin') && <td className="px-4 py-3 text-emerald-600 text-xs font-semibold">${user.donations.toLocaleString()}</td>}
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button 
