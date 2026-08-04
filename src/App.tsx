@@ -28,6 +28,7 @@ const BookReader = lazy(() => import('@/components/BookReader'));
 const BlogPage = lazy(() => import('@/components/BlogPage'));
 const BlogPostReader = lazy(() => import('@/components/BlogPostReader'));
 const DonatePage = lazy(() => import('@/components/DonatePage'));
+const ThankYouPage = lazy(() => import('@/components/ThankYouPage'));
 const PartnershipPage = lazy(() => import('@/components/PartnershipPage'));
 const PodcastPage = lazy(() => import('@/components/PodcastPage'));
 const SermonsPage = lazy(() => import('@/components/SermonsPage'));
@@ -50,16 +51,19 @@ const PageLoader = () => (
 export type Page = string;
 
 const getPageFromPath = (): Page => {
-  const path = window.location.pathname.replace(/^\//, '') as Page;
-  if (path.startsWith('blog/')) return 'blog-details';
-  if (path.startsWith('sermon/')) return 'sermon-player';
-  if (path.startsWith('books/')) return 'book-details';
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners'];
-  if (validPages.includes(path)) {
-    return path;
+  const rawPath = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') as Page;
+  const search = window.location.search;
+
+  if (rawPath === 'thank-you' || rawPath.startsWith('thank-you') || search.includes('tx_ref=') || search.includes('transaction_id=')) {
+    return 'thank-you';
   }
-  if (path === '') {
-    return 'home';
+  if (rawPath.startsWith('blog/')) return 'blog-details';
+  if (rawPath.startsWith('sermon/')) return 'sermon-player';
+  if (rawPath.startsWith('books/')) return 'book-details';
+
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'counter', 'encounter', 'encounters', 'daily-devotional', 'events'];
+  if (validPages.includes(rawPath)) {
+    return rawPath;
   }
   return 'home';
 };
@@ -847,6 +851,24 @@ export default function App() {
     );
   }
 
+  if (currentPage === 'thank-you') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <Suspense fallback={<PageLoader />}>
+          <ThankYouPage onNavigateHome={() => navigate('home')} onNavigateSermons={() => navigate('sermons')} />
+        </Suspense>
+        <Footer onNavigate={navigate} />
+
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
   if (currentPage === 'podcast') {
     return (
       <div className="min-h-screen bg-white">
@@ -860,6 +882,30 @@ export default function App() {
         </Suspense>
         <Footer onNavigate={navigate} />
 
+        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'events' || currentPage === 'counter' || currentPage === 'encounter' || currentPage === 'encounters') {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <main className="pt-20">
+          <Suspense fallback={<PageLoader />}>
+            <EventsSection events={events} />
+            <StatsSection
+              sermonsCount={stats?.sermons}
+              booksCount={stats?.books}
+              membersCount={stats?.members}
+            />
+          </Suspense>
+        </main>
+        <Footer onNavigate={navigate} />
         <NewsletterPopup />
       </div>
     );

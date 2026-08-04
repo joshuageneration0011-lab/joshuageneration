@@ -50,7 +50,15 @@ export default function ThankYouPage({ onNavigateHome, onNavigateSermons }: Than
           body: JSON.stringify({
             tx_ref: ref || pendingData?.tx_ref,
             transaction_id: params.get('transaction_id'),
-            status: status
+            status: status,
+            backup: pendingData ? {
+              donor: pendingData.donor,
+              email: pendingData.email,
+              amount: pendingData.amount,
+              purpose: pendingData.purpose,
+              frequency: pendingData.frequency,
+              currency: pendingData.currency
+            } : null
           })
         });
 

@@ -1767,6 +1767,205 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST Verify Donation (Public callback endpoint)
+  if (pathname === '/api/donations/verify' && method === 'POST') {
+    try {
+      const { tx_ref, transaction_id, status, backup } = await getJsonBody(req);
+      
+      console.log(`Verifying payment tx_ref: ${tx_ref}, transaction_id: ${transaction_id}, status: ${status}`);
+
+      // Check if it already exists in the database
+      if (pool) {
+        const existRes = await pool.query('SELECT * FROM donations WHERE id = $1', [tx_ref || transaction_id]);
+        if (existRes.rows.length > 0) {
+          sendJson(res, 200, existRes.rows[0]);
+          return;
+        }
+      } else {
+        const donations = JSON.parse(fs.readFileSync(DONATIONS_FILE, 'utf-8'));
+        const existing = donations.find(d => d.id === (tx_ref || transaction_id));
+        if (existing) {
+          sendJson(res, 200, existing);
+          return;
+        }
+      }
+
+      // 1. Try verifying with Flutterwave API if credentials exist
+      let donation = null;
+      let clientSecret = '';
+      if (pool) {
+        const result = await pool.query('SELECT flutterwave_prophetic_client_secret, flutterwave_mission_client_secret FROM settings WHERE id = 1');
+        const row = result.rows[0] || {};
+        // Use client secret depending on cause if backup is available, otherwise try prophetic then mission
+        const isProphetic = backup?.purpose === 'Prophetic Offering';
+        clientSecret = isProphetic 
+          ? (row.flutterwave_prophetic_client_secret || row.flutterwave_mission_client_secret)
+          : (row.flutterwave_mission_client_secret || row.flutterwave_prophetic_client_secret);
+      } else {
+        try {
+          const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+          const isProphetic = backup?.purpose === 'Prophetic Offering';
+          clientSecret = isProphetic 
+            ? (data.flutterwave_prophetic_client_secret || data.flutterwave_mission_client_secret)
+            : (data.flutterwave_mission_client_secret || data.flutterwave_prophetic_client_secret);
+        } catch(e) {}
+      }
+
+      if (clientSecret && transaction_id && !transaction_id.toString().startsWith('mock')) {
+        try {
+          const verifyRes = await fetch(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${clientSecret}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (verifyRes.ok) {
+            const verifyData = await verifyRes.json();
+            if (verifyData.status === 'success' && verifyData.data.status === 'successful') {
+              const tx = verifyData.data;
+              const desc = tx.narration || '';
+              let purpose = 'Mission / Outreach';
+              if (desc.includes('Prophetic') || backup?.purpose === 'Prophetic Offering') {
+                purpose = 'Prophetic Offering';
+              }
+              
+              donation = {
+                id: tx.tx_ref || transaction_id.toString(),
+                donor: tx.customer.name || backup?.donor || 'Generous Donor',
+                email: tx.customer.email || backup?.email || 'donor@joshuagen.org',
+                amount: Number(tx.amount),
+                purpose: purpose,
+                date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                method: tx.payment_type || 'Flutterwave',
+                frequency: backup?.frequency || 'one-time',
+                currency: tx.currency || backup?.currency || 'USD'
+              };
+            }
+          }
+        } catch (e) {
+          console.error('Flutterwave transaction verification call failed:', e);
+        }
+      }
+
+      // 2. Fallback to backup client-side details if verification failed or was a mock payment
+      if (!donation && backup && status === 'successful') {
+        const randomNum = Math.floor(100000 + Math.random() * 900000);
+        donation = {
+          id: tx_ref || `JG-TXN-${randomNum}`,
+          donor: backup.donor || 'Generous Donor',
+          email: backup.email || 'donor@joshuagen.org',
+          amount: Number(backup.amount) || 50.00,
+          purpose: backup.purpose || 'Prophetic Offering',
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          method: 'Flutterwave',
+          frequency: backup.frequency || 'one-time',
+          currency: backup.currency || 'USD'
+        };
+      }
+
+      // If we still do not have a donation object, throw error
+      if (!donation) {
+        sendJson(res, 400, { error: 'Failed to verify transaction and no backup details provided' });
+        return;
+      }
+
+      // 3. Save donation record to database
+      if (pool) {
+        await pool.query(
+          `INSERT INTO donations (id, donor, email, amount, purpose, date, method, frequency, currency)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (id) DO UPDATE SET donor = EXCLUDED.donor`,
+          [donation.id, donation.donor, donation.email, donation.amount, donation.purpose, donation.date, donation.method, donation.frequency, donation.currency]
+        );
+      } else {
+        const donations = JSON.parse(fs.readFileSync(DONATIONS_FILE, 'utf-8'));
+        const idx = donations.findIndex(d => d.id === donation.id);
+        if (idx >= 0) {
+          donations[idx] = donation;
+        } else {
+          donations.unshift(donation);
+        }
+        fs.writeFileSync(DONATIONS_FILE, JSON.stringify(donations, null, 2), 'utf-8');
+      }
+
+      console.log(`Donation ${donation.id} successfully recorded in database!`);
+
+      // 4. Send Heartfelt Thank You Email to Donor
+      try {
+        const currencySymbols = {
+          NGN: '₦',
+          USD: '$',
+          GBP: '£',
+          EUR: '€',
+          CAD: 'C$',
+          ZAR: 'R'
+        };
+        const symbol = currencySymbols[donation.currency] || '$';
+        const formattedAmount = `${symbol}${donation.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const thankYouSubject = "Thank You for Your Generous Offering - Joshua Generation";
+        const thankYouHtml = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; bg-color: #ffffff;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div style="display: inline-block; width: 50px; height: 50px; line-height: 50px; border-radius: 25px; background-color: #fef3c7; color: #d97706; font-size: 24px; font-weight: bold; text-align: center;">🙏</div>
+            </div>
+            <h2 style="color: #1f2937; text-align: center; font-size: 22px; font-weight: bold; margin-top: 0;">Offering Received</h2>
+            <p style="color: #4b5563; font-size: 14px; line-height: 1.5;">Dear ${donation.donor},</p>
+            <p style="color: #4b5563; font-size: 14px; line-height: 1.5;">We have successfully received your generous offering of <strong>${formattedAmount} ${donation.currency}</strong> to <strong>Joshua Generation Ministry</strong>. Thank you for your obedience, love, and seed in supporting the propagation of the Gospel.</p>
+            
+            <div style="background-color: #f9fafb; border: 1px solid #f3f4f6; border-radius: 8px; padding: 15px; margin: 20px 0;">
+              <h3 style="margin-top: 0; font-size: 14px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Receipt Details</h3>
+              <table style="width: 100%; font-size: 13px; color: #4b5563; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 500;">Transaction ID:</td>
+                  <td style="padding: 4px 0; text-align: right; color: #111827; font-family: monospace;">${donation.id}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 500;">Date:</td>
+                  <td style="padding: 4px 0; text-align: right; color: #111827;">${donation.date}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 500;">Cause / Purpose:</td>
+                  <td style="padding: 4px 0; text-align: right; color: #111827;">${donation.purpose}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; font-weight: 500;">Method:</td>
+                  <td style="padding: 4px 0; text-align: right; color: #111827;">${donation.method}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="text-align: center; margin-top: 25px; font-size: 12px; color: #9ca3af;">
+              <p style="margin: 0 0 5px 0;">You are receiving this email because you made a donation to Joshua Generation.</p>
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} Joshua Generation Ministry. All rights reserved.</p>
+            </div>
+          </div>
+        `;
+
+        sendZeptoEmail(donation.email, donation.donor, thankYouSubject, thankYouHtml)
+          .then(success => {
+            if (success) {
+              console.log(`[Donation Verify Email] Successfully sent thank you to ${donation.email}`);
+            } else {
+              console.warn(`[Donation Verify Email] Failed to send thank you to ${donation.email}`);
+            }
+          })
+          .catch(err => {
+            console.error(`[Donation Verify Email] Error during email dispatch:`, err);
+          });
+      } catch (err) {
+        console.error('Failed to generate verification thank you email:', err);
+      }
+
+      sendJson(res, 200, donation);
+    } catch (e) {
+      console.error('Verify donation error:', e);
+      sendJson(res, 500, { error: 'Failed to verify donation' });
+    }
+    return;
+  }
+
   // GET Books
   if (pathname === '/api/books' && method === 'GET') {
     try {
