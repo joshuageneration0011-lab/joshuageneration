@@ -2558,10 +2558,27 @@ const server = http.createServer(async (req, res) => {
             let credRole = 'member';
             if (u.role === 'Admin') credRole = 'admin';
             if (u.role === 'Superadmin') credRole = 'superadmin';
-            await pool.query(
-              `UPDATE credentials SET role = $1 WHERE LOWER(username) = LOWER($2)`,
-              [credRole, u.email]
-            );
+            
+            if (u.password && u.password.trim() !== '') {
+              const { salt, hash } = hashPassword(u.password.trim());
+              const checkCred = await pool.query('SELECT * FROM credentials WHERE LOWER(username) = LOWER($1)', [u.email]);
+              if (checkCred.rows.length > 0) {
+                await pool.query(
+                  'UPDATE credentials SET salt = $1, hash = $2, role = $3 WHERE LOWER(username) = LOWER($4)',
+                  [salt, hash, credRole, u.email]
+                );
+              } else {
+                await pool.query(
+                  'INSERT INTO credentials (username, salt, hash, role) VALUES ($1, $2, $3, $4)',
+                  [u.email, salt, hash, credRole]
+                );
+              }
+            } else {
+              await pool.query(
+                `UPDATE credentials SET role = $1 WHERE LOWER(username) = LOWER($2)`,
+                [credRole, u.email]
+              );
+            }
           }
           await pool.query('COMMIT');
         } else {
@@ -2571,11 +2588,21 @@ const server = http.createServer(async (req, res) => {
             let creds = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
             if (Array.isArray(creds)) {
               for (const u of data) {
+                let credRole = 'member';
+                if (u.role === 'Admin') credRole = 'admin';
+                if (u.role === 'Superadmin') credRole = 'superadmin';
+
                 const idx = creds.findIndex(c => c.username.toLowerCase() === u.email.toLowerCase());
-                if (idx !== -1) {
-                  let credRole = 'member';
-                  if (u.role === 'Admin') credRole = 'admin';
-                  if (u.role === 'Superadmin') credRole = 'superadmin';
+                if (u.password && u.password.trim() !== '') {
+                  const { salt, hash } = hashPassword(u.password.trim());
+                  if (idx !== -1) {
+                    creds[idx].salt = salt;
+                    creds[idx].hash = hash;
+                    creds[idx].role = credRole;
+                  } else {
+                    creds.push({ username: u.email, salt, hash, role: credRole });
+                  }
+                } else if (idx !== -1) {
                   creds[idx].role = credRole;
                 }
               }

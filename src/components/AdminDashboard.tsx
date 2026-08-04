@@ -733,6 +733,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
   const [sermons, setSermons] = useState<number>(0);
   const [donations, setDonations] = useState<number>(0);
   const [avatar, setAvatar] = useState('');
+  const [password, setPassword] = useState('');
 
   const filtered = users.filter(u => 
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -763,6 +764,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     setSermons(0);
     setDonations(0);
     setAvatar('');
+    setPassword('');
     setIsFormOpen(true);
   };
 
@@ -783,6 +785,7 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     setSermons(user.sermons);
     setDonations(user.donations);
     setAvatar(user.avatar || '');
+    setPassword('');
     setIsFormOpen(true);
   };
 
@@ -819,7 +822,8 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
       joined: joined || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       sermons: Number(sermons) || 0,
       donations: Number(donations) || 0,
-      avatar: avatar.trim() || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000)}?w=200&q=80`
+      avatar: avatar.trim() || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000)}?w=200&q=80`,
+      password: password.trim()
     };
 
     let updatedUsers: any[];
@@ -1019,6 +1023,20 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                   onChange={(e) => setEmail(e.target.value)} 
                   placeholder="emily@example.com"
                   className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  {editingUser ? 'New Password (leave blank to keep current)' : 'Password *'}
+                </label>
+                <input 
+                  type="password" 
+                  required={!editingUser}
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder={editingUser ? "Leave blank to keep unchanged" : "••••••••"}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-mono"
                 />
               </div>
 
