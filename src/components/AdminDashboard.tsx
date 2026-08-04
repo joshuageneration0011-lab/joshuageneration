@@ -361,7 +361,7 @@ export default function AdminDashboard({
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Bar */}
         <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-200">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between px-3 sm:px-6 py-2.5">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsMobileSidebarOpen(true)}
@@ -396,7 +396,7 @@ export default function AdminDashboard({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 bg-gray-50">
           {renderTabContent()}
         </main>
       </div>
@@ -532,7 +532,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-royal-blue-600 via-royal-blue-700 to-royal-blue-900 relative overflow-hidden shadow-lg">
+      <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-royal-blue-600 via-royal-blue-700 to-royal-blue-900 relative overflow-hidden shadow-lg">
         <div className="absolute inset-0 bg-grid opacity-10" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-500/10 rounded-full blur-[80px]" />
         <div className="relative">
@@ -554,12 +554,12 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
           { label: 'Total Donations', value: formatCurrencySum(donations), change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true, superadminOnly: true },
           { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
         ].filter(stat => !stat.superadminOnly || userRole === 'superadmin').map((stat) => (
-          <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
+          <div key={stat.label} className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-4">
               <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center', stat.color)}>
                 <stat.icon className="w-5 h-5 text-white" />
               </div>
-              <span className={cn('flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg', stat.up ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-650 border border-red-100')}>
+              <span className={cn('flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg', stat.up ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-655 border border-red-100')}>
                 {stat.up ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
                 {stat.change}
               </span>
@@ -576,7 +576,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart */}
           {userRole === 'superadmin' && (
-            <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
+            <div className="p-4 sm:p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
                 <button className="text-gray-400 hover:text-gray-600 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
@@ -596,7 +596,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
           )}
 
           {/* Activity Hub (Tabbed Donations and Members) */}
-          <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
+          <div className="p-4 sm:p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
               <div className="flex gap-4">
                 {userRole === 'superadmin' && (
@@ -643,10 +643,10 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
                         </div>
                         <div>
                           <p className="text-gray-900 text-sm font-medium">{d.donor}</p>
-                          <p className="text-gray-500 text-[10px]">{d.purpose} â€¢ {d.date}</p>
+                          <p className="text-gray-500 text-[10px]">{d.purpose} • {d.date}</p>
                         </div>
                       </div>
-                      <span className="text-emerald-600 font-bold text-sm">+${d.amount.toLocaleString()}</span>
+                      <span className="text-emerald-600 font-bold text-sm">+{getCurrencySymbol(d.currency)}{d.amount.toLocaleString()}</span>
                     </div>
                   ))
                 )
@@ -680,7 +680,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
 
 
           {/* Content Summary Card */}
-          <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
+          <div className="p-4 sm:p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-gray-900 font-semibold text-sm">Content Library</h3>
               <button 
@@ -874,7 +874,8 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
       </div>
 
       <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
@@ -955,6 +956,73 @@ function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block md:hidden divide-y divide-gray-150">
+          {paginatedUsers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              No members found matching your search.
+            </div>
+          ) : (
+            paginatedUsers.map((user) => (
+              <div key={user.id} className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover shadow-sm" />
+                    <div>
+                      <p className="text-gray-900 text-sm font-semibold">{user.name}</p>
+                      <p className="text-gray-500 text-[10px]">{user.email}</p>
+                    </div>
+                  </div>
+                  <span className={cn('px-2 py-0.5 rounded-full text-[9px] font-semibold border',
+                    user.role === 'Superadmin' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100/50' :
+                    user.role === 'Admin' ? 'bg-gold-50 text-gold-700 border-gold-100/50' :
+                    'bg-gray-50 text-gray-605 border-gray-100/50'
+                  )}>{['Member', 'Partner', 'Minister'].includes(user.role) ? 'User' : user.role}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500 pt-1 border-t border-gray-50">
+                  <span className={cn('flex items-center gap-1 text-[11px] font-medium',
+                    user.status === 'active' ? 'text-emerald-700' :
+                    user.status === 'new' ? 'text-royal-blue-600' : 'text-gray-450'
+                  )}>
+                    <span className={cn('w-1.5 h-1.5 rounded-full',
+                      user.status === 'active' ? 'bg-emerald-500' :
+                      user.status === 'new' ? 'bg-royal-blue-500' : 'bg-gray-300'
+                    )} />
+                    {user.status}
+                  </span>
+                  <span>Joined: {user.joined}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <span className="text-gray-500">Sermons: <strong className="text-gray-700">{user.sermons}</strong></span>
+                  {(userRole === 'superadmin' || userRole === 'admin') && (
+                    <span className="text-emerald-600 font-semibold">Donations: ${user.donations.toLocaleString()}</span>
+                  )}
+                </div>
+                <div className="flex w-full items-center gap-2 pt-2 border-t border-gray-50">
+                  <button 
+                    onClick={() => handleViewClick(user)}
+                    className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-xs font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View
+                  </button>
+                  <button 
+                    onClick={() => handleEditClick(user)}
+                    className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-xs font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteClick(user)}
+                    className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 text-red-655 text-xs font-semibold hover:bg-red-100/10 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
           <p className="text-gray-505 text-xs">
@@ -1264,7 +1332,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
   const [speaker, setSpeaker] = useState('Apostle Joshua Iyemifokhae');
   const [category, setCategory] = useState('Faith');
   const [date, setDate] = useState('');
-  const [duration, setDuration] = useState('45:00');
+  const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
@@ -1289,7 +1357,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
       {
         id: 't_' + Date.now() + Math.random().toString(36).substring(2, 6),
         title: `Part ${seriesAudios.length + 1}: `,
-        duration: '45:00',
+        duration: '',
         audioUrl: '',
         sourceMode: 'upload'
       }
@@ -1320,7 +1388,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
     setSpeaker('Apostle Joshua Iyemifokhae');
     setCategory('Faith');
     setDate(new Date().toISOString().split('T')[0]);
-    setDuration('45:00');
+    setDuration('');
     setDescription('');
     setThumbnail('');
     setAudioUrl('');
@@ -1458,6 +1526,24 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
     }
   };
 
+  const handleAudioUrlChange = (url: string) => {
+    setAudioUrl(url);
+    if (!url) return;
+    try {
+      const audioObj = new Audio(resolveApiUrl(url));
+      audioObj.addEventListener('loadedmetadata', () => {
+        const durationSeconds = audioObj.duration;
+        if (!isNaN(durationSeconds)) {
+          const minutes = Math.floor(durationSeconds / 60);
+          const seconds = Math.floor(durationSeconds % 60);
+          setDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+        }
+      });
+    } catch (e) {
+      console.error("Failed to pre-fetch duration from url:", e);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !speaker.trim() || !description.trim()) {
@@ -1508,7 +1594,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
           finalAudiosList.push({
             id: track.id,
             title: track.title.trim() || `Part ${i + 1}`,
-            duration: track.duration.trim() || '45:00',
+            duration: track.duration.trim() || '00:00',
             audioUrl: trackUrl.trim()
           });
         }
@@ -1539,7 +1625,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
         speaker: speaker.trim(),
         category: category.trim(),
         date: date || new Date().toISOString().split('T')[0],
-        duration: duration.trim() || '45:00',
+        duration: duration.trim() || '00:00',
         description: description.trim(),
         thumbnail: finalThumbnail.trim() || 'https://images.unsplash.com/photo-1499750310107-5fef28a67343?w=800&q=80',
         audioUrl: finalAudioUrl.trim(),
@@ -1669,7 +1755,8 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
 
       {/* Sermons Data Table */}
       <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
@@ -1750,7 +1837,65 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
             </tbody>
           </table>
         </div>
-        {/* Pagination Footer */}
+
+        {/* Mobile Card-Based View */}
+        <div className="block md:hidden divide-y divide-gray-150">
+          {paginatedSermons.map((s: Sermon) => (
+            <div key={s.id} className="p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <img src={resolveApiUrl(s.thumbnail)} alt={s.title} className="w-16 aspect-[16/10] object-cover rounded-lg shadow-sm border border-gray-100 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-gray-900 text-sm font-semibold truncate">{s.title}</p>
+                  <p className="text-gray-500 text-[11px] truncate">{s.speaker}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">{s.category}</span>
+                <span className="flex items-center gap-1 text-[11px]"><Clock className="w-3 h-3 text-gray-400" />{s.duration}</span>
+                <span className="text-[11px]">{s.date}</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                <div className="flex flex-wrap gap-1">
+                  {s.audios && s.audios.length > 0 ? (
+                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[9px] font-bold border border-purple-100">
+                      <Headphones className="w-2.5 h-2.5" /> Series ({s.audios.length})
+                    </span>
+                  ) : s.audioUrl ? (
+                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[9px] font-bold border border-amber-100">
+                      <Headphones className="w-2.5 h-2.5" /> Audio
+                    </span>
+                  ) : null}
+                  {s.videoUrl && (
+                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-700 text-[9px] font-bold border border-sky-100">
+                      <Tv className="w-2.5 h-2.5" /> Video
+                    </span>
+                  )}
+                </div>
+                <div className="text-right text-[11px] text-gray-500">
+                  {s.views.toLocaleString()} views • {(s.downloads || 0).toLocaleString()} DLs
+                </div>
+              </div>
+              <div className="flex w-full items-center gap-2 pt-2 border-t border-gray-50">
+                <button 
+                  onClick={() => openEditForm(s)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-xs font-semibold hover:bg-gray-100 transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button 
+                  onClick={() => handleDeleteClick(s)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-655 text-xs font-semibold hover:bg-red-100/10 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="text-center py-8 text-gray-400 text-sm">No sermons found. Click "New Sermon" to add one.</div>
+          )}
+        </div>
+      {/* Pagination Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/30">
           <p className="text-gray-500 text-xs">
             Showing {filtered.length === 0 ? 0 : (sermonPage - 1) * ADMIN_SERMONS_PER_PAGE + 1}â€“{Math.min(sermonPage * ADMIN_SERMONS_PER_PAGE, filtered.length)} of {filtered.length} sermons
@@ -1863,7 +2008,7 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
                     required
                     value={duration} 
                     onChange={(e) => setDuration(e.target.value)} 
-                    placeholder="45:00"
+                    placeholder="e.g. 45:00 (Auto-detected)"
                     className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-450 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
                   />
                 </div>
@@ -2042,9 +2187,9 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
                     <input 
                       type="url" 
                       value={audioUrl} 
-                      onChange={(e) => setAudioUrl(e.target.value)} 
+                      onChange={(e) => handleAudioUrlChange(e.target.value)} 
                       placeholder="https://example.com/audio.mp3"
-                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs placeholder-gray-450 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 transition-all text-gray-900 font-medium"
                     />
                   )}
 
@@ -2226,7 +2371,25 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
                               <input
                                 type="url"
                                 value={track.audioUrl.startsWith('blob:') ? '' : track.audioUrl}
-                                onChange={(e) => updateSeriesTrack(track.id, { audioUrl: e.target.value })}
+                                onChange={(e) => {
+                                  const url = e.target.value;
+                                  updateSeriesTrack(track.id, { audioUrl: url });
+                                  if (url) {
+                                    try {
+                                      const audioObj = new Audio(resolveApiUrl(url));
+                                      audioObj.addEventListener('loadedmetadata', () => {
+                                        const durationSeconds = audioObj.duration;
+                                        if (!isNaN(durationSeconds)) {
+                                          const minutes = Math.floor(durationSeconds / 60);
+                                          const seconds = Math.floor(durationSeconds % 60);
+                                          updateSeriesTrack(track.id, { duration: `${minutes}:${seconds.toString().padStart(2, '0')}` });
+                                        }
+                                      });
+                                    } catch (err) {
+                                      console.error("Failed to pre-fetch track duration:", err);
+                                    }
+                                  }
+                                }}
                                 placeholder="https://example.com/part-audio.mp3"
                                 className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/10 focus:border-royal-blue-500 text-gray-905 font-medium"
                               />
@@ -2957,8 +3120,23 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
   const [seoKeywords, setSeoKeywords] = useState('');
   const [slugWarning, setSlugWarning] = useState('');
 
+  const [blogPage, setBlogPage] = useState(1);
+  const BLOG_POSTS_PER_PAGE = 10;
+
   const activePosts = posts.filter(p => !p.isDeleted);
   const deletedPosts = posts.filter(p => p.isDeleted);
+
+  const blogTotalPages = Math.max(1, Math.ceil(activePosts.length / BLOG_POSTS_PER_PAGE));
+  const paginatedActivePosts = activePosts.slice(
+    (blogPage - 1) * BLOG_POSTS_PER_PAGE,
+    blogPage * BLOG_POSTS_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (blogPage > blogTotalPages) {
+      setBlogPage(blogTotalPages);
+    }
+  }, [activePosts.length, blogTotalPages, blogPage]);
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
@@ -3208,7 +3386,8 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
         </div>
       ) : (
         <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50/50">
@@ -3224,7 +3403,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {activePosts.map((post) => {
+                {paginatedActivePosts.map((post) => {
                   const postViews = (post as any).views || 0;
                   const postComments = (post as any).comments || 0;
                   const postStatus = (post as any).status || 'Published';
@@ -3259,7 +3438,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                           </button>
                           <button 
                             onClick={() => setPostToDelete(post)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-650 transition-colors cursor-pointer"
                             title="Delete Post"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -3272,6 +3451,89 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile View */}
+          <div className="block md:hidden divide-y divide-gray-150">
+            {paginatedActivePosts.map((post) => {
+              const postViews = (post as any).views || 0;
+              const postComments = (post as any).comments || 0;
+              const postStatus = (post as any).status || 'Published';
+              return (
+                <div key={post.id} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-gray-900 text-sm font-semibold truncate flex-1">{post.title}</p>
+                    <span className={cn('px-2 py-0.5 rounded-full text-[9px] font-semibold border flex-shrink-0',
+                      postStatus === 'Published' ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50' : 'bg-gold-50 text-gold-700 border-gold-100/50'
+                    )}>{postStatus}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-medium">{post.category}</span>
+                    <span>By {post.author}</span>
+                    <span>{post.date}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-50">
+                    <span>Slug: <code className="font-mono text-gray-600">/{post.slug}</code></span>
+                    <span>{postViews.toLocaleString()} views • {postComments} comments</span>
+                  </div>
+                  <div className="flex w-full items-center gap-2 pt-2 border-t border-gray-50">
+                    <button 
+                      onClick={() => openEditForm(post)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-xs font-semibold hover:bg-gray-100 transition-colors"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button 
+                      onClick={() => setPostToDelete(post)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-650 text-xs font-semibold hover:bg-red-100/10 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {activePosts.length === 0 && (
+              <div className="text-center py-8 text-gray-400 text-sm">No blog posts found.</div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {blogTotalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-150 flex items-center justify-between bg-gray-50/50">
+              <p className="text-gray-500 text-xs">
+                Showing {(blogPage - 1) * BLOG_POSTS_PER_PAGE + 1}–{Math.min(blogPage * BLOG_POSTS_PER_PAGE, activePosts.length)} of {activePosts.length} posts
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBlogPage(p => Math.max(1, p - 1))}
+                  disabled={blogPage === 1}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                    blogPage === 1
+                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  )}
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-gray-500 font-medium">
+                  Page {blogPage} of {blogTotalPages}
+                </span>
+                <button
+                  onClick={() => setBlogPage(p => Math.min(blogTotalPages, p + 1))}
+                  disabled={blogPage === blogTotalPages}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
+                    blogPage === blogTotalPages
+                      ? 'bg-royal-blue-200 text-royal-blue-300 cursor-not-allowed'
+                      : 'bg-royal-blue-600 text-white hover:bg-royal-blue-700'
+                  )}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -4489,109 +4751,337 @@ function PrayerTab() {
   );
 }
 
-// ====== MODERATION TAB ======
 function ModerationTab() {
+  const [comments, setComments] = useState<any[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [filterWords, setFilterWords] = useState('');
+  const [blockLinks, setBlockLinks] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const COMMENTS_PER_PAGE = 10;
+
+  // Load comments and moderation settings on mount
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const fetchedComments = await api.getAdminComments();
+      setComments(fetchedComments);
+      
+      const fetchedSettings = await api.getSettings();
+      setSettings(fetchedSettings);
+      setFilterWords(fetchedSettings.filter_words || '');
+      setBlockLinks(fetchedSettings.block_links !== 'false'); // Default to true if not explicitly 'false'
+    } catch (err) {
+      console.error('Failed to load moderation data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settings) return;
+    setSavingSettings(true);
+    try {
+      const updatedSettings: Settings = {
+        ...settings,
+        filter_words: filterWords.trim(),
+        block_links: blockLinks ? 'true' : 'false'
+      };
+      await api.saveSettings(updatedSettings);
+      alert('Moderation settings saved successfully!');
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleApprove = async (id: string) => {
+    try {
+      await api.approveComment(id);
+      // Update local state to reflect approved status
+      setComments(prev => prev.map(c => c.id === id ? { ...c, status: 'approved' } : c));
+    } catch (err) {
+      console.error('Failed to approve comment:', err);
+      alert('Failed to approve comment.');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this comment?')) return;
+    try {
+      await api.deleteComment(id);
+      setComments(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      console.error('Failed to delete comment:', err);
+      alert('Failed to delete comment.');
+    }
+  };
+
+  // Filtering comments
+  const filteredComments = comments.filter(c => {
+    // Status Filter
+    if (statusFilter === 'pending' && c.status === 'approved') return false;
+    if (statusFilter === 'approved' && c.status !== 'approved') return false;
+
+    // Search Filter
+    if (searchTerm.trim() !== '') {
+      const search = searchTerm.toLowerCase();
+      const nameMatch = c.name?.toLowerCase().includes(search);
+      const textMatch = c.text?.toLowerCase().includes(search);
+      const itemMatch = c.item_title?.toLowerCase().includes(search);
+      return nameMatch || textMatch || itemMatch;
+    }
+
+    return true;
+  });
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredComments.length / COMMENTS_PER_PAGE));
+  const paginatedComments = filteredComments.slice(
+    (currentPage - 1) * COMMENTS_PER_PAGE,
+    currentPage * COMMENTS_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredComments.length, totalPages, currentPage]);
+
+  // Status stats
+  const pendingCount = comments.filter(c => c.status !== 'approved').length;
+  const approvedCount = comments.filter(c => c.status === 'approved').length;
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Moderation</h2>
-          <p className="text-gray-500 text-sm">Review and moderate community content</p>
+          <h2 className="text-xl font-bold text-gray-900">Comments & Moderation</h2>
+          <p className="text-gray-500 text-sm">Review, approve, filter, and moderate community comments</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2 border border-gray-200 shadow-sm font-medium text-sm">
-            <Filter className="w-4 h-4 text-gray-550" /> All Reports
-          </button>
-          <button className="px-4 py-2 rounded-xl bg-royal-blue-600 text-white text-sm font-medium hover:bg-royal-blue-700 transition-colors flex items-center gap-2 shadow-sm">
-            <Shield className="w-4 h-4" /> Moderation Tools
-          </button>
-        </div>
+        <button 
+          onClick={loadData}
+          className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2 border border-gray-200 shadow-sm font-semibold text-sm cursor-pointer"
+        >
+          <RefreshCw className="w-4 h-4" /> Refresh Queue
+        </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Pending Review', value: '12', icon: AlertTriangle, color: 'text-gold-600 bg-gold-50 border-gold-100' },
-          { label: 'Flagged Content', value: '8', icon: AlertCircle, color: 'text-red-650 bg-red-50 border-red-100' },
-          { label: 'Approved Today', value: '34', icon: CheckCircle, color: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
-          { label: 'Reported Users', value: '3', icon: Shield, color: 'text-royal-blue-700 bg-royal-blue-50 border-royal-blue-100' },
-        ].map((stat) => (
-          <div key={stat.label} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <span className={cn('p-1.5 rounded-lg border', stat.color.split(' ')[1], stat.color.split(' ')[2])}>
-                <stat.icon className={cn('w-4 h-4', stat.color.split(' ')[0])} />
-              </span>
-              <span className="text-gray-500 text-xs font-semibold">{stat.label}</span>
-            </div>
-            <p className="text-gray-900 text-2xl font-bold">{stat.value}</p>
+      {/* Settings Panel & Tools */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Moderation Rules & Filters */}
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+            <Shield className="w-5 h-5 text-royal-blue-600" />
+            <h3 className="text-gray-950 font-bold text-sm">Moderation Controls</h3>
           </div>
-        ))}
-      </div>
-
-      {/* Reports List */}
-      <div className="space-y-3">
-        {[
-          { type: 'Comment', from: 'User #4521', reason: 'Inappropriate language', date: '2 hours ago', status: 'Pending' },
-          { type: 'Comment', from: 'User #3892', reason: 'Spam content', date: '5 hours ago', status: 'Pending' },
-          { type: 'User', from: 'User #5210', reason: 'Fake account', date: '1 day ago', status: 'Reviewed' },
-          { type: 'Sermon', from: 'User #2104', reason: 'Copyright claim', date: '2 days ago', status: 'Pending' },
-          { type: 'Comment', from: 'User #7821', reason: 'Harassment', date: '2 days ago', status: 'Resolved' },
-        ].map((report, i) => (
-          <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white border border-gray-200 hover:border-gray-300 shadow-sm transition-all">
-            <div className="flex items-center gap-4">
-              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center border', report.status === 'Pending' ? 'bg-gold-50 border-gold-100' : report.status === 'Reviewed' ? 'bg-royal-blue-50 border-royal-blue-100' : 'bg-emerald-50 border-emerald-100')}>
-                <AlertTriangle className={cn('w-5 h-5', report.status === 'Pending' ? 'text-gold-700' : report.status === 'Reviewed' ? 'text-royal-blue-700' : 'text-emerald-700')} />
-              </div>
-              <div>
-                <p className="text-gray-900 text-sm font-semibold">{report.reason}</p>
-                <p className="text-gray-500 text-[10px]">{report.type} reported by {report.from} â€¢ {report.date}</p>
-              </div>
+          <form onSubmit={handleSaveSettings} className="space-y-4">
+            {/* Filter Words */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Filter Words (Bad Words)</label>
+              <textarea
+                value={filterWords}
+                onChange={(e) => setFilterWords(e.target.value)}
+                placeholder="badword1, spamlink, advert, hack..."
+                rows={3}
+                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 bg-white text-gray-800 resize-none leading-relaxed"
+              />
+              <p className="text-[10px] text-gray-400 leading-normal">
+                Comments containing these comma-separated keywords will be automatically flagged as blocked/pending review.
+              </p>
             </div>
+
+            {/* Links Block Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div>
+                <label className="text-xs font-bold text-gray-800 block">Block Links in Comments</label>
+                <span className="text-[10px] text-gray-400">Flag comments containing URLs/links</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={blockLinks}
+                  onChange={(e) => setBlockLinks(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-royal-blue-600"></div>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingSettings || loading}
+              className="w-full py-2.5 bg-royal-blue-600 hover:bg-royal-blue-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm cursor-pointer disabled:opacity-50 border-none"
+            >
+              {savingSettings ? 'Saving Controls...' : 'Save Moderation Rules'}
+            </button>
+          </form>
+        </div>
+
+        {/* Moderation Queue & Filter View */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col space-y-4">
+          {/* Stats, Filters & Search bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold border',
-                report.status === 'Pending' ? 'bg-gold-50 text-gold-700 border-gold-100' :
-                report.status === 'Reviewed' ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-100' :
-                'bg-emerald-50 text-emerald-700 border-emerald-100'
-              )}>{report.status}</span>
-              {report.status === 'Pending' && (
-                <div className="flex gap-1">
-                  <button className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 transition-colors"><Check className="w-3.5 h-3.5" /></button>
-                  <button className="p-1.5 rounded-lg bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"><X className="w-3.5 h-3.5" /></button>
+              <button
+                onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
+                  statusFilter === 'all' ? 'bg-royal-blue-50 text-royal-blue-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'
+                )}
+              >
+                All ({comments.length})
+              </button>
+              <button
+                onClick={() => { setStatusFilter('pending'); setCurrentPage(1); }}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
+                  statusFilter === 'pending' ? 'bg-gold-50 text-gold-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'
+                )}
+              >
+                Blocked/Pending ({pendingCount})
+              </button>
+              <button
+                onClick={() => { setStatusFilter('approved'); setCurrentPage(1); }}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
+                  statusFilter === 'approved' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'
+                )}
+              >
+                Approved ({approvedCount})
+              </button>
+            </div>
+            <div className="relative flex-1 max-w-xs">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search comments..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 bg-white text-gray-800 placeholder-gray-400"
+              />
+            </div>
+          </div>
+
+          {/* Queue List */}
+          {loading ? (
+            <div className="py-12 text-center text-gray-400 space-y-2">
+              <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-royal-blue-600" />
+              <p className="text-xs font-medium">Fetching comments queue...</p>
+            </div>
+          ) : paginatedComments.length === 0 ? (
+            <div className="py-16 text-center text-gray-400 border border-dashed border-gray-150 rounded-2xl">
+              <Shield className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-semibold">No comments in this filter queue</p>
+              <p className="text-xs text-gray-400 mt-1">Try changing your filters or searching another keyword.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {paginatedComments.map((comment) => {
+                const initials = comment.name ? comment.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                const itemTypeLabel = comment.item_type === 'sermon' ? 'Sermon' : comment.item_type === 'book' ? 'Book' : 'Blog';
+                const formattedDate = comment.created_at ? new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                return (
+                  <div key={comment.id} className="p-4 rounded-xl bg-gray-55 transition-colors flex items-start gap-4 border border-transparent hover:border-gray-100 hover:bg-gray-50">
+                    {/* User Initials Avatar */}
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
+                      {initials}
+                    </div>
+
+                    {/* Main content body */}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <span className="text-gray-900 text-xs font-bold">{comment.name}</span>
+                        <span className="text-[10px] text-gray-400 font-medium">{formattedDate}</span>
+                        <span className={cn('px-1.5 py-0.5 rounded-full text-[8px] font-bold border flex-shrink-0', 
+                          comment.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50' : 'bg-red-50 text-red-655 border-red-100'
+                        )}>
+                          {comment.status === 'approved' ? 'Approved' : 'Blocked / Pending'}
+                        </span>
+                      </div>
+
+                      {/* Comment body */}
+                      <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line bg-white p-2.5 rounded-xl border border-gray-100">{comment.text}</p>
+
+                      {/* Commented on indicator */}
+                      <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                        <span className="font-semibold">{itemTypeLabel}:</span>
+                        <span className="italic text-gray-500 font-medium truncate max-w-[250px]">{comment.item_title || 'Unknown Item'}</span>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-gray-100/50 mt-1">
+                        {comment.status !== 'approved' && (
+                          <button
+                            onClick={() => handleApprove(comment.id)}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Approve
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(comment.id)}
+                          className="px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Delete Permanently
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Pagination controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-gray-150 mt-2 bg-white px-2">
+                  <p className="text-gray-500 text-xs">
+                    Showing {(currentPage - 1) * COMMENTS_PER_PAGE + 1}–{Math.min(currentPage * COMMENTS_PER_PAGE, filteredComments.length)} of {filteredComments.length} comments
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                        currentPage === 1
+                          ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      )}
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs text-gray-500 font-medium">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
+                        currentPage === totalPages
+                          ? 'bg-royal-blue-200 text-royal-blue-300 cursor-not-allowed'
+                          : 'bg-royal-blue-600 text-white hover:bg-royal-blue-700'
+                      )}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Moderation Queue */}
-      <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
-        <h3 className="text-gray-900 font-bold mb-4">Recent Comments to Moderate</h3>
-        <div className="space-y-4">
-          {[
-            { user: 'Anonymous', comment: 'This sermon changed my life! But I disagree with...', time: '10 min ago', flag: 'Potential spam' },
-            { user: 'NewUser789', comment: 'Check out my website for...', time: '25 min ago', flag: 'Spam detected' },
-            { user: 'TruthSeeker', comment: 'This teaching is not biblical because...', time: '1 hour ago', flag: 'Reported by users' },
-          ].map((item, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <div className="w-8 h-8 rounded-full bg-gold-50 flex items-center justify-center flex-shrink-0 mt-0.5 border border-gold-100">
-                <span className="text-gold-700 text-xs font-bold">{item.user.charAt(0)}</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-gray-900 text-xs font-semibold">{item.user}</span>
-                  <span className="text-gray-400 text-[10px]">{item.time}</span>
-                  <span className="px-1.5 py-0.5 rounded-full bg-red-50 text-red-655 border border-red-100 text-[8px] font-semibold">{item.flag}</span>
-                </div>
-                <p className="text-gray-750 text-xs">{item.comment}</p>
-                <div className="flex gap-2 mt-2">
-                  <button className="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-semibold hover:bg-emerald-100 transition-colors flex items-center gap-1"><Check className="w-3 h-3" />Approve</button>
-                  <button className="px-3 py-1 rounded-lg bg-red-50 text-red-605 border border-red-100 text-[10px] font-semibold hover:bg-red-100 transition-colors flex items-center gap-1 text-red-600"><X className="w-3 h-3" />Remove</button>
-                  <button className="px-3 py-1 rounded-lg bg-gray-100 text-gray-650 text-[10px] hover:bg-gray-200 transition-colors font-semibold">Block User</button>
-                </div>
-              </div>
-            </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

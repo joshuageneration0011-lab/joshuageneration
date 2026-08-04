@@ -4,6 +4,7 @@ import type { Sermon } from '@/types';
 import { cn } from '@/utils/cn';
 import { api, resolveApiUrl } from '@/utils/api';
 import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
+import { SmoothImage } from './SmoothImage';
 
 interface SermonsPageProps {
   sermons: Sermon[];
@@ -249,7 +250,7 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
           <>
           {/* Mobile List View (only visible on mobile screens) */}
           <div className="flex flex-col sm:hidden border-t-2 border-black pt-2 mb-8">
-            {paginatedSermons.map((sermon) => (
+            {paginatedSermons.map((sermon, index) => (
               <div
                 key={sermon.id}
                 onClick={() => onSermonSelect(sermon)}
@@ -295,10 +296,11 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
                     <Heart className={cn("w-3 h-3", likedSermonIds.includes(sermon.id) ? "fill-red-500 text-red-500" : "text-white")} />
                   </button>
                   {sermon.thumbnail ? (
-                    <img loading="lazy" decoding="async"
+                    <SmoothImage
                       src={resolveApiUrl(sermon.thumbnail)}
                       alt={sermon.title}
                       className="w-full h-full object-cover"
+                      priority={index < 3}
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-royal-blue-950 flex items-center justify-center">
@@ -322,10 +324,11 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
                 {/* Audio Card Visual */}
                 <div className="relative aspect-[16/10] bg-gray-900 overflow-hidden">
                   {sermon.thumbnail ? (
-                    <img loading="lazy" decoding="async"
+                    <SmoothImage
                       src={resolveApiUrl(sermon.thumbnail)}
                       alt={sermon.title}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      priority={index < 4}
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-royal-blue-950/60 to-gray-900" />

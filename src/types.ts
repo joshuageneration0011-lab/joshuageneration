@@ -130,6 +130,7 @@ export interface Settings {
   adsense_center_blog_code?: string;
   adsense_beneath_blog_code?: string;
   filter_words?: string;
+  block_links?: string;
   privacyPolicy?: string;
   termsOfService?: string;
 }

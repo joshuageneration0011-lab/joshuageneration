@@ -4,6 +4,7 @@ import { resolveApiUrl } from '@/utils/api';
 import { useState, useEffect } from 'react';
 import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
 import { cn } from '@/utils/cn';
+import { SmoothImage } from './SmoothImage';
 
 interface BlogSectionProps {
   posts: BlogPost[];
@@ -79,10 +80,11 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
                   >
                     <Heart className={cn("w-3.5 h-3.5", likedBlogIds.includes(featured.id) ? "fill-red-500 text-red-500" : "text-white")} />
                   </button>
-                  <img loading="lazy" decoding="async"
+                  <SmoothImage
                     src={resolveApiUrl(featured.imageUrl)}
                     alt={featured.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    priority={true}
                   />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
@@ -120,7 +122,7 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
 
           {/* Side Articles — takes 2 cols */}
           <div className="lg:col-span-2 flex flex-col gap-5">
-            {others.map((post) => (
+            {others.map((post, index) => (
               <div
                 key={post.id}
                 onClick={() => onPostSelect?.(post)}
@@ -138,10 +140,11 @@ export default function BlogSection({ posts, onPostSelect, onViewAll }: BlogSect
                   >
                     <Heart className={cn("w-3 h-3", likedBlogIds.includes(post.id) ? "fill-red-500 text-red-500" : "text-white")} />
                   </button>
-                  <img loading="lazy" decoding="async"
+                  <SmoothImage
                     src={resolveApiUrl(post.imageUrl)}
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    priority={index < 3}
                   />
                 </div>
 

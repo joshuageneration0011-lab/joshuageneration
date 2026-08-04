@@ -28,6 +28,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
   // Comments System State
   const [comments, setComments] = useState<any[]>([]);
+  const [commentPage, setCommentPage] = useState(1);
   const [newCommentName, setNewCommentName] = useState('');
   const [newCommentText, setNewCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -49,6 +50,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
   // Load comments and views on mount
   useEffect(() => {
+    setCommentPage(1);
     api.incrementSermonViews(sermon.id)
       .then((newViews) => {
         setLocalViews(newViews);
@@ -78,6 +80,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
       if (res.comment.status === 'approved') {
         setComments(prev => [res.comment, ...prev]);
+        setCommentPage(1);
       } else {
         alert('Thank you! Your comment has been submitted and is awaiting moderation.');
       }
@@ -713,35 +716,69 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 {!Array.isArray(comments) || comments.length === 0 ? (
                   <p className="text-gray-400 text-sm text-center py-4">No comments yet. Be the first to share your thoughts!</p>
                 ) : (
-                  comments.map((comment) => {
-                    if (!comment) return null;
-                    const initials = comment.name ? comment.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
-                    let formattedDate = '';
-                    if (comment.created_at) {
-                      const d = new Date(comment.created_at);
-                      if (!isNaN(d.getTime())) {
-                        formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                      }
-                    }
+                  (() => {
+                    const COMMENTS_PER_PAGE = 5;
+                    const totalCommentPages = Math.ceil(comments.length / COMMENTS_PER_PAGE);
+                    const paginatedComments = comments.slice((commentPage - 1) * COMMENTS_PER_PAGE, commentPage * COMMENTS_PER_PAGE);
                     return (
-                      <div key={comment.id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
-                        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
-                          {initials}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-baseline justify-between mb-1">
-                            <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
-                            {formattedDate && (
-                              <span className="text-[9px] font-semibold text-gray-400">
-                                {formattedDate}
-                              </span>
-                            )}
+                      <>
+                        {paginatedComments.map((comment) => {
+                          if (!comment) return null;
+                          const initials = comment.name ? comment.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                          let formattedDate = '';
+                          if (comment.created_at) {
+                            const d = new Date(comment.created_at);
+                            if (!isNaN(d.getTime())) {
+                              formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                            }
+                          }
+                          return (
+                            <div key={comment.id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-royal-blue-100 to-royal-blue-200 text-royal-blue-700 flex items-center justify-center font-bold text-sm shadow-sm">
+                                {initials}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-baseline justify-between mb-1">
+                                  <h4 className="text-sm font-bold text-gray-900">{comment.name}</h4>
+                                  {formattedDate && (
+                                    <span className="text-[9px] font-semibold text-gray-400">
+                                      {formattedDate}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-650 text-xs leading-relaxed whitespace-pre-line">{comment.text}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Pagination Controls */}
+                        {totalCommentPages > 1 && (
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-150 mt-4">
+                            <button
+                              type="button"
+                              onClick={() => setCommentPage(prev => Math.max(prev - 1, 1))}
+                              disabled={commentPage === 1}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-royal-blue-600 disabled:opacity-40 disabled:hover:text-gray-500 transition-colors bg-white hover:bg-gray-50 border border-gray-200 rounded-xl cursor-pointer disabled:cursor-not-allowed"
+                            >
+                              Previous
+                            </button>
+                            <span className="text-xs text-gray-500 font-medium">
+                              Page {commentPage} of {totalCommentPages}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setCommentPage(prev => Math.min(prev + 1, totalCommentPages))}
+                              disabled={commentPage === totalCommentPages}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-royal-blue-600 disabled:opacity-40 disabled:hover:text-gray-500 transition-colors bg-white hover:bg-gray-50 border border-gray-200 rounded-xl cursor-pointer disabled:cursor-not-allowed"
+                            >
+                              Next
+                            </button>
                           </div>
-                          <p className="text-gray-650 text-xs leading-relaxed whitespace-pre-line">{comment.text}</p>
-                        </div>
-                      </div>
+                        )}
+                      </>
                     );
-                  })
+                  })()
                 )}
               </div>
             </div>

@@ -5,6 +5,7 @@ import type { BlogPost } from '@/types';
 import { cn } from '@/utils/cn';
 import { updatePageSEO } from '@/utils/seo';
 import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
+import { SmoothImage } from './SmoothImage';
 
 interface BlogPageProps {
   posts: BlogPost[];
@@ -166,10 +167,11 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                           style={{ boxShadow: hoveredId === post.id ? `0 20px 60px ${accent}25, 0 4px 16px rgba(0,0,0,0.1)` : '0 4px 16px rgba(0,0,0,0.06)' }}
                         >
                           {/* Full-bleed image */}
-                          <img loading="lazy" decoding="async"
+                          <SmoothImage
                             src={resolveApiUrl(post.imageUrl)}
                             alt={post.title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            priority={i === 0}
                           />
                           {/* Like Button */}
                           <button
@@ -240,7 +242,7 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                     </div>
 
                     <div className="space-y-2">
-                      {listPosts.map((post) => {
+                      {listPosts.map((post, index) => {
                         const accent = getAccent(post.category);
                         return (
                           <div
@@ -262,10 +264,11 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                               >
                                 <Heart className={cn("w-3 h-3", likedBlogIds.includes(post.id) ? "fill-red-500 text-red-500" : "text-white")} />
                               </button>
-                              <img loading="lazy" decoding="async"
+                              <SmoothImage
                                 src={resolveApiUrl(post.imageUrl)}
                                 alt={post.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                priority={index < 3}
                               />
                             </div>
 
@@ -411,7 +414,7 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                     className="group cursor-pointer flex gap-3 items-start"
                   >
                     <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
-                      <img loading="lazy" decoding="async" src={resolveApiUrl(post.imageUrl)} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <SmoothImage src={resolveApiUrl(post.imageUrl)} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" priority={true} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-bold text-[#1a1208] group-hover:text-royal-blue-600 transition-colors line-clamp-2 leading-snug">

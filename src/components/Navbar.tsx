@@ -97,7 +97,6 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
-            {/* Logo */}
             <a
               href="#"
               onClick={(e) => {
@@ -106,14 +105,14 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
               }}
               className="flex items-center gap-2.5 group"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-royal-blue-500 to-royal-blue-700 flex items-center justify-center shadow-lg shadow-royal-blue-500/20 transition-transform duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-sm">J</span>
+              <div className="w-9 h-9 rounded-xl bg-gray-950 flex items-center justify-center shadow-lg shadow-gray-950/20 transition-transform duration-300 group-hover:scale-105 overflow-hidden border border-white/[0.08]">
+                <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <span className={cn(
                 'font-bold text-lg tracking-tight transition-colors duration-300',
                 isScrolled || currentPage !== 'home' ? 'text-gray-900' : 'text-white'
               )}>
-                Joshua<span className="text-gold-500">Gen</span>
+                Joshuas<span className="text-gold-500">Generation</span>
               </span>
             </a>
 

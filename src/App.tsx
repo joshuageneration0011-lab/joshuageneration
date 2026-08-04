@@ -923,6 +923,8 @@ export default function App() {
           onSermonsClick={() => navigate('sermons')}
           onBooksClick={() => navigate('books')}
           onBlogClick={() => navigate('blog')}
+          sermonsCount={stats?.sermons}
+          booksCount={stats?.books}
         />
         <Suspense fallback={<div className="h-40 flex items-center justify-center bg-gray-50"><div className="w-8 h-8 rounded-full border-4 border-gold-500 border-t-transparent animate-spin" /></div>}>
           <StatsSection

@@ -41,7 +41,7 @@ export default function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
       if (result.success) {
         onLogin();
       } else {
-        setError(result.error || 'Invalid credentials. Try admin@joshuagen.org / admin123');
+        setError(result.error || 'Invalid email or password.');
         setIsLoading(false);
       }
     } catch (err) {
@@ -163,7 +163,7 @@ export default function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@joshuagen.org"
+                    placeholder="Enter email address"
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
                   />
                 </div>
@@ -228,11 +228,7 @@ export default function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
                 )}
               </button>
 
-              <div className="pt-2 text-center">
-                <p className="text-gray-400 text-[10px] leading-relaxed">
-                  Demo: admin@joshuagen.org / admin123
-                </p>
-              </div>
+              {/* Demo credentials footer removed */}
             </form>
           )}
 
@@ -247,7 +243,7 @@ export default function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@joshuagen.org"
+                    placeholder="Enter email address"
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all"
                   />
                 </div>

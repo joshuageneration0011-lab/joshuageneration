@@ -4,6 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
+import { exec } from 'child_process';
 import { DEFAULT_PRIVACY_POLICY, DEFAULT_TERMS_OF_SERVICE } from './legal_defaults.js';
 
 const vapidPublicKey = 'BJBaNfrwFP_ZX_Awp6_rgOoWJt42KKagStsZfInoih_gZyK7dDDogJA_2cm0JCNDY0erJ7g7_WRr8Xe3m_wZjls';
@@ -530,7 +531,7 @@ async function initDb() {
       }
 
       // Safe migration: add new columns first (idempotent), THEN remove old ones
-      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference', 'adsense_auto_code', 'adsense_above_blog_code', 'adsense_center_blog_code', 'adsense_beneath_blog_code', 'filter_words', 'privacyPolicy', 'termsOfService']) {
+      for (const col of ['flutterwave_prophetic_client_id', 'flutterwave_prophetic_client_secret', 'flutterwave_mission_client_id', 'flutterwave_mission_client_secret', 'contactEmail', 'contactPhone', 'contactAddress', 'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'homeHeadlinePrefix', 'homeHeadlineHighlight', 'homeHeadlineSuffix', 'homeSubheading', 'homeBibleVerse', 'homeBibleReference', 'adsense_auto_code', 'adsense_above_blog_code', 'adsense_center_blog_code', 'adsense_beneath_blog_code', 'filter_words', 'block_links', 'privacyPolicy', 'termsOfService']) {
         try { await pool.query(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS "${col}" TEXT DEFAULT ''`); } catch (e) { console.error('Migration error:', e); }
       }
 
@@ -549,7 +550,30 @@ async function initDb() {
 
       const settingsCheck = await pool.query('SELECT 1 FROM settings WHERE id = 1');
       if (settingsCheck.rowCount === 0) {
-        await pool.query(`INSERT INTO settings (id, flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret) VALUES (1, '', '', '', '')`);
+        await pool.query(`
+          INSERT INTO settings (
+            id, 
+            flutterwave_prophetic_client_id, 
+            flutterwave_prophetic_client_secret, 
+            flutterwave_mission_client_id, 
+            flutterwave_mission_client_secret
+          ) VALUES (
+            1, 
+            'FLWPUBK-e83f5b22f448ff39c1f157b929adadc9-X', 
+            'FLWSECK-8062008c8cdda5846480c599b94c9b80-19fc7c47ad9vt-X', 
+            'FLWPUBK-4d5fe16c0831195900d5e49808253e0f-X', 
+            'FLWSECK-5df1ed2b34c0770e965289c196aa770a-19fc7c2e858vt-X'
+          )
+        `);
+      } else {
+        await pool.query(`
+          UPDATE settings SET 
+            flutterwave_prophetic_client_id = COALESCE(NULLIF(flutterwave_prophetic_client_id, ''), 'FLWPUBK-e83f5b22f448ff39c1f157b929adadc9-X'),
+            flutterwave_prophetic_client_secret = COALESCE(NULLIF(flutterwave_prophetic_client_secret, ''), 'FLWSECK-8062008c8cdda5846480c599b94c9b80-19fc7c47ad9vt-X'),
+            flutterwave_mission_client_id = COALESCE(NULLIF(flutterwave_mission_client_id, ''), 'FLWPUBK-4d5fe16c0831195900d5e49808253e0f-X'),
+            flutterwave_mission_client_secret = COALESCE(NULLIF(flutterwave_mission_client_secret, ''), 'FLWSECK-5df1ed2b34c0770e965289c196aa770a-19fc7c2e858vt-X')
+          WHERE id = 1
+        `);
       }
 
       await pool.query(`
@@ -750,6 +774,105 @@ async function initDb() {
     }
   } else {
     initLocalData();
+  }
+  try {
+    await generateSitemap();
+  } catch (err) {
+    console.error('Failed to run sitemap generation on startup:', err);
+  }
+}
+
+// --- Sitemap Generator ---
+async function generateSitemap() {
+  try {
+    let sermons = [];
+    let books = [];
+    let blogPosts = [];
+
+    if (pool) {
+      const sermonsRes = await pool.query('SELECT id FROM sermons');
+      sermons = sermonsRes.rows;
+      const booksRes = await pool.query('SELECT id FROM books');
+      books = booksRes.rows;
+      const blogRes = await pool.query('SELECT id FROM blog_posts');
+      blogPosts = blogRes.rows;
+    } else {
+      if (fs.existsSync(SERMONS_FILE)) sermons = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf8'));
+      if (fs.existsSync(BOOKS_FILE)) books = JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf8'));
+      if (fs.existsSync(BLOG_FILE)) blogPosts = JSON.parse(fs.readFileSync(BLOG_FILE, 'utf8'));
+    }
+
+    const domain = 'https://joshuasgeneration.com';
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+    // Static pages
+    const staticPages = [
+      '',
+      '/sermons',
+      '/books',
+      '/blog',
+      '/podcast',
+      '/contact',
+      '/donate',
+      '/partnership'
+    ];
+
+    for (const page of staticPages) {
+      xml += `  <url>\n`;
+      xml += `    <loc>${domain}${page}</loc>\n`;
+      xml += `    <changefreq>daily</changefreq>\n`;
+      xml += `    <priority>${page === '' ? '1.0' : '0.8'}</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic sermons
+    for (const sermon of sermons) {
+      xml += `  <url>\n`;
+      xml += `    <loc>${domain}/sermon/${sermon.id}</loc>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.6</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic books
+    for (const book of books) {
+      xml += `  <url>\n`;
+      xml += `    <loc>${domain}/books/${book.id}</loc>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.6</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Dynamic blog posts
+    for (const post of blogPosts) {
+      xml += `  <url>\n`;
+      xml += `    <loc>${domain}/blog/${post.id}</loc>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.6</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+
+    const publicPath = path.join(__dirname, '..', 'public', 'sitemap.xml');
+    const distPath = path.join(__dirname, '..', 'dist', 'sitemap.xml');
+
+    try {
+      fs.writeFileSync(publicPath, xml, 'utf8');
+      console.log(`Successfully generated public sitemap at ${publicPath}`);
+    } catch (e) {
+      console.warn('Failed to write to public sitemap.xml:', e.message);
+    }
+
+    try {
+      fs.writeFileSync(distPath, xml, 'utf8');
+      console.log(`Successfully generated dist sitemap at ${distPath}`);
+    } catch (e) {
+      console.warn('Failed to write to dist sitemap.xml:', e.message);
+    }
+  } catch (err) {
+    console.error('Failed to generate sitemap:', err);
   }
 }
 
@@ -1561,12 +1684,17 @@ const server = http.createServer(async (req, res) => {
         }
 
         let filterWordsStr = '';
+        let blockLinksStr = 'true';
         if (pool) {
-          const result = await pool.query('SELECT filter_words FROM settings WHERE id = 1');
-          if (result.rowCount > 0) filterWordsStr = result.rows[0].filter_words || '';
+          const result = await pool.query('SELECT filter_words, block_links FROM settings WHERE id = 1');
+          if (result.rowCount > 0) {
+            filterWordsStr = result.rows[0].filter_words || '';
+            blockLinksStr = result.rows[0].block_links || 'true';
+          }
         } else {
           const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
           filterWordsStr = settings.filter_words || '';
+          blockLinksStr = settings.block_links || 'true';
         }
 
         const filterWords = filterWordsStr.split(',')
@@ -1575,11 +1703,12 @@ const server = http.createServer(async (req, res) => {
 
         const linkPattern = /https?:\/\/|www\.|[a-z0-9]+\.(com|net|org|edu|gov|mil|biz|info|mobi|name|xyz|ly|gl|co|cc|tv|me)/i;
         const containsLink = linkPattern.test(text);
+        const shouldBlockLinks = blockLinksStr === 'true';
 
         const textLower = text.toLowerCase();
         const containsBadWord = filterWords.some(word => textLower.includes(word));
 
-        const status = (containsLink || containsBadWord) ? 'blocked' : 'approved';
+        const status = ((containsLink && shouldBlockLinks) || containsBadWord) ? 'blocked' : 'approved';
 
         const newComment = {
           id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
@@ -2344,12 +2473,13 @@ const server = http.createServer(async (req, res) => {
         adsense_center_blog_code: '',
         adsense_beneath_blog_code: '',
         filter_words: '',
+        block_links: 'true',
         privacyPolicy: DEFAULT_PRIVACY_POLICY,
         termsOfService: DEFAULT_TERMS_OF_SERVICE
       };
 
       if (pool) {
-        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words", "privacyPolicy", "termsOfService" FROM settings WHERE id = 1');
+        const { rows } = await pool.query('SELECT "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words", "block_links", "privacyPolicy", "termsOfService" FROM settings WHERE id = 1');
         const row = rows[0] || {};
         const responseData = {};
         for (const key in defaults) {
@@ -2422,13 +2552,13 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       if (pool) {
-        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words", "privacyPolicy", "termsOfService" FROM settings WHERE id = 1');
+        const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words", "block_links", "privacyPolicy", "termsOfService" FROM settings WHERE id = 1');
         const row = result.rows[0] || {};
         const responseData = {
           flutterwave_prophetic_client_id: '', flutterwave_prophetic_client_secret: '',
           flutterwave_mission_client_id: '', flutterwave_mission_client_secret: '',
           adsense_auto_code: '', adsense_above_blog_code: '', adsense_center_blog_code: '', adsense_beneath_blog_code: '',
-          filter_words: '', ...row
+          filter_words: '', block_links: 'true', ...row
         };
         if (!responseData.privacyPolicy) responseData.privacyPolicy = DEFAULT_PRIVACY_POLICY;
         if (!responseData.termsOfService) responseData.termsOfService = DEFAULT_TERMS_OF_SERVICE;
@@ -2454,6 +2584,14 @@ const server = http.createServer(async (req, res) => {
     try {
       const data = await getJsonBody(req);
       if (pool) {
+        const currentRes = await pool.query('SELECT * FROM settings WHERE id = 1');
+        const current = currentRes.rows[0] || {};
+        
+        const prophetic_id = data.flutterwave_prophetic_client_id || current.flutterwave_prophetic_client_id || 'FLWPUBK-e83f5b22f448ff39c1f157b929adadc9-X';
+        const prophetic_secret = data.flutterwave_prophetic_client_secret || current.flutterwave_prophetic_client_secret || 'FLWSECK-8062008c8cdda5846480c599b94c9b80-19fc7c47ad9vt-X';
+        const mission_id = data.flutterwave_mission_client_id || current.flutterwave_mission_client_id || 'FLWPUBK-4d5fe16c0831195900d5e49808253e0f-X';
+        const mission_secret = data.flutterwave_mission_client_secret || current.flutterwave_mission_client_secret || 'FLWSECK-5df1ed2b34c0770e965289c196aa770a-19fc7c2e858vt-X';
+
         await pool.query(
           `UPDATE settings SET 
             flutterwave_prophetic_client_id = $1, 
@@ -2478,14 +2616,15 @@ const server = http.createServer(async (req, res) => {
             "adsense_center_blog_code" = $20,
             "adsense_beneath_blog_code" = $21,
             "filter_words" = $22,
-            "privacyPolicy" = $23,
-            "termsOfService" = $24
+            "block_links" = $23,
+            "privacyPolicy" = $24,
+            "termsOfService" = $25
            WHERE id = 1`,
           [
-            data.flutterwave_prophetic_client_id || '',
-            data.flutterwave_prophetic_client_secret || '',
-            data.flutterwave_mission_client_id || '',
-            data.flutterwave_mission_client_secret || '',
+            prophetic_id,
+            prophetic_secret,
+            mission_id,
+            mission_secret,
             data.contactEmail || '',
             data.contactPhone || '',
             data.contactAddress || '',
@@ -2504,12 +2643,24 @@ const server = http.createServer(async (req, res) => {
             data.adsense_center_blog_code || '',
             data.adsense_beneath_blog_code || '',
             data.filter_words || '',
+            data.block_links || 'true',
             data.privacyPolicy || '',
             data.termsOfService || ''
           ]
         );
       } else {
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+        let existing = {};
+        if (fs.existsSync(SETTINGS_FILE)) {
+          try { existing = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8')); } catch (e) {}
+        }
+        const mergedData = {
+          ...data,
+          flutterwave_prophetic_client_id: data.flutterwave_prophetic_client_id || existing.flutterwave_prophetic_client_id || 'FLWPUBK-e83f5b22f448ff39c1f157b929adadc9-X',
+          flutterwave_prophetic_client_secret: data.flutterwave_prophetic_client_secret || existing.flutterwave_prophetic_client_secret || 'FLWSECK-8062008c8cdda5846480c599b94c9b80-19fc7c47ad9vt-X',
+          flutterwave_mission_client_id: data.flutterwave_mission_client_id || existing.flutterwave_mission_client_id || 'FLWPUBK-4d5fe16c0831195900d5e49808253e0f-X',
+          flutterwave_mission_client_secret: data.flutterwave_mission_client_secret || existing.flutterwave_mission_client_secret || 'FLWSECK-5df1ed2b34c0770e965289c196aa770a-19fc7c2e858vt-X'
+        };
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(mergedData, null, 2), 'utf-8');
       }
       sendJson(res, 200, { success: true });
     } catch (e) {
@@ -2691,7 +2842,6 @@ const server = http.createServer(async (req, res) => {
         
         const extLower = ext.toLowerCase();
         if (extLower === '.jpg' || extLower === '.jpeg' || extLower === '.png') {
-          const { exec } = require('child_process');
           const pyCmd = `python3 -c "
 from PIL import Image
 try:
@@ -2701,12 +2851,12 @@ try:
         ratio = min(800/w, 800/h)
         img = img.resize((int(w*ratio), int(h*ratio)), Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.ANTIALIAS)
     if '${extLower}' in ['.jpg', '.jpeg']:
-        img.save('${filePath}', 'JPEG', quality=75, optimize=True)
+        img.save('${filePath}', 'JPEG', quality=82, optimize=True)
     elif '${extLower}' == '.png':
         if img.mode in ('RGBA', 'LA'):
             img.save('${filePath}', 'PNG', optimize=True)
         else:
-            img.convert('RGB').save('${filePath}', 'JPEG', quality=75, optimize=True)
+            img.convert('RGB').save('${filePath}', 'JPEG', quality=82, optimize=True)
 except Exception as e:
     print(e)
 "`;
@@ -2883,6 +3033,7 @@ except Exception as e:
         }
         fs.writeFileSync(SERMONS_FILE, JSON.stringify(data, null, 2), 'utf-8');
       }
+      generateSitemap();
       sendJson(res, 200, { success: true, item });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to save sermon' });
@@ -2947,6 +3098,7 @@ except Exception as e:
         const filtered = data.filter(x => x.id !== id);
         fs.writeFileSync(SERMONS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
       }
+      generateSitemap();
       sendJson(res, 200, { success: true });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to delete sermon' });
@@ -2993,6 +3145,7 @@ except Exception as e:
         }
         fs.writeFileSync(BOOKS_FILE, JSON.stringify(data, null, 2), 'utf-8');
       }
+      generateSitemap();
       sendJson(res, 200, { success: true, item });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to save book' });
@@ -3011,6 +3164,7 @@ except Exception as e:
         const filtered = data.filter(x => x.id !== id);
         fs.writeFileSync(BOOKS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
       }
+      generateSitemap();
       sendJson(res, 200, { success: true });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to delete book' });
@@ -3057,6 +3211,7 @@ except Exception as e:
         }
         fs.writeFileSync(BLOG_FILE, JSON.stringify(data, null, 2), 'utf-8');
       }
+      generateSitemap();
       sendJson(res, 200, { success: true, item });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to save blog post' });
@@ -3075,6 +3230,7 @@ except Exception as e:
         const filtered = data.filter(x => x.id !== id);
         fs.writeFileSync(BLOG_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
       }
+      generateSitemap();
       sendJson(res, 200, { success: true });
     } catch (e) {
       sendJson(res, 500, { error: 'Failed to delete blog post' });

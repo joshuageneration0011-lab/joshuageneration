@@ -7,6 +7,8 @@ interface HeroSectionProps {
   onSermonsClick?: () => void;
   onBooksClick?: () => void;
   onBlogClick?: () => void;
+  sermonsCount?: number;
+  booksCount?: number;
 }
 
 const SPARKLES = [
@@ -22,14 +24,19 @@ const SPARKLES = [
 
 const WAVE_BARS = 24;
 
-const STATS = [
-  { icon: Headphones, label: 'Sermons', value: '500+' },
-  { icon: Users, label: 'Believers', value: '12K+' },
-  { icon: BookMarked, label: 'Books', value: '80+' },
-  { icon: Radio, label: 'Live Streams', value: 'Weekly' },
-];
-
-export default function HeroSection({ onSermonsClick, onBooksClick, onBlogClick }: HeroSectionProps) {
+export default function HeroSection({ 
+  onSermonsClick, 
+  onBooksClick, 
+  onBlogClick,
+  sermonsCount,
+  booksCount
+}: HeroSectionProps) {
+  const STATS = [
+    { icon: Headphones, label: 'Sermons', value: sermonsCount !== undefined && sermonsCount !== null ? `${sermonsCount}` : '500+' },
+    { icon: Users, label: 'Believers', value: '12K+' },
+    { icon: BookMarked, label: 'Books', value: booksCount !== undefined && booksCount !== null ? `${booksCount}` : '80+' },
+    { icon: Radio, label: 'Live Streams', value: 'Weekly' },
+  ];
   const [settings, setSettings] = useState<Partial<Settings>>({
     homeHeadlinePrefix: 'Experience the ',
     homeHeadlineHighlight: 'Presence',

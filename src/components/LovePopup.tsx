@@ -375,28 +375,20 @@ export default function LovePopup({ isOpen, onClose, onNavigate }: LovePopupProp
                 </p>
               </div>
 
-              {/* Quick Actions (Donate / Partner) */}
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => handleNavigate('donate')}
-                  className="flex flex-col items-center gap-2.5 p-5 bg-gradient-to-br from-gold-50/50 to-gold-100/30 hover:to-gold-100/50 border border-gold-200/40 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300 cursor-pointer"
+              {/* Quick Actions (Donate / Apostle Love Gift) */}
+              <div className="flex justify-center">
+                <a
+                  href="https://selar.co/showlove/joshuasgeneration"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-2.5 p-5 w-full max-w-sm bg-gradient-to-br from-gold-50/50 to-gold-100/30 hover:to-gold-100/50 border border-gold-200/40 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300 cursor-pointer text-center"
                 >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-r from-gold-500 to-gold-600 flex items-center justify-center shadow-md shadow-gold-500/20 text-white">
                     <Gift className="w-5 h-5" />
                   </div>
-                  <span className="text-sm font-bold text-gold-800">Support Financially</span>
-                  <span className="text-[10px] text-gold-600 font-semibold uppercase tracking-wider">Donate</span>
-                </button>
-                <button
-                  onClick={() => handleNavigate('partnership')}
-                  className="flex flex-col items-center gap-2.5 p-5 bg-gradient-to-br from-royal-blue-50/50 to-royal-blue-100/30 hover:to-royal-blue-100/50 border border-royal-blue-200/30 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300 cursor-pointer"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-royal-blue-500 to-royal-blue-600 flex items-center justify-center shadow-md shadow-royal-blue-500/20 text-white">
-                    <Heart className="w-5 h-5 fill-white text-white" />
-                  </div>
-                  <span className="text-sm font-bold text-royal-blue-800">Partner with Us</span>
-                  <span className="text-[10px] text-royal-blue-600 font-semibold uppercase tracking-wider">Become a Partner</span>
-                </button>
+                  <span className="text-sm font-bold text-gold-800 uppercase tracking-wide">SEND A LOVE GIFT TO THE APOSTLE</span>
+                  <span className="text-[10px] text-gold-600 font-semibold uppercase tracking-wider">SUPPORT MINISTRY</span>
+                </a>
               </div>
 
               {/* Message of Appreciation Form */}

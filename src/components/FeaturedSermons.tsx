@@ -4,6 +4,7 @@ import type { Sermon } from '@/types';
 import { resolveApiUrl } from '@/utils/api';
 import { getLikedItems, toggleLikeItem } from '@/data/likesStore';
 import { cn } from '@/utils/cn';
+import { SmoothImage } from './SmoothImage';
 
 interface FeaturedSermonsProps {
   sermons: Sermon[];
@@ -95,10 +96,11 @@ export default function FeaturedSermons({ sermons, onSermonSelect, onViewAll, is
                 {/* Audio card visual */}
                 <div className="relative h-44 flex flex-col items-center justify-center overflow-hidden bg-gray-900">
                   {sermon.thumbnail ? (
-                    <img loading="lazy" decoding="async"
+                    <SmoothImage
                       src={resolveApiUrl(sermon.thumbnail)}
                       alt={sermon.title}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      priority={index < 4}
                     />
                   ) : (
                     <div
