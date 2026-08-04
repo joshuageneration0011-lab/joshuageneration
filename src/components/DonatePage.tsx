@@ -311,7 +311,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   {/* Prophet Offering Card */}
                   <button
                     type="button"
-                    onClick={() => handleCategorySelect('Prophetic Offering')}
+                    onClick={() => handleCategorySelect('Prophet Offering / Faith Seed')}
                     className="group relative flex flex-col items-center text-center p-8 rounded-2xl border-2 border-gold-300 bg-gradient-to-br from-gold-50 to-amber-50 hover:border-gold-500 hover:shadow-xl hover:shadow-gold-200/50 hover:scale-[1.03] transition-all duration-300 overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-gold-400/5 to-amber-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -320,7 +320,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                         <Crown className="w-8 h-8 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">Prophetic Offering</h4>
+                        <h4 className="text-lg font-bold text-gray-800 mb-1">Prophet Offering / Faith Seed</h4>
                         <p className="text-xs text-gray-500 leading-relaxed">
                           Honor the prophetic ministry and support the anointed work of the prophet in your life.
                         </p>
@@ -335,17 +335,17 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   <button
                     type="button"
                     onClick={() => handleCategorySelect('Mission / Outreach')}
-                    className="group relative flex flex-col items-center text-center p-8 rounded-2xl border-2 border-royal-blue-200 bg-gradient-to-br from-royal-blue-50 to-blue-50 hover:border-royal-blue-500 hover:shadow-xl hover:shadow-royal-blue-200/50 hover:scale-[1.03] transition-all duration-300 overflow-hidden"
+                    className="group relative flex flex-col items-center text-center p-8 rounded-2xl border-2 border-royal-blue-200 bg-gradient-to-br from-royal-blue-50/50 to-indigo-50/30 hover:border-royal-blue-500 hover:shadow-xl hover:shadow-royal-blue-200/40 hover:scale-[1.03] transition-all duration-300 overflow-hidden"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-royal-blue-400/5 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-royal-blue-500/5 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="relative z-10 flex flex-col items-center gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-royal-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-royal-blue-300/40 group-hover:scale-110 transition-transform duration-300">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-royal-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-royal-blue-500/30 group-hover:scale-110 transition-transform duration-300">
                         <Globe className="w-8 h-8 text-white" />
                       </div>
                       <div>
                         <h4 className="text-lg font-bold text-gray-800 mb-1">Mission / Outreach</h4>
                         <p className="text-xs text-gray-500 leading-relaxed">
-                          Fuel global missions, evangelism campaigns, and community outreach around the world.
+                          Support local and global evangelism, charity programs, and ministry expansion projects.
                         </p>
                       </div>
                       <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-royal-blue-600 text-white text-xs font-semibold shadow-sm group-hover:bg-royal-blue-700 transition-colors">
@@ -354,11 +354,6 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                     </div>
                   </button>
                 </div>
-
-                <p className="text-center text-xs text-gray-400 pt-2">
-                  <ShieldCheck className="inline w-3.5 h-3.5 mr-1 text-emerald-400" />
-                  All transactions are secure and encrypted
-                </p>
               </div>
             )}
 
@@ -366,8 +361,8 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
               <form onSubmit={handleNextStep} className="space-y-6 animate-in">
                 {/* Selected Category Badge */}
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cause === 'Prophetic Offering' ? 'bg-gold-500' : 'bg-royal-blue-600'}`}>
-                    {cause === 'Prophetic Offering' ? <Crown className="w-4 h-4 text-white" /> : <Globe className="w-4 h-4 text-white" />}
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${(cause === 'Prophetic Offering' || cause === 'Prophet Offering / Faith Seed') ? 'bg-gold-500' : 'bg-royal-blue-600'}`}>
+                    {(cause === 'Prophetic Offering' || cause === 'Prophet Offering / Faith Seed') ? <Crown className="w-4 h-4 text-white" /> : <Globe className="w-4 h-4 text-white" />}
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-gray-400 font-medium">Giving to</p>

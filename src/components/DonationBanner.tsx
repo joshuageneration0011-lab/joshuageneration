@@ -5,7 +5,7 @@ interface DonationBannerProps {
 }
 
 const GIVE_OPTIONS = [
-  { icon: Crown,     label: 'Prophetic Offering', desc: 'Honor the prophetic ministry and support the anointed work' },
+  { icon: Crown,     label: 'Prophet Offering / Faith Seed', desc: 'Honor the prophetic ministry and support the anointed work' },
   { icon: Globe,     label: 'Mission / Outreach', desc: 'Fuel global missions, evangelism, and community outreach' },
 ];
 

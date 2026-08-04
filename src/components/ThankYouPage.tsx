@@ -11,7 +11,7 @@ export default function ThankYouPage({ onNavigateHome, onNavigateSermons }: Than
   const [email, setEmail] = useState('');
   const [amount, setAmount] = useState<number>(0);
   const [currency, setCurrency] = useState('NGN');
-  const [cause, setCause] = useState('Prophetic Offering');
+  const [cause, setCause] = useState('Prophet Offering / Faith Seed');
   const [frequency, setFrequency] = useState('one-time');
   const [txRef, setTxRef] = useState('');
   const [dateStr, setDateStr] = useState('');
@@ -69,7 +69,7 @@ export default function ThankYouPage({ onNavigateHome, onNavigateSermons }: Than
             setEmail(verifiedDonation.email || '');
             setAmount(Number(verifiedDonation.amount) || 0);
             setCurrency(verifiedDonation.currency || 'NGN');
-            setCause(verifiedDonation.purpose || 'Prophetic Offering');
+            setCause(verifiedDonation.purpose || 'Prophet Offering / Faith Seed');
             setFrequency(verifiedDonation.frequency || 'one-time');
             setTxRef(verifiedDonation.id || ref || `JG-TXN-${Date.now()}`);
             setDateStr(verifiedDonation.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
@@ -86,7 +86,7 @@ export default function ThankYouPage({ onNavigateHome, onNavigateSermons }: Than
       const emailToUse = pendingData?.email || params.get('email') || '';
       const amountToUse = pendingData?.amount ? Number(pendingData.amount) : Number(params.get('amount')) || 0;
       const currencyToUse = pendingData?.currency || params.get('currency') || 'NGN';
-      const causeToUse = pendingData?.purpose || params.get('cause') || 'Prophetic Offering';
+      const causeToUse = pendingData?.purpose || params.get('cause') || 'Prophet Offering / Faith Seed';
       const freqToUse = pendingData?.frequency || 'one-time';
       const referenceToUse = ref || `JG-TXN-${Date.now()}`;
       const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -161,7 +161,7 @@ export default function ThankYouPage({ onNavigateHome, onNavigateSermons }: Than
             <div className="bg-gray-50 rounded-2xl border border-gray-200/80 p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                 <div className="flex items-center gap-2">
-                  {cause === 'Prophetic Offering' ? (
+                  {(cause === 'Prophetic Offering' || cause === 'Prophet Offering / Faith Seed') ? (
                     <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center text-gold-600">
                       <Crown className="w-4 h-4" />
                     </div>

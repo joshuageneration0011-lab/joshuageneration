@@ -3814,7 +3814,7 @@ interface DonationsTabProps {
 function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'prophetic' | 'mission'>('all');
 
-  const propheticDonations = donations.filter(d => d.purpose === 'Prophetic Offering');
+  const propheticDonations = donations.filter(d => d.purpose === 'Prophetic Offering' || d.purpose === 'Prophet Offering / Faith Seed');
   const missionDonations = donations.filter(d => d.purpose === 'Mission / Outreach');
 
   const filteredDonations = activeTab === 'prophetic'
@@ -3907,7 +3907,7 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
               : 'border-transparent text-gray-505 hover:text-gray-800'
           )}
         >
-          Prophetic Offerings
+          Prophet Offering / Faith Seed
           <span className={cn(
             'px-2 py-0.5 rounded-full text-xs font-semibold',
             activeTab === 'prophetic' ? 'bg-gold-100 text-gold-700' : 'bg-gray-100 text-gray-600'
@@ -3978,7 +3978,7 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
                   <td className="px-4 py-3">
                     <span className={cn(
                       'px-2 py-0.5 rounded-full text-[10px] font-semibold',
-                      d.purpose === 'Prophetic Offering' ? 'bg-gold-50 text-gold-700 border border-gold-200' : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      (d.purpose === 'Prophetic Offering' || d.purpose === 'Prophet Offering / Faith Seed') ? 'bg-gold-50 text-gold-700 border border-gold-200' : 'bg-blue-50 text-blue-700 border border-blue-200'
                     )}>
                       {d.purpose}
                     </span>
@@ -4804,7 +4804,7 @@ function SettingsTab() {
                 {/* Prophetic Offering */}
                 <div className="space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-royal-blue-600 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-royal-blue-500" /> Prophetic Offering Account
+                    <span className="w-1.5 h-1.5 rounded-full bg-royal-blue-500" /> Prophet Offering / Faith Seed Account
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">

@@ -1797,14 +1797,14 @@ const server = http.createServer(async (req, res) => {
         const result = await pool.query('SELECT flutterwave_prophetic_client_secret, flutterwave_mission_client_secret FROM settings WHERE id = 1');
         const row = result.rows[0] || {};
         // Use client secret depending on cause if backup is available, otherwise try prophetic then mission
-        const isProphetic = backup?.purpose === 'Prophetic Offering';
+        const isProphetic = backup?.purpose === 'Prophetic Offering' || backup?.purpose === 'Prophet Offering / Faith Seed';
         clientSecret = isProphetic 
           ? (row.flutterwave_prophetic_client_secret || row.flutterwave_mission_client_secret)
           : (row.flutterwave_mission_client_secret || row.flutterwave_prophetic_client_secret);
       } else {
         try {
           const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
-          const isProphetic = backup?.purpose === 'Prophetic Offering';
+          const isProphetic = backup?.purpose === 'Prophetic Offering' || backup?.purpose === 'Prophet Offering / Faith Seed';
           clientSecret = isProphetic 
             ? (data.flutterwave_prophetic_client_secret || data.flutterwave_mission_client_secret)
             : (data.flutterwave_mission_client_secret || data.flutterwave_prophetic_client_secret);
@@ -1826,8 +1826,8 @@ const server = http.createServer(async (req, res) => {
               const tx = verifyData.data;
               const desc = tx.narration || '';
               let purpose = 'Mission / Outreach';
-              if (desc.includes('Prophetic') || backup?.purpose === 'Prophetic Offering') {
-                purpose = 'Prophetic Offering';
+              if (desc.includes('Prophetic') || desc.includes('Prophet') || backup?.purpose === 'Prophetic Offering' || backup?.purpose === 'Prophet Offering / Faith Seed') {
+                purpose = 'Prophet Offering / Faith Seed';
               }
               
               donation = {
@@ -1856,7 +1856,7 @@ const server = http.createServer(async (req, res) => {
           donor: backup.donor || 'Generous Donor',
           email: backup.email || 'donor@joshuagen.org',
           amount: Number(backup.amount) || 50.00,
-          purpose: backup.purpose || 'Prophetic Offering',
+          purpose: backup.purpose || 'Prophet Offering / Faith Seed',
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           method: 'Flutterwave',
           frequency: backup.frequency || 'one-time',
@@ -2080,12 +2080,12 @@ const server = http.createServer(async (req, res) => {
       if (pool) {
         const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference" FROM settings WHERE id = 1');
         const row = result.rows[0] || {};
-        clientId = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_id : row.flutterwave_mission_client_id;
-        clientSecret = cause === 'Prophetic Offering' ? row.flutterwave_prophetic_client_secret : row.flutterwave_mission_client_secret;
+        clientId = (cause === 'Prophetic Offering' || cause === 'Prophet Offering / Faith Seed') ? row.flutterwave_prophetic_client_id : row.flutterwave_mission_client_id;
+        clientSecret = (cause === 'Prophetic Offering' || cause === 'Prophet Offering / Faith Seed') ? row.flutterwave_prophetic_client_secret : row.flutterwave_mission_client_secret;
       } else {
         const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
-        clientId = cause === 'Prophetic Offering' ? data.flutterwave_prophetic_client_id : data.flutterwave_mission_client_id;
-        clientSecret = cause === 'Prophetic Offering' ? data.flutterwave_prophetic_client_secret : data.flutterwave_mission_client_secret;
+        clientId = (cause === 'Prophetic Offering' || cause === 'Prophet Offering / Faith Seed') ? data.flutterwave_prophetic_client_id : data.flutterwave_mission_client_id;
+        clientSecret = (cause === 'Prophetic Offering' || cause === 'Prophet Offering / Faith Seed') ? data.flutterwave_prophetic_client_secret : data.flutterwave_mission_client_secret;
       }
 
       if (!clientId || !clientSecret) {
