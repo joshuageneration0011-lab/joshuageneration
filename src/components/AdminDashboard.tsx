@@ -153,8 +153,10 @@ export default function AdminDashboard({
   ];
 
   const visibleSidebarItems = sidebarItems.filter(item => {
-    if (item.id === 'donations') return userRole === 'superadmin' || userRole === 'admin';
-    if (item.id === 'settings') return userRole === 'superadmin';
+    if (userRole !== 'superadmin') {
+      const allowedTabsForAdmin = ['dashboard', 'sermons', 'sons-daughters-sermons', 'partners-sermons', 'testimonies', 'events', 'blog'];
+      return allowedTabsForAdmin.includes(item.id);
+    }
     return true;
   });
 
@@ -199,6 +201,12 @@ export default function AdminDashboard({
   }, []);
 
   const renderTabContent = () => {
+    if (userRole !== 'superadmin') {
+      const allowedTabsForAdmin = ['dashboard', 'sermons', 'sons-daughters-sermons', 'partners-sermons', 'testimonies', 'events', 'blog'];
+      if (!allowedTabsForAdmin.includes(activeTab)) {
+        return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} events={events} books={books} />;
+      }
+    }
     switch (activeTab) {
       case 'dashboard': return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} events={events} books={books} />;
       case 'users': return <UsersTab users={users} onUpdateUsers={handleUpdateUsers} />;
@@ -511,7 +519,7 @@ function SubscribersTab() {
 
 function DashboardTab({ posts, onTabChange, donations, sermons, users, events, books }: DashboardTabProps) {
   const userRole = api.getRole();
-  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>((userRole === 'superadmin' || userRole === 'admin') ? 'donations' : 'members');
+  const [activeListTab, setActiveListTab] = useState<'donations' | 'members'>(userRole === 'superadmin' ? 'donations' : 'members');
 
   // Exact data from state / database
   const totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
@@ -531,7 +539,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
           <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome back, {displayName}</h1>
           <p className="text-white/80 text-sm mt-1 max-w-lg">Here is your overview for today.</p>
           <div className="flex flex-wrap gap-2 mt-4">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">{newMembersCount} new members</span>
+            {userRole === 'superadmin' && <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">{newMembersCount} new members</span>}
             <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium">{sermons.length} sermons uploaded</span>
             <span className="px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 text-xs font-medium">{posts.length} blog posts</span>
             <span className="px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-medium">{events.length} upcoming events</span>
@@ -545,7 +553,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
           { label: 'Sermon Views', value: totalSermonViews.toLocaleString(), change: '+0.0%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
           { label: 'Total Donations', value: formatCurrencySum(donations), change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true, superadminOnly: true },
           { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
-        ].filter(stat => !stat.superadminOnly || userRole === 'superadmin' || userRole === 'admin').map((stat) => (
+        ].filter(stat => !stat.superadminOnly || userRole === 'superadmin').map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-4">
               <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center', stat.color)}>
@@ -567,7 +575,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
         {/* Left Column (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart */}
-          {(userRole === 'superadmin' || userRole === 'admin') && (
+          {userRole === 'superadmin' && (
             <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
@@ -591,7 +599,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
           <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
               <div className="flex gap-4">
-                {(userRole === 'superadmin' || userRole === 'admin') && (
+                {userRole === 'superadmin' && (
                   <button
                     onClick={() => setActiveListTab('donations')}
                     className={cn(
@@ -685,10 +693,10 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
             <div className="space-y-3">
               {[
                 { label: 'Sermons', value: sermons.length.toString(), icon: Tv, color: 'text-royal-blue-600 bg-royal-blue-50 border-royal-blue-100/30' },
-                { label: 'Books', value: books.length.toString(), icon: BookOpen, color: 'text-emerald-600 bg-emerald-50 border-emerald-100/30' },
+                { label: 'Books', value: books.length.toString(), icon: BookOpen, color: 'text-emerald-600 bg-emerald-50 border-emerald-100/30', superadminOnly: true },
                 { label: 'Blog Posts', value: posts.length.toString(), icon: FileText, color: 'text-gold-600 bg-gold-50 border-gold-100/30' },
                 { label: 'Events', value: events.length.toString(), icon: Calendar, color: 'text-violet-600 bg-violet-50 border-violet-100/30' },
-              ].map((item) => (
+              ].filter(item => !item.superadminOnly || userRole === 'superadmin').map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100/50 transition-all border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center border', item.color)}>

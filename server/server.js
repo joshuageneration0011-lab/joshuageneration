@@ -2416,6 +2416,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/api/admin/settings' && method === 'GET') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Superadmin access required' });
+      return;
+    }
     try {
       if (pool) {
         const result = await pool.query('SELECT flutterwave_prophetic_client_id, flutterwave_prophetic_client_secret, flutterwave_mission_client_id, flutterwave_mission_client_secret, "contactEmail", "contactPhone", "contactAddress", "socialFacebook", "socialTwitter", "socialInstagram", "socialYoutube", "homeHeadlinePrefix", "homeHeadlineHighlight", "homeHeadlineSuffix", "homeSubheading", "homeBibleVerse", "homeBibleReference", "adsense_auto_code", "adsense_above_blog_code", "adsense_center_blog_code", "adsense_beneath_blog_code", "filter_words", "privacyPolicy", "termsOfService" FROM settings WHERE id = 1');
@@ -2442,8 +2446,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST Settings (Admin only)
   if (pathname === '/api/admin/settings' && method === 'POST') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Superadmin access required' });
+      return;
+    }
     try {
       const data = await getJsonBody(req);
       if (pool) {
@@ -2512,8 +2519,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET Users (Admin only)
+  // GET Users (Superadmin only)
   if (pathname === '/api/users' && method === 'GET') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Superadmin access required' });
+      return;
+    }
     try {
       if (pool) {
         const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
@@ -2540,8 +2551,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST Users (Admin only)
+  // POST Users (Superadmin only)
   if (pathname === '/api/users' && method === 'POST') {
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Superadmin access required' });
+      return;
+    }
     try {
       const data = await getJsonBody(req);
       if (Array.isArray(data)) {
@@ -2624,8 +2639,8 @@ const server = http.createServer(async (req, res) => {
 
   // GET Donations (Superadmin only)
   if (pathname === '/api/donations' && method === 'GET') {
-    if (user.role !== 'superadmin' && user.role !== 'admin') {
-      sendJson(res, 403, { error: 'Superadmin or Admin access required' });
+    if (user.role !== 'superadmin') {
+      sendJson(res, 403, { error: 'Superadmin access required' });
       return;
     }
     try {
