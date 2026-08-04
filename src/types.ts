@@ -104,6 +104,7 @@ export interface Donation {
   date: string;
   method: string;
   frequency: string;
+  currency?: string;
 }
 
 export interface Settings {

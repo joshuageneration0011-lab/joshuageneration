@@ -21,6 +21,55 @@ import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/test
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'testimonies';
 
+export const getCurrencySymbol = (currency?: string) => {
+  const symbols: Record<string, string> = {
+    NGN: '₦',
+    USD: '$',
+    GBP: '£',
+    EUR: '€',
+    CAD: 'C$',
+    ZAR: 'R'
+  };
+  return symbols[currency || 'USD'] || '$';
+};
+
+export const formatCurrencySum = (txs: Donation[]) => {
+  if (txs.length === 0) return '$0';
+  
+  const groups: Record<string, number> = {};
+  txs.forEach(t => {
+    const curr = t.currency || 'USD';
+    groups[curr] = (groups[curr] || 0) + t.amount;
+  });
+
+  const parts = Object.entries(groups).map(([curr, sum]) => {
+    const symbol = getCurrencySymbol(curr);
+    return `${symbol}${sum.toLocaleString()}`;
+  });
+
+  return parts.join(' / ');
+};
+
+export const formatCurrencyAvg = (txs: Donation[]) => {
+  if (txs.length === 0) return '$0';
+  
+  const sums: Record<string, number> = {};
+  const counts: Record<string, number> = {};
+  txs.forEach(t => {
+    const curr = t.currency || 'USD';
+    sums[curr] = (sums[curr] || 0) + t.amount;
+    counts[curr] = (counts[curr] || 0) + 1;
+  });
+
+  const parts = Object.entries(sums).map(([curr, sum]) => {
+    const symbol = getCurrencySymbol(curr);
+    const avg = Math.round(sum / counts[curr]);
+    return `${symbol}${avg.toLocaleString()}`;
+  });
+
+  return parts.join(' / ');
+};
+
 // Dynamic sidebar configuration inside component
 
 // ====== MOCK DATA ======
@@ -494,7 +543,7 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
         {[
           { label: 'Total Users', value: totalUsersCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
           { label: 'Sermon Views', value: totalSermonViews.toLocaleString(), change: '+0.0%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
-          { label: 'Total Donations', value: `$${donations.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}`, change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true, superadminOnly: true },
+          { label: 'Total Donations', value: formatCurrencySum(donations), change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true, superadminOnly: true },
           { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
         ].filter(stat => !stat.superadminOnly || userRole === 'superadmin' || userRole === 'admin').map((stat) => (
           <div key={stat.label} className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
@@ -3887,9 +3936,9 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: `Total ${activeTab === 'prophetic' ? 'Prophetic' : activeTab === 'mission' ? 'Mission' : 'Raised'}`, value: `$${displayedTotal.toLocaleString()}`, icon: DollarSign, color: activeTab === 'prophetic' ? 'from-gold-500 to-gold-600' : activeTab === 'mission' ? 'from-blue-500 to-blue-700' : 'from-emerald-500 to-emerald-700' },
+          { label: `Total ${activeTab === 'prophetic' ? 'Prophetic' : activeTab === 'mission' ? 'Mission' : 'Raised'}`, value: formatCurrencySum(filteredDonations), icon: DollarSign, color: activeTab === 'prophetic' ? 'from-gold-500 to-gold-600' : activeTab === 'mission' ? 'from-blue-500 to-blue-700' : 'from-emerald-500 to-emerald-700' },
           { label: 'Total Payments', value: `${displayedCount}`, icon: RefreshCw, color: 'from-royal-blue-500 to-royal-blue-700' },
-          { label: 'Avg. Donation', value: `$${displayedAvg.toLocaleString()}`, icon: Gift, color: 'from-violet-500 to-violet-700' },
+          { label: 'Avg. Donation', value: formatCurrencyAvg(filteredDonations), icon: Gift, color: 'from-violet-500 to-violet-700' },
           { label: 'Givers', value: `${uniqueGivers}`, icon: Users, color: 'from-pink-500 to-pink-700' },
         ].map((stat) => (
           <div key={stat.label} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
@@ -3897,7 +3946,7 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
               <stat.icon className="w-4 h-4 text-white" />
             </div>
             <p className="text-lg font-bold text-gray-900">{stat.value}</p>
-            <p className="text-gray-500 text-xs mt-0.5">{stat.label}</p>
+            <p className="text-gray-505 text-xs mt-0.5">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -3925,7 +3974,7 @@ function DonationsTab({ donations, loading, onRefresh }: DonationsTabProps) {
                       <p className="text-gray-400 text-xs">{d.email}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-emerald-600 font-bold text-sm">+${d.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-emerald-600 font-bold text-sm">+{getCurrencySymbol(d.currency)}{d.amount.toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <span className={cn(
                       'px-2 py-0.5 rounded-full text-[10px] font-semibold',

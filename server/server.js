@@ -2612,7 +2612,8 @@ const server = http.createServer(async (req, res) => {
           purpose: row.purpose,
           date: row.date,
           method: row.method,
-          frequency: row.frequency
+          frequency: row.frequency,
+          currency: row.currency || 'USD'
         }));
         sendJson(res, 200, donations);
       } else {
