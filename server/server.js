@@ -2646,6 +2646,34 @@ const server = http.createServer(async (req, res) => {
       
       req.on('end', () => {
         console.log(`Saved direct binary upload to ${filePath}`);
+        
+        const extLower = ext.toLowerCase();
+        if (extLower === '.jpg' || extLower === '.jpeg' || extLower === '.png') {
+          const { exec } = require('child_process');
+          const pyCmd = `python3 -c "
+from PIL import Image
+try:
+    img = Image.open('${filePath}')
+    w, h = img.size
+    if w > 800 or h > 800:
+        ratio = min(800/w, 800/h)
+        img = img.resize((int(w*ratio), int(h*ratio)), Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.ANTIALIAS)
+    if '${extLower}' in ['.jpg', '.jpeg']:
+        img.save('${filePath}', 'JPEG', quality=75, optimize=True)
+    elif '${extLower}' == '.png':
+        if img.mode in ('RGBA', 'LA'):
+            img.save('${filePath}', 'PNG', optimize=True)
+        else:
+            img.convert('RGB').save('${filePath}', 'JPEG', quality=75, optimize=True)
+except Exception as e:
+    print(e)
+"`;
+          exec(pyCmd, (err) => {
+            if (err) console.error('Failed to compress upload in-place:', err);
+            else console.log('Successfully compressed uploaded image in-place');
+          });
+        }
+        
         sendJson(res, 200, { url: `/api/uploads/${cleanFilename}` });
       });
       
