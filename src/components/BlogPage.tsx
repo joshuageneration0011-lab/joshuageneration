@@ -1,6 +1,6 @@
 import { resolveApiUrl } from '@/utils/api';
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Clock, ArrowRight, Tag, Bookmark, TrendingUp, Feather, Heart } from 'lucide-react';
+import { Search, Clock, ArrowRight, Tag, Bookmark, TrendingUp, Feather, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { BlogPost } from '@/types';
 import { cn } from '@/utils/cn';
 import { updatePageSEO } from '@/utils/seo';
@@ -43,6 +43,8 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const POSTS_PER_PAGE = 6;
 
   useEffect(() => {
     updatePageSEO({
@@ -52,6 +54,10 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
       type: 'website',
     });
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory]);
 
   const categories = useMemo(() => {
     const list = new Set(posts.filter(p => !p.isDeleted).map(p => p.category));
@@ -72,6 +78,17 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
 
   const heroPosts = filteredPosts.slice(0, 3);
   const listPosts  = filteredPosts.slice(3);
+
+  const totalPages = Math.max(1, Math.ceil(listPosts.length / POSTS_PER_PAGE));
+  const paginatedListPosts = useMemo(() => {
+    const start = (currentPage - 1) * POSTS_PER_PAGE;
+    return listPosts.slice(start, start + POSTS_PER_PAGE);
+  }, [listPosts, currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-[#faf9f7] pt-20">
@@ -233,14 +250,18 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                 {/* LIST POSTS */}
                 {listPosts.length > 0 && (
                   <>
-                    <div className="flex items-center gap-3 mb-6">
-                      <TrendingUp className="w-4 h-4 text-[#b8942f]" />
-                      <h2 className="text-sm font-black text-[#1a1208] uppercase tracking-widest">More Articles</h2>
-                      <div className="flex-1 h-px bg-[#e8e3db]" />
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="w-4 h-4 text-[#b8942f]" />
+                        <h2 className="text-sm font-black text-[#1a1208] uppercase tracking-widest">More Articles</h2>
+                      </div>
+                      <span className="text-xs text-[#8a7a6a] font-medium">
+                        Showing {(currentPage - 1) * POSTS_PER_PAGE + 1} - {Math.min(currentPage * POSTS_PER_PAGE, listPosts.length)} of {listPosts.length}
+                      </span>
                     </div>
 
-                    <div className="space-y-2">
-                      {listPosts.map((post) => {
+                    <div className="space-y-3">
+                      {paginatedListPosts.map((post) => {
                         const accent = getAccent(post.category);
                         return (
                           <div
@@ -298,6 +319,49 @@ export default function BlogPage({ posts, onPostSelect }: BlogPageProps) {
                         );
                       })}
                     </div>
+
+                    {/* PAGINATION CONTROLS */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t border-[#ede8e0]">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border border-[#e8e3db] bg-white text-[#5a4a3a] hover:bg-[#faf5ec] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          Previous
+                        </button>
+
+                        <div className="flex items-center gap-1 px-2">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            const isActive = page === currentPage;
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => handlePageChange(page)}
+                                className={cn(
+                                  "w-8 h-8 rounded-xl text-xs font-bold transition-all flex items-center justify-center",
+                                  isActive
+                                    ? "bg-[#1a1208] text-white shadow-sm"
+                                    : "bg-white text-[#5a4a3a] border border-[#e8e3db] hover:border-[#d4af37]"
+                                )}
+                              >
+                                {page}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border border-[#e8e3db] bg-white text-[#5a4a3a] hover:bg-[#faf5ec] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          Next
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </>
