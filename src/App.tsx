@@ -54,14 +54,24 @@ const getPageFromPath = (): Page => {
   const rawPath = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') as Page;
   const search = window.location.search;
 
-  if (rawPath === 'thank-you' || rawPath.startsWith('thank-you') || search.includes('tx_ref=') || search.includes('transaction_id=')) {
+  const params = new URLSearchParams(search);
+  const status = params.get('status');
+  const txRef = params.get('tx_ref');
+  const transactionId = params.get('transaction_id');
+
+  if (rawPath === 'thank-you' || rawPath.startsWith('thank-you')) {
+    return 'thank-you';
+  }
+
+  // Only redirect other pages to thank-you if payment callback status is successful or completed
+  if (rawPath !== 'donate' && (txRef || transactionId) && (status === 'successful' || status === 'completed')) {
     return 'thank-you';
   }
   if (rawPath.startsWith('blog/')) return 'blog-details';
   if (rawPath.startsWith('sermon/')) return 'sermon-player';
   if (rawPath.startsWith('books/')) return 'book-details';
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'counter', 'encounter', 'encounters', 'daily-devotional', 'events'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -224,9 +234,36 @@ export default function App() {
       });
     } else if (path.startsWith('sermon/')) {
       const id = path.split('/')[1];
-      getSavedSermons().then(sermons => {
-        const sermon = sermons.find(s => s.id === id);
-        if (sermon) setSelectedSermon(sermon);
+      getSavedSermons().then(async (sermons) => {
+        let sermon = sermons.find(s => s.id === id);
+        if (sermon) {
+          setSelectedSermon(sermon);
+          return;
+        }
+
+        // If not found in public, try sons-daughters private sermons
+        try {
+          const sdSermons = await api.getSermonsByAudience('sons-daughters');
+          sermon = sdSermons.find(s => s.id === id);
+          if (sermon) {
+            setSelectedSermon(sermon);
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to search in sons-daughters sermons:', e);
+        }
+
+        // If still not found, try partners private sermons
+        try {
+          const partnerSermons = await api.getSermonsByAudience('partners');
+          sermon = partnerSermons.find(s => s.id === id);
+          if (sermon) {
+            setSelectedSermon(sermon);
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to search in partners sermons:', e);
+        }
       });
     } else if (path.startsWith('books/')) {
       const id = path.split('/')[1];
@@ -887,7 +924,8 @@ export default function App() {
     );
   }
 
-  if (currentPage === 'events' || currentPage === 'counter' || currentPage === 'encounter' || currentPage === 'encounters') {
+
+  if (currentPage === 'events' || currentPage === 'encounter' || currentPage === 'encounters') {
     return (
       <div className="min-h-screen bg-white">
         <Navbar

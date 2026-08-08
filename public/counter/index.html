@@ -30,8 +30,9 @@
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 2rem 1.5rem;
-      overflow: hidden;
+      padding: 2rem 1.5rem calc(80px + env(safe-area-inset-bottom, 0px)) 1.5rem;
+      overflow-x: hidden;
+      overflow-y: auto;
       touch-action: manipulation;
     }
 
@@ -337,6 +338,155 @@
       color: #a5b4fc;
       text-decoration: underline;
     }
+
+    /* Bottom Navigation Tab Bar (White) */
+    .nav-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border-top: 1px solid rgba(229, 231, 235, 0.7);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0.4rem 0.5rem 0.5rem 0.5rem;
+      z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Keep it centered on larger screens like a device frame */
+    @media (min-width: 640px) {
+      .nav-container {
+        max-width: 480px;
+        margin: 0 auto;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 20px 20px 0 0;
+        border-left: 1px solid rgba(229, 231, 235, 0.7);
+        border-right: 1px solid rgba(229, 231, 235, 0.7);
+      }
+    }
+
+    .nav-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      color: #9ca3af; /* gray-400 */
+      font-size: 10px;
+      font-weight: 500;
+      transition: color 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      padding: 0.2rem 0.4rem;
+      gap: 0.15rem;
+    }
+
+    .nav-link:hover {
+      color: #4b5563; /* gray-600 */
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+      color: #9ca3af;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover .nav-icon {
+      color: #4b5563;
+    }
+
+    /* Give Button with Gold Highlight circle */
+    .nav-link-give {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      font-size: 10px;
+      font-weight: 500;
+      color: #d97706; /* Gold/Amber text */
+      position: relative;
+      padding: 0.2rem 0.4rem;
+      cursor: pointer;
+      gap: 0.15rem;
+    }
+
+    .give-icon-wrapper {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
+      margin-top: -18px; /* Lift above the white bar */
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .nav-link-give:hover .give-icon-wrapper {
+      transform: scale(1.06);
+      box-shadow: 0 6px 12px rgba(217, 119, 6, 0.4);
+    }
+
+    .nav-icon-give {
+      width: 18px;
+      height: 18px;
+      color: #ffffff;
+      stroke-width: 2.2;
+    }
+
+    /* Stats Section */
+    .stats-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      width: 100%;
+      max-width: 380px;
+      margin-top: 2rem;
+      z-index: 10;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 0.85rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      border-color: rgba(99, 102, 241, 0.2);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.2rem;
+      font-family: monospace;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
   </style>
 </head>
 <body>
@@ -365,6 +515,40 @@
       <button id="reset-btn" class="reset-btn">Reset</button>
       <button id="plus-btn" class="adjust-btn" title="Increase by 1" aria-label="Plus 1">┼</button>
     </div>
+
+    <!-- Live Stats Counter Row -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <span class="stat-value" id="stats-views">...</span>
+        <span class="stat-label">Page Views</span>
+      </div>
+    </div>
+
+    <!-- Quick Navigation -->
+    <nav class="nav-container">
+      <a href="/" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+      </a>
+      <a href="/sermons" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+        Sermons
+      </a>
+      <a href="/books" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="m16 6 4 14M12 6v14M8 8v12M4 4v16"/></svg>
+        Books
+      </a>
+      <a href="/blog" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        Blog
+      </a>
+      <a href="/donate" class="nav-link-give">
+        <div class="give-icon-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon-give"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5z"/></svg>
+        </div>
+        Give
+      </a>
+    </nav>
   </div>
 
   <script>
@@ -565,6 +749,26 @@
         updateDisplay(true);
       }
     });
+
+    // Fetch live statistics
+    async function loadStats() {
+      try {
+        // 1. Increment page views
+        await fetch('/api/counter/increment', { method: 'POST' });
+        
+        // 2. Fetch stats
+        const res = await fetch('/api/counter/stats');
+        if (res.ok) {
+          const stats = await res.json();
+          document.getElementById('stats-views').innerText = stats.pageViews.toLocaleString();
+        }
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      }
+    }
+
+    // Run on load
+    loadStats();
 
   </script>
 </body>

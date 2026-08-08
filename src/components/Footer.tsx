@@ -162,11 +162,11 @@ export default function Footer({ onNavigate }: FooterProps) {
               }}
               className="flex items-center gap-3 mb-6 group inline-flex"
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-royal-blue-500 to-royal-blue-700 flex items-center justify-center shadow-lg shadow-royal-blue-500/30 transition-transform duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-lg">J</span>
+              <div className="w-10 h-10 rounded-xl bg-gray-950 flex items-center justify-center shadow-lg shadow-gray-950/30 transition-transform duration-300 group-hover:scale-105 overflow-hidden border border-white/[0.08]">
+                <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <span className="font-bold text-xl text-white tracking-tight">
-                Joshua<span className="text-gold-500">Gen</span>
+                Joshuas<span className="text-gold-500">Generation</span>
               </span>
             </a>
             <p className="text-royal-blue-100/80 text-sm leading-relaxed mb-8 pr-4">

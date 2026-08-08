@@ -178,10 +178,12 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginMod
         <div className="p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-royal-blue-500 to-royal-blue-700 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-royal-blue-500/20">
-              <span className="text-white font-bold text-lg">
-                {view === 'otp' || view === 'reset' ? '✓' : 'J'}
-              </span>
+            <div className="w-12 h-12 rounded-xl bg-gray-950 flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden border border-white/[0.08]">
+              {view === 'otp' || view === 'reset' ? (
+                <span className="text-white font-bold text-lg">✓</span>
+              ) : (
+                <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
+              )}
             </div>
             <h2 className="text-2xl font-bold text-gray-900">
               {view === 'login' && 'Welcome Back'}
@@ -191,7 +193,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginMod
               {view === 'reset' && 'Enter New Password'}
             </h2>
             <p className="text-gray-500 text-sm mt-1">
-              {view === 'login' && 'Sign in to your JoshuaGen account'}
+              {view === 'login' && 'Sign in to your JoshuasGeneration account'}
               {view === 'signup' && 'Join the Joshua Generation community'}
               {view === 'otp' && `We sent a 6-digit code to ${email}`}
               {view === 'forgot' && "We'll send you an OTP to reset your password"}

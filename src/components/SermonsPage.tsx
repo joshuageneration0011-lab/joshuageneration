@@ -74,6 +74,20 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
 
   // Filter and sort logic
   const filteredAndSortedSermons = useMemo(() => {
+    const getSermonNumericId = (id: string): number => {
+      if (id.startsWith('s_')) {
+        const num = parseInt(id.substring(2), 10);
+        return isNaN(num) ? 0 : num;
+      }
+      if (id.startsWith('sermon_private_')) {
+        const num = parseInt(id.substring(15), 10);
+        return isNaN(num) ? 0 : num;
+      }
+      const clean = id.replace(/\D/g, '');
+      const num = parseInt(clean, 10);
+      return isNaN(num) ? 0 : num;
+    };
+
     return localSermons
       .filter((sermon) => {
         const matchesSearch =
@@ -84,7 +98,15 @@ export default function SermonsPage({ sermons, onSermonSelect, isLoading = false
       })
       .sort((a, b) => {
         if (sortBy === 'newest') {
-          return Number(b.id) - Number(a.id);
+          const dateCompare = b.date.localeCompare(a.date);
+          if (dateCompare !== 0) return dateCompare;
+          
+          const numA = getSermonNumericId(a.id);
+          const numB = getSermonNumericId(b.id);
+          if (numA !== 0 || numB !== 0) {
+            return numB - numA;
+          }
+          return b.id.localeCompare(a.id);
         } else if (sortBy === 'views') {
           return b.views - a.views;
         }

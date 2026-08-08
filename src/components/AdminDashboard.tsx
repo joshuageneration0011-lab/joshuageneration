@@ -240,12 +240,12 @@ export default function AdminDashboard({
       )}>
         <div className="p-4 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-royal-blue-500 to-royal-blue-700 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xs">J</span>
+            <div className="w-8 h-8 rounded-xl bg-gray-950 flex items-center justify-center shadow-lg overflow-hidden border border-gray-200/10">
+              <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             {isSidebarOpen && (
               <span className="text-gray-900 font-bold text-sm">
-                Joshua<span className="text-gold-600">Gen</span>
+                Joshuas<span className="text-gold-600">Generation</span>
                 <span className="block text-[9px] text-gray-400 font-normal">Admin Panel</span>
               </span>
             )}
@@ -308,10 +308,12 @@ export default function AdminDashboard({
           <div className="absolute left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 p-4">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-royal-blue-500 to-royal-blue-700 flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">J</span>
+                <div className="w-8 h-8 rounded-xl bg-gray-950 flex items-center justify-center overflow-hidden border border-gray-200/10">
+                  <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
                 </div>
-                <span className="text-gray-900 font-bold text-sm">JoshuaGen</span>
+                <span className="text-gray-900 font-bold text-sm">
+                  Joshuas<span className="text-gold-600">Generation</span>
+                </span>
               </div>
               <button onClick={() => setIsMobileSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -1656,10 +1658,36 @@ function SermonsTab({ sermons, onUpdateSermons, audience = 'public' }: SermonsTa
 
   // Filter by audience
   const audienceFilteredSermons = useMemo(() => {
-    return sermons.filter((s: Sermon) => {
-      const sAudience = s.audience || 'public';
-      return sAudience === audience;
-    });
+    const getSermonNumericId = (id: string): number => {
+      if (id.startsWith('s_')) {
+        const num = parseInt(id.substring(2), 10);
+        return isNaN(num) ? 0 : num;
+      }
+      if (id.startsWith('sermon_private_')) {
+        const num = parseInt(id.substring(15), 10);
+        return isNaN(num) ? 0 : num;
+      }
+      const clean = id.replace(/\D/g, '');
+      const num = parseInt(clean, 10);
+      return isNaN(num) ? 0 : num;
+    };
+
+    return sermons
+      .filter((s: Sermon) => {
+        const sAudience = s.audience || 'public';
+        return sAudience === audience;
+      })
+      .sort((a, b) => {
+        const dateCompare = b.date.localeCompare(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        
+        const numA = getSermonNumericId(a.id);
+        const numB = getSermonNumericId(b.id);
+        if (numA !== 0 || numB !== 0) {
+          return numB - numA;
+        }
+        return b.id.localeCompare(a.id);
+      });
   }, [sermons, audience]);
 
   // Stats calculation
@@ -4761,8 +4789,20 @@ function ModerationTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [commentsPerPage, setCommentsPerPage] = useState(5);
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(new Set());
 
-  const COMMENTS_PER_PAGE = 10;
+  const toggleExpandComment = (id: string) => {
+    setExpandedCommentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   // Load comments and moderation settings on mount
   const loadData = async () => {
@@ -4847,10 +4887,10 @@ function ModerationTab() {
   });
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredComments.length / COMMENTS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredComments.length / commentsPerPage));
   const paginatedComments = filteredComments.slice(
-    (currentPage - 1) * COMMENTS_PER_PAGE,
-    currentPage * COMMENTS_PER_PAGE
+    (currentPage - 1) * commentsPerPage,
+    currentPage * commentsPerPage
   );
 
   useEffect(() => {
@@ -5013,7 +5053,29 @@ function ModerationTab() {
                       </div>
 
                       {/* Comment body */}
-                      <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line bg-white p-2.5 rounded-xl border border-gray-100">{comment.text}</p>
+                      <div className="text-gray-700 text-xs leading-relaxed whitespace-pre-line bg-white p-2.5 rounded-xl border border-gray-100">
+                        {comment.text.length <= 150 || expandedCommentIds.has(comment.id) ? (
+                          comment.text
+                        ) : (
+                          <>
+                            {comment.text.slice(0, 150)}...
+                            <button
+                              onClick={() => toggleExpandComment(comment.id)}
+                              className="text-royal-blue-600 font-bold ml-1 hover:underline cursor-pointer border-none bg-transparent p-0 inline-block"
+                            >
+                              Read More
+                            </button>
+                          </>
+                        )}
+                        {comment.text.length > 150 && expandedCommentIds.has(comment.id) && (
+                          <button
+                            onClick={() => toggleExpandComment(comment.id)}
+                            className="text-royal-blue-600 font-bold ml-1 hover:underline cursor-pointer border-none bg-transparent p-0 block mt-1"
+                          >
+                            Show Less
+                          </button>
+                        )}
+                      </div>
 
                       {/* Commented on indicator */}
                       <div className="flex items-center gap-1 text-[10px] text-gray-400">
@@ -5044,42 +5106,59 @@ function ModerationTab() {
               })}
 
               {/* Pagination controls */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-gray-150 mt-2 bg-white px-2">
-                  <p className="text-gray-500 text-xs">
-                    Showing {(currentPage - 1) * COMMENTS_PER_PAGE + 1}–{Math.min(currentPage * COMMENTS_PER_PAGE, filteredComments.length)} of {filteredComments.length} comments
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-150 mt-2 bg-white px-2">
+                <div className="flex items-center gap-4">
+                  <p className="text-gray-550 text-xs">
+                    Showing {filteredComments.length === 0 ? 0 : (currentPage - 1) * commentsPerPage + 1}–
+                    {Math.min(currentPage * commentsPerPage, filteredComments.length)} of {filteredComments.length} comments
                   </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
-                        currentPage === 1
-                          ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      )}
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <span>Show:</span>
+                    <select
+                      value={commentsPerPage}
+                      onChange={(e) => {
+                        setCommentsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="px-2 py-1 border border-gray-200 rounded-lg text-xs bg-white text-gray-700 outline-none"
                     >
-                      Previous
-                    </button>
-                    <span className="text-xs text-gray-500 font-medium">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
-                        currentPage === totalPages
-                          ? 'bg-royal-blue-200 text-royal-blue-300 cursor-not-allowed'
-                          : 'bg-royal-blue-600 text-white hover:bg-royal-blue-700'
-                      )}
-                    >
-                      Next
-                    </button>
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
                   </div>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
+                      currentPage === 1
+                        ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    )}
+                  >
+                    Previous
+                  </button>
+                  <span className="text-xs text-gray-500 font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-none',
+                      currentPage === totalPages
+                        ? 'bg-royal-blue-200 text-royal-blue-300 cursor-not-allowed'
+                        : 'bg-royal-blue-600 text-white hover:bg-royal-blue-700'
+                    )}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

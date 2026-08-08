@@ -154,6 +154,20 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     return filename;
   };
 
+  const parseDurationToSeconds = (durationStr: string): number => {
+    if (!durationStr) return 0;
+    const parts = durationStr.split(':').map(Number);
+    if (parts.some(isNaN)) return 0;
+    if (parts.length === 2) {
+      // MM:SS
+      return parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+      // HH:MM:SS
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    return 0;
+  };
+
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const activeMediaRef = audioRef;
@@ -169,13 +183,21 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     // Pause any media playing when sermon changes
     setIsPlaying(false);
     setCurrentTime(0);
-    setDuration(0);
+    setDuration(parseDurationToSeconds(activeTrack.duration));
     setCurrentTrackIndex(0);
     
     // Sync views
     setLocalViews(sermon.views);
     setLocalDownloads(sermon.downloads || 0);
   }, [sermon.id, sermon.views]);
+
+  // Sync duration state when the track duration or sermon changes as a robust metadata fallback
+  useEffect(() => {
+    const parsedSecs = parseDurationToSeconds(activeTrack.duration);
+    if (parsedSecs > 0) {
+      setDuration(parsedSecs);
+    }
+  }, [activeTrack.duration, sermon.id]);
 
   // Trigger audio reload/play when track or sermon changes
   useEffect(() => {
@@ -242,8 +264,8 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
   const handleLoadedMetadata = () => {
     const media = activeMediaRef.current;
-    if (media) {
-      setDuration(media.duration || 0);
+    if (media && isFinite(media.duration) && media.duration > 0) {
+      setDuration(media.duration);
     }
   };
 

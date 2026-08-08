@@ -57,14 +57,7 @@ async function syncData() {
       const posts = JSON.parse(fs.readFileSync(blogFile, 'utf-8'));
       const jsonIds = posts.map(p => p.id.toString());
       
-      // Delete missing
-      const dbPosts = await pool.query('SELECT id FROM blog_posts');
-      for (const row of dbPosts.rows) {
-        if (!jsonIds.includes(row.id.toString())) {
-          await pool.query('DELETE FROM blog_posts WHERE id = $1', [row.id]);
-          console.log(`Deleted blog post: ${row.id}`);
-        }
-      }
+
 
       console.log(`Syncing ${posts.length} blog posts...`);
       for (const p of posts) {
@@ -115,13 +108,7 @@ async function syncData() {
     try {
       const jsonIds = sermons.map(s => s.id.toString());
       
-      const dbSermons = await pool.query('SELECT id FROM sermons');
-      for (const row of dbSermons.rows) {
-        if (!jsonIds.includes(row.id.toString())) {
-          await pool.query('DELETE FROM sermons WHERE id = $1', [row.id]);
-          console.log(`Deleted sermon: ${row.id}`);
-        }
-      }
+
 
       console.log(`Syncing ${sermons.length} sermons...`);
       for (const s of sermons) {
@@ -156,13 +143,7 @@ async function syncData() {
       const books = JSON.parse(fs.readFileSync(booksFile, 'utf-8'));
       const jsonIds = books.map(b => b.id.toString());
       
-      const dbBooks = await pool.query('SELECT id FROM books');
-      for (const row of dbBooks.rows) {
-        if (!jsonIds.includes(row.id.toString())) {
-          await pool.query('DELETE FROM books WHERE id = $1', [row.id]);
-          console.log(`Deleted book: ${row.id}`);
-        }
-      }
+
 
       console.log(`Syncing ${books.length} books...`);
       for (const b of books) {
@@ -225,13 +206,7 @@ async function syncData() {
       const events = JSON.parse(fs.readFileSync(eventsFile, 'utf-8'));
       const jsonIds = events.map(ev => ev.id.toString());
       
-      const dbEvents = await pool.query('SELECT id FROM events');
-      for (const row of dbEvents.rows) {
-        if (!jsonIds.includes(row.id.toString())) {
-          await pool.query('DELETE FROM events WHERE id = $1', [row.id]);
-          console.log(`Deleted event: ${row.id}`);
-        }
-      }
+
 
       console.log(`Syncing ${events.length} events...`);
       for (const ev of events) {

@@ -575,6 +575,11 @@ async function initDb() {
           WHERE id = 1
         `);
       }
+      try {
+        await pool.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS counter_page_views INT DEFAULT 0');
+      } catch (e) {
+        console.error('Failed to add counter_page_views column:', e);
+      }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS events (
@@ -671,6 +676,15 @@ async function initDb() {
           text TEXT NOT NULL,
           created_at VARCHAR NOT NULL,
           status VARCHAR DEFAULT 'approved'
+        );
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          token VARCHAR(255) PRIMARY KEY,
+          username VARCHAR(255) NOT NULL,
+          role VARCHAR(50) NOT NULL,
+          expires_at BIGINT NOT NULL
         );
       `);
 
@@ -905,12 +919,30 @@ function sendJson(res, statusCode, data) {
 }
 
 // --- Auth Helper ---
-function getAuthenticatedUser(req) {
+async function getAuthenticatedUser(req) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
   const token = authHeader.substring(7);
+
+  if (pool) {
+    try {
+      const result = await pool.query('SELECT username, role, expires_at FROM sessions WHERE token = $1', [token]);
+      if (result.rowCount === 0) return null;
+      
+      const session = result.rows[0];
+      const expiresAt = Number(session.expires_at);
+      if (Date.now() > expiresAt) {
+        await pool.query('DELETE FROM sessions WHERE token = $1', [token]);
+        return null;
+      }
+      return { username: session.username, role: session.role || 'admin' };
+    } catch (dbErr) {
+      console.warn('Database session fetch failed, falling back to in-memory sessions:', dbErr.message);
+    }
+  }
+
   const session = sessions.get(token);
   if (!session) return null;
 
@@ -996,13 +1028,24 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      // Strip existing Open Graph, Twitter, and description meta tags to prevent crawlers using the default homepage values
+      html = html.replace(/<meta\s+[^>]*property=["']og:[^"']*["'][^>]*>/gi, '');
+      html = html.replace(/<meta\s+[^>]*name=["']twitter:[^"']*["'][^>]*>/gi, '');
+      html = html.replace(/<meta\s+[^>]*name=["']description["'][^>]*>/gi, '');
+
       html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
       const ogTags = `
+        <meta name="description" content="${description.replace(/"/g, '&quot;')}">
         <meta property="og:title" content="${title.replace(/"/g, '&quot;')}">
         <meta property="og:description" content="${description.replace(/"/g, '&quot;')}">
         <meta property="og:image" content="${imageUrl}">
+        <meta property="og:url" content="https://joshuasgeneration.com${targetPath}">
+        <meta property="og:site_name" content="Joshua's Generation">
         <meta property="og:type" content="website">
         <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}">
+        <meta name="twitter:description" content="${description.replace(/"/g, '&quot;')}">
+        <meta name="twitter:image" content="${imageUrl}">
       `;
       html = html.replace('</head>', `${ogTags}</head>`);
       
@@ -1074,7 +1117,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/api/admin/subscribers' && method === 'GET') {
-    const user = getAuthenticatedUser(req);
+    const user = await getAuthenticatedUser(req);
     if (!user) {
       return sendJson(res, 401, { error: 'Unauthorized' });
     }
@@ -1255,11 +1298,20 @@ const server = http.createServer(async (req, res) => {
 
       // Generate session token
       const token = crypto.randomBytes(32).toString('hex');
-      sessions.set(token, {
-        username: email,
-        role: 'member',
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 Hours Session
-      });
+      const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      if (pool) {
+        try {
+          await pool.query(
+            'INSERT INTO sessions (token, username, role, expires_at) VALUES ($1, $2, $3, $4)',
+            [token, email, 'member', expiresAt]
+          );
+        } catch (dbErr) {
+          console.error('Failed to save session to DB, using in-memory:', dbErr);
+          sessions.set(token, { username: email, role: 'member', expiresAt });
+        }
+      } else {
+        sessions.set(token, { username: email, role: 'member', expiresAt });
+      }
 
       pendingRegistrations.delete(email.toLowerCase());
       sendJson(res, 200, { success: true, token, role: 'member', name: pending.name });
@@ -1407,11 +1459,20 @@ const server = http.createServer(async (req, res) => {
       if (creds && verifyPassword(password, creds.salt, creds.hash)) {
         const token = crypto.randomBytes(32).toString('hex');
         const role = creds.role || 'admin';
-        sessions.set(token, {
-          username: creds.username,
-          role: role,
-          expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 Hours Session
-        });
+        const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+        if (pool) {
+          try {
+            await pool.query(
+              'INSERT INTO sessions (token, username, role, expires_at) VALUES ($1, $2, $3, $4)',
+              [token, creds.username, role, expiresAt]
+            );
+          } catch (dbErr) {
+            console.error('Failed to save login session to DB, using in-memory:', dbErr);
+            sessions.set(token, { username: creds.username, role, expiresAt });
+          }
+        } else {
+          sessions.set(token, { username: creds.username, role, expiresAt });
+        }
         sendJson(res, 200, { success: true, token, role });
       } else {
         sendJson(res, 401, { error: 'Invalid email or password' });
@@ -1427,7 +1488,7 @@ const server = http.createServer(async (req, res) => {
     try {
       if (pool) {
         try {
-          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'sons-daughters' ORDER BY id DESC");
+          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'sons-daughters' ORDER BY date DESC, id DESC");
           const sermons = result.rows.map(row => ({
             id: row.id,
             title: row.title,
@@ -1469,7 +1530,7 @@ const server = http.createServer(async (req, res) => {
     try {
       if (pool) {
         try {
-          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'partners' ORDER BY id DESC");
+          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'partners' ORDER BY date DESC, id DESC");
           const sermons = result.rows.map(row => ({
             id: row.id,
             title: row.title,
@@ -1511,7 +1572,7 @@ const server = http.createServer(async (req, res) => {
     try {
       if (pool) {
         try {
-          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'public' OR audience IS NULL ORDER BY id DESC");
+          const result = await pool.query("SELECT * FROM sermons WHERE audience = 'public' OR audience IS NULL ORDER BY date DESC, id DESC");
           // Map database naming back to frontend interface
           const sermons = result.rows.map(row => ({
             id: row.id,
@@ -2274,6 +2335,80 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST Increment Counter Page Views (Public)
+  if (pathname === '/api/counter/increment' && method === 'POST') {
+    try {
+      let updatedViews = 0;
+      if (pool) {
+        const result = await pool.query('UPDATE settings SET counter_page_views = COALESCE(counter_page_views, 0) + 1 WHERE id = 1 RETURNING counter_page_views');
+        updatedViews = result.rows[0]?.counter_page_views || 0;
+      } else {
+        const file = path.join(__dirname, 'counter_views.json');
+        let count = 0;
+        if (fs.existsSync(file)) {
+          const content = fs.readFileSync(file, 'utf-8');
+          count = parseInt(content, 10) || 0;
+        }
+        count += 1;
+        fs.writeFileSync(file, String(count), 'utf-8');
+        updatedViews = count;
+      }
+      sendJson(res, 200, { success: true, views: updatedViews });
+    } catch (e) {
+      console.error('Failed to increment counter views:', e);
+      sendJson(res, 500, { error: 'Failed to increment counter views' });
+    }
+    return;
+  }
+
+  // GET Counter stats (Public)
+  if (pathname === '/api/counter/stats' && method === 'GET') {
+    try {
+      let pageViews = 0;
+      let registeredUsers = 0;
+      let sermonsCount = 0;
+      let totalSermonViews = 0;
+
+      if (pool) {
+        const viewsRes = await pool.query('SELECT counter_page_views FROM settings WHERE id = 1');
+        pageViews = viewsRes.rows[0]?.counter_page_views || 0;
+
+        const usersRes = await pool.query('SELECT COUNT(*) FROM users');
+        registeredUsers = parseInt(usersRes.rows[0].count, 10);
+
+        const sermonsCountRes = await pool.query('SELECT COUNT(*) FROM sermons');
+        sermonsCount = parseInt(sermonsCountRes.rows[0].count, 10);
+
+        const sermonViewsRes = await pool.query('SELECT SUM(COALESCE(views, 0)) as total FROM sermons');
+        totalSermonViews = parseInt(sermonViewsRes.rows[0].total || '0', 10);
+      } else {
+        const file = path.join(__dirname, 'counter_views.json');
+        if (fs.existsSync(file)) {
+          pageViews = parseInt(fs.readFileSync(file, 'utf-8'), 10) || 0;
+        }
+        if (fs.existsSync(USERS_FILE)) {
+          registeredUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8')).length;
+        }
+        if (fs.existsSync(SERMONS_FILE)) {
+          const sermons = JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8'));
+          sermonsCount = sermons.length;
+          totalSermonViews = sermons.reduce((sum, s) => sum + (s.views || 0), 0);
+        }
+      }
+
+      sendJson(res, 200, {
+        pageViews,
+        registeredUsers,
+        sermonsCount,
+        totalSermonViews
+      });
+    } catch (e) {
+      console.error('Failed to fetch counter stats:', e);
+      sendJson(res, 500, { error: 'Failed to fetch counter stats' });
+    }
+    return;
+  }
+
   // GET Stats (Public)
   if (pathname === '/api/stats' && method === 'GET') {
     try {
@@ -2502,7 +2637,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
-  const user = getAuthenticatedUser(req);
+  const user = await getAuthenticatedUser(req);
   if (!user) {
     sendJson(res, 401, { error: 'Unauthorized admin access' });
     return;
@@ -2512,7 +2647,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/admin/sermons' && method === 'GET') {
     try {
       if (pool) {
-        const result = await pool.query('SELECT * FROM sermons ORDER BY id DESC');
+        const result = await pool.query('SELECT * FROM sermons ORDER BY date DESC, id DESC');
         const sermons = result.rows.map(row => ({
           id: row.id,
           title: row.title,

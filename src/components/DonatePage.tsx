@@ -1,5 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { Gift, Heart, CheckCircle2, ArrowLeft, Mail, User, ShieldCheck, Sparkles, AlertCircle, Crown, Globe } from 'lucide-react';
+
+const globalCurrencies = [
+  { code: 'USD', symbol: '$', name: 'United States Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound Sterling' },
+  { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+  { code: 'GHS', symbol: 'GH₵', name: 'Ghanaian Cedi' },
+  { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling' },
+  { code: 'UGX', symbol: 'USh', name: 'Ugandan Shilling' },
+  { code: 'TZS', symbol: 'TSh', name: 'Tanzanian Shilling' },
+  { code: 'RWF', symbol: 'FRw', name: 'Rwandan Franc' },
+  { code: 'ZMW', symbol: 'ZK', name: 'Zambian Kwacha' },
+  { code: 'MWK', symbol: 'MK', name: 'Malawian Kwacha' },
+  { code: 'XOF', symbol: 'CFA', name: 'West African CFA Franc' },
+  { code: 'XAF', symbol: 'FCFA', name: 'Central African CFA Franc' },
+  { code: 'AED', symbol: 'د.إ', name: 'United Arab Emirates Dirham' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+  { code: 'DKK', symbol: 'kr', name: 'Danish Krone' },
+  { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'ILS', symbol: '₪', name: 'Israeli New Shekel' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'KRW', symbol: '₩', name: 'South Korean Won' },
+  { code: 'MXN', symbol: 'Mex$', name: 'Mexican Peso' },
+  { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
+  { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar' },
+  { code: 'PLN', symbol: 'zł', name: 'Polish Złoty' },
+  { code: 'RUB', symbol: '₽', name: 'Russian Ruble' },
+  { code: 'SAR', symbol: 'ر.س', name: 'Saudi Riyal' },
+  { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
+  { code: 'TRY', symbol: '₺', name: 'Turkish Lira' },
+  { code: 'TND', symbol: 'DT', name: 'Tunisian Dinar' },
+  { code: 'EGP', symbol: 'E£', name: 'Egyptian Pound' },
+  { code: 'MAD', symbol: 'DH', name: 'Moroccan Dirham' },
+  { code: 'QAR', symbol: 'QR', name: 'Qatari Riyal' }
+];
+
 interface DonatePageProps {
   onBack: () => void;
   initialCause?: string;
@@ -14,15 +57,25 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [currency, setCurrency] = useState('NGN');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState('');
 
-  const currencySymbols: Record<string, string> = {
-    NGN: '₦',
-    USD: '$',
-    GBP: '£',
-    EUR: '€',
-    CAD: 'C$',
-    ZAR: 'R'
-  };
+  const currencySymbols = globalCurrencies.reduce<Record<string, string>>((acc, curr) => {
+    acc[curr.code] = curr.symbol;
+    return acc;
+  }, {});
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.currency-dropdown-container')) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showDropdown]);
   
   // Errors and Loading
   const [errors, setErrors] = useState<Record<string, string>>({}); 
@@ -34,7 +87,8 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
     const params = new URLSearchParams(window.location.search);
     const status = params.get('status');
     const txRef = params.get('tx_ref');
-    if (status === 'successful' && txRef) {
+    const isSuccess = status === 'successful' || status === 'completed';
+    if (isSuccess && txRef) {
       // Payment came back successful — log and show receipt
       setReceiptId(txRef);
       setStep(3);
@@ -44,6 +98,15 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
       if (pending) {
         try {
           const donationData = JSON.parse(pending);
+          if (donationData.donor) setName(donationData.donor);
+          if (donationData.email) setEmail(donationData.email);
+          if (donationData.purpose) setCause(donationData.purpose);
+          if (donationData.frequency) setFrequency(donationData.frequency);
+          if (donationData.currency) setCurrency(donationData.currency);
+          if (donationData.amount) {
+            setAmount(donationData.amount);
+            setCustomAmount('');
+          }
           fetch('/api/donations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -71,13 +134,16 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
 
       // Clean URL
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-    } else if (status && status !== 'successful' && txRef) {
+    } else if (status && !isSuccess && txRef) {
       setErrors({ payment: 'Payment was not completed. Please try again.' });
     }
   }, []);
 
   // Auto-detect currency based on IP address and Timezone
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('status')) return;
+
     const detectCurrency = async () => {
       try {
         const controller = new AbortController();
@@ -124,7 +190,20 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
     detectCurrency();
   }, []);
 
-  const presetAmounts = ['10', '25', '50', '100', '250', '500'];
+  const getPresetAmounts = (cur: string) => {
+    switch (cur) {
+      case 'NGN': return ['2000', '5000', '10000', '20000', '50000', '100000'];
+      case 'KES': return ['500', '1000', '2500', '5000', '10000', '25000'];
+      case 'GHS': return ['50', '100', '250', '500', '1000', '2500'];
+      case 'ZAR': return ['100', '250', '500', '1000', '2000', '5000'];
+      case 'UGX': return ['10000', '25000', '50000', '100000', '250000', '500000'];
+      case 'TZS': return ['10000', '25000', '50000', '100000', '250000', '500000'];
+      case 'RWF': return ['5000', '10000', '25000', '50000', '100000', '250000'];
+      default: return ['10', '25', '50', '100', '250', '500'];
+    }
+  };
+
+  // Reset presets event-driven on user selection rather than a global side-effect
 
   const handlePresetSelect = (val: string) => {
     setAmount(val);
@@ -397,7 +476,7 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                 </div>
 
                 {/* Currency Selection Grid */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Select Currency
                   </label>
@@ -406,13 +485,75 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                       <button
                         key={cur}
                         type="button"
-                        onClick={() => setCurrency(cur)}
-                        className={`py-2 rounded-xl border text-xs font-bold transition-all duration-200 flex flex-col items-center justify-center gap-0.5 ${currency === cur ? 'border-gold-500 bg-gold-50 text-gold-800 ring-2 ring-gold-500/20' : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'}`}
+                        onClick={() => {
+                          setCurrency(cur);
+                          setShowDropdown(false);
+                          const presets = getPresetAmounts(cur);
+                          setAmount(presets[2] || '50');
+                          setCustomAmount('');
+                        }}
+                        className={`py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 flex flex-col items-center justify-center gap-0.5 cursor-pointer ${currency === cur ? 'border-gold-500 bg-gold-50 text-gold-800 ring-2 ring-gold-500/20' : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'}`}
                       >
                         <span className="text-[9px] uppercase font-semibold text-gray-400">{cur}</span>
                         <span className="text-sm">{currencySymbols[cur]}</span>
                       </button>
                     ))}
+                  </div>
+
+                  {/* Searchable Dropdown for other currencies */}
+                  <div className="relative currency-dropdown-container">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Or select any currency:</span>
+                      <div className="relative flex-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowDropdown(!showDropdown)}
+                          className="w-full px-3.5 py-2 text-left border border-gray-200 rounded-xl text-xs bg-white text-gray-700 flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                        >
+                          <span className="font-semibold text-gray-800">
+                            {currency} ({currencySymbols[currency] || ''}) - {globalCurrencies.find(c => c.code === currency)?.name || 'Other Currency'}
+                          </span>
+                          <Globe className="w-3.5 h-3.5 text-gray-400" />
+                        </button>
+
+                        {showDropdown && (
+                          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto p-2 space-y-2">
+                            <input
+                              type="text"
+                              placeholder="Type country or currency..."
+                              value={currencySearch}
+                              onChange={(e) => setCurrencySearch(e.target.value)}
+                              className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/20 bg-gray-50 text-gray-800"
+                            />
+                            <div className="space-y-1">
+                              {globalCurrencies
+                                .filter(c =>
+                                  c.code.toLowerCase().includes(currencySearch.toLowerCase()) ||
+                                  c.name.toLowerCase().includes(currencySearch.toLowerCase())
+                                )
+                                .map((c) => (
+                                  <button
+                                    key={c.code}
+                                    type="button"
+                                    onClick={() => {
+                                      setCurrency(c.code);
+                                      setShowDropdown(false);
+                                      setCurrencySearch('');
+                                      const presets = getPresetAmounts(c.code);
+                                      setAmount(presets[2] || '50');
+                                      setCustomAmount('');
+                                    }}
+                                    className={`w-full px-3 py-2 text-left text-xs rounded-lg hover:bg-gray-50 flex items-center justify-between cursor-pointer border-none ${currency === c.code ? 'bg-gold-50 text-gold-900 font-bold' : 'text-gray-700 bg-transparent'}`}
+                                  >
+                                    <span>{c.code} ({c.symbol}) - {c.name}</span>
+                                    {currency === c.code && <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />}
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -422,12 +563,12 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                     Donation Amount ({currency})
                   </label>
                   <div className="grid grid-cols-3 gap-2.5 mb-3">
-                    {presetAmounts.map((val) => (
+                    {getPresetAmounts(currency).map((val) => (
                       <button
                         key={val}
                         type="button"
                         onClick={() => handlePresetSelect(val)}
-                        className={`py-3 rounded-xl border font-bold transition-all duration-200 ${amount === val ? 'border-gold-500 bg-gold-50 text-gold-800' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                        className={`py-3 rounded-xl border font-bold transition-all duration-200 cursor-pointer ${amount === val ? 'border-gold-500 bg-gold-50 text-gold-800' : 'border-gray-200 text-gray-650 hover:border-gray-300 bg-white'}`}
                       >
                         {currencySymbols[currency] || '$'}{val}
                       </button>
@@ -537,9 +678,9 @@ export default function DonatePage({ onBack, initialCause }: DonatePageProps) {
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-2">Thank you, {name}!</h3>
-                  <p className="text-gray-500 text-sm max-w-sm mx-auto">
-                    Your gift of <strong className="text-gray-800">{currencySymbols[currency] || '$'}{getFinalAmount()}</strong> to the <strong>{cause}</strong> has been successfully simulated and completed.
+                  <h3 className="text-2xl font-bold text-gray-800 mb-2">GOD BLESS YOU{name ? `, ${name}` : ''}!</h3>
+                  <p className="text-gray-500 text-sm max-w-lg mx-auto leading-relaxed">
+                    Your giving of <strong className="text-gray-850 font-bold">{currencySymbols[currency] || '$'}{getFinalAmount()}</strong> to the <strong>{cause || 'ministry'}</strong> has been successfully simulated and completed. I declare, according to Genesis 27:28, that you have the dew of heaven and the fatness of the earth in the name of Jesus. Your harvest is sure, and we await your testimonies.
                   </p>
                 </div>
 

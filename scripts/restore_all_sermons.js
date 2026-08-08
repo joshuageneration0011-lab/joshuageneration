@@ -44,10 +44,10 @@ function pickThumbnail(id) {
 
 // Helper to load environment variables from server/.env
 function loadEnv() {
-  const serverDir = path.resolve(__dirname, '..');
+  const serverDir = __dirname.endsWith('scripts') ? path.resolve(__dirname, '../server') : __dirname;
   const envPath = path.join(serverDir, '.env');
   if (!fs.existsSync(envPath)) {
-    console.warn('.env file not found in server directory. Using process.env.');
+    console.warn(`.env file not found at ${envPath}. Using process.env.`);
     return;
   }
   const envContent = fs.readFileSync(envPath, 'utf8');
@@ -84,6 +84,8 @@ const pool = new pg.Pool({
 function cleanHtml(html) {
   if (!html) return '';
   return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
     .replace(/<[^>]*>/g, '') // Remove HTML tags
     .replace(/&#038;/g, '&')
     .replace(/&amp;/g, '&')
@@ -95,7 +97,8 @@ function cleanHtml(html) {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n/g, '\n\n')
     .trim();
 }
 
@@ -116,8 +119,33 @@ function extractAudioUrl(post) {
   return '';
 }
 
+// Helper to normalize titles for matching
+function getAlphanumericNorm(str) {
+  if (!str) return '';
+  return str.toLowerCase()
+    .replace(/download\s+here/gi, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
 async function restoreSermons() {
   try {
+    const serverDir = __dirname.endsWith('scripts') ? path.resolve(__dirname, '../server') : __dirname;
+    const privateSermonsPath = path.resolve(serverDir, 'private_sermons.json');
+    const privateTitles = new Set();
+    if (fs.existsSync(privateSermonsPath)) {
+      try {
+        const privateSermons = JSON.parse(fs.readFileSync(privateSermonsPath, 'utf-8'));
+        privateSermons.forEach(s => {
+          if (s.title) {
+            privateTitles.add(getAlphanumericNorm(s.title));
+          }
+        });
+        console.log(`Loaded ${privateTitles.size} private sermon titles to exclude.`);
+      } catch (err) {
+        console.error('Failed to load private_sermons.json:', err.message);
+      }
+    }
+
     const wpUrl = 'https://joshuasgeneration.net/wp-json/wp/v2/sermon?per_page=100&_embed';
     console.log(`📡 Fetching all sermons from WordPress CPT REST API: ${wpUrl}...`);
     
@@ -138,6 +166,13 @@ async function restoreSermons() {
     
     for (const post of posts) {
       const title = cleanHtml(post.title.rendered);
+      
+      // Exclude if title matches a private sermon title
+      if (privateTitles.has(getAlphanumericNorm(title))) {
+        console.log(`🚫 Skipping private sermon: "${title}"`);
+        continue;
+      }
+      
       const audioUrl = extractAudioUrl(post);
       
       if (!audioUrl) {
@@ -145,6 +180,9 @@ async function restoreSermons() {
         continue;
       }
       
+      const slug = post.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const uniqueId = `sermon_${slug || post.id}`;
+
       // Get featured image URL from the embedded data, fall back to curated pool
       let thumbnail = pickThumbnail(uniqueId);
       const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0];
@@ -152,12 +190,13 @@ async function restoreSermons() {
         thumbnail = featuredMedia.source_url;
       }
       
-      // Truncate clean description
-      const fullDesc = cleanHtml(post.excerpt.rendered || post.content.rendered);
-      const description = fullDesc.length > 200 ? fullDesc.slice(0, 197) + '...' : fullDesc;
+      // Get untruncated description from content, strip the download button div wrappers first
+      let fullDescHtml = post.content?.rendered || '';
+      fullDescHtml = fullDescHtml.replace(/<div[^>]*>[\s\S]*?<\/div>/gi, '');
+      fullDescHtml = fullDescHtml.replace(/<a[^>]+href="[^"]+\.mp3"[^>]*>[\s\S]*?<\/a>/gi, '');
       
-      const slug = post.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const uniqueId = `sermon_${slug || post.id}`;
+      const fullDesc = cleanHtml(fullDescHtml || post.excerpt?.rendered || '');
+      const description = fullDesc || 'Imported from sermon page.';
       
       sermons.push({
         id: uniqueId,
@@ -225,13 +264,28 @@ async function restoreSermons() {
       }
     }
 
+    // Clean up any existing duplicate public/null audience sermons in DB that match private titles
+    if (privateTitles.size > 0) {
+      console.log('\nCleaning up duplicate public records matching private titles from DB...');
+      try {
+        const dbRes = await pool.query("SELECT id, title FROM sermons WHERE audience = 'public' OR audience IS NULL");
+        for (const row of dbRes.rows) {
+          if (privateTitles.has(getAlphanumericNorm(row.title))) {
+            console.log(`🗑️ Deleting duplicate public sermon from DB: "${row.title}" (ID: ${row.id})`);
+            await pool.query("DELETE FROM sermons WHERE id = $1", [row.id]);
+          }
+        }
+      } catch (dbErr) {
+        console.error('Failed to clean up duplicates from database:', dbErr.message);
+      }
+    }
+
     // Verify count in PostgreSQL
     const dbCountRes = await pool.query('SELECT COUNT(*) FROM sermons');
     console.log(`\n🎉 PostgreSQL count is now: ${dbCountRes.rows[0].count}`);
 
-    // 2. Overwrite fallback files
-    const localSermonsPath = path.resolve(__dirname, '../data/sermons.json');
-    const localDefaultsPath = path.resolve(__dirname, '../default_data.json');
+    const localSermonsPath = path.resolve(serverDir, 'data/sermons.json');
+    const localDefaultsPath = path.resolve(serverDir, 'default_data.json');
 
     console.log(`\nWriting full sermons array to ${localSermonsPath}...`);
     fs.writeFileSync(localSermonsPath, JSON.stringify(sermons, null, 2), 'utf-8');
