@@ -32,21 +32,21 @@ export function updatePageSEO(config: SEOConfig) {
 
   // Open Graph / Facebook Social Sharing Tags
   const currentUrl = window.location.origin + '/#blog/' + (config.slug || '');
+  const shareImage = config.imageUrl
+    ? (config.imageUrl.startsWith('http') ? config.imageUrl : window.location.origin + config.imageUrl)
+    : window.location.origin + '/og-image.jpg';
+
   setMetaTag('property', 'og:title', config.title);
   setMetaTag('property', 'og:description', config.description);
   setMetaTag('property', 'og:url', currentUrl);
   setMetaTag('property', 'og:type', config.type || 'website');
-  if (config.imageUrl) {
-    setMetaTag('property', 'og:image', config.imageUrl);
-  }
+  setMetaTag('property', 'og:image', shareImage);
 
   // Twitter Social Sharing Cards
   setMetaTag('name', 'twitter:card', 'summary_large_image');
   setMetaTag('name', 'twitter:title', config.title);
   setMetaTag('name', 'twitter:description', config.description);
-  if (config.imageUrl) {
-    setMetaTag('name', 'twitter:image', config.imageUrl);
-  }
+  setMetaTag('name', 'twitter:image', shareImage);
 
   // Canonical Link
   let canonical = document.querySelector('link[rel="canonical"]');
