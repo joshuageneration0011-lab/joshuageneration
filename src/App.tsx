@@ -229,13 +229,20 @@ export default function App() {
     if (path.startsWith('blog/')) {
       const id = path.split('/')[1];
       getSavedBlogPosts().then(posts => {
-        const post = posts.find(p => p.id === id);
-        if (post) setSelectedPost(post);
+        const post = posts.find(p => String(p.id) === String(id));
+        if (post) {
+          setSelectedPost(post);
+        } else {
+          navigate('blog');
+        }
+      }).catch((err) => {
+        console.error('Failed to resolve shared blog link:', err);
+        navigate('blog');
       });
     } else if (path.startsWith('sermon/')) {
       const id = path.split('/')[1];
       getSavedSermons().then(async (sermons) => {
-        let sermon = sermons.find(s => s.id === id);
+        let sermon = sermons.find(s => String(s.id) === String(id));
         if (sermon) {
           setSelectedSermon(sermon);
           return;
@@ -244,7 +251,7 @@ export default function App() {
         // If not found in public, try sons-daughters private sermons
         try {
           const sdSermons = await api.getSermonsByAudience('sons-daughters');
-          sermon = sdSermons.find(s => s.id === id);
+          sermon = sdSermons.find(s => String(s.id) === String(id));
           if (sermon) {
             setSelectedSermon(sermon);
             return;
@@ -256,7 +263,7 @@ export default function App() {
         // If still not found, try partners private sermons
         try {
           const partnerSermons = await api.getSermonsByAudience('partners');
-          sermon = partnerSermons.find(s => s.id === id);
+          sermon = partnerSermons.find(s => String(s.id) === String(id));
           if (sermon) {
             setSelectedSermon(sermon);
             return;
@@ -264,12 +271,25 @@ export default function App() {
         } catch (e) {
           console.error('Failed to search in partners sermons:', e);
         }
+
+        // Redirect fallback if not found anywhere
+        navigate('sermons');
+      }).catch((err) => {
+        console.error('Failed to resolve shared sermon link:', err);
+        navigate('sermons');
       });
     } else if (path.startsWith('books/')) {
       const id = path.split('/')[1];
       getSavedBooks().then(books => {
-        const book = books.find(b => b.id === id);
-        if (book) setSelectedBook(book);
+        const book = books.find(b => String(b.id) === String(id));
+        if (book) {
+          setSelectedBook(book);
+        } else {
+          navigate('books');
+        }
+      }).catch((err) => {
+        console.error('Failed to resolve shared book link:', err);
+        navigate('books');
       });
     }
   }, []);
