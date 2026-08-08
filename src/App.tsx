@@ -36,6 +36,7 @@ const ContactPage = lazy(() => import('@/components/ContactPage'));
 const PrivacyPolicyPage = lazy(() => import('@/components/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('@/components/TermsOfServicePage'));
 const CookiePolicyPage = lazy(() => import('@/components/CookiePolicyPage'));
+const GetUpdatesPage = lazy(() => import('@/components/GetUpdatesPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -71,7 +72,7 @@ const getPageFromPath = (): Page => {
   if (rawPath.startsWith('sermon/')) return 'sermon-player';
   if (rawPath.startsWith('books/')) return 'book-details';
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -229,7 +230,7 @@ export default function App() {
     if (path.startsWith('blog/')) {
       const id = path.split('/')[1];
       getSavedBlogPosts().then(posts => {
-        const post = posts.find(p => String(p.id) === String(id));
+        const post = posts.find(p => String(p.id) === String(id) || p.slug === id);
         if (post) {
           setSelectedPost(post);
         } else {
@@ -407,7 +408,11 @@ export default function App() {
   const navigate = (page: Page, id?: string) => {
     console.log('[Routing] Navigating to page:', page);
     let path = page === 'home' ? '/' : `/${page}`;
-    if (page === 'blog-details' && id) path = `/blog/${id}`;
+    if (page === 'blog-details' && id) {
+      const post = posts.find(p => String(p.id) === String(id));
+      const urlParam = post?.slug || id;
+      path = `/blog/${urlParam}`;
+    }
     if (page === 'sermon-player' && id) path = `/sermon/${id}`;
     if (page === 'book-details' && id) path = `/books/${id}`;
     window.history.pushState(null, '', path);
@@ -453,6 +458,14 @@ export default function App() {
           onLogin={handleAdminLogin}
           onBack={() => navigate('home')}
         />
+      </Suspense>
+    );
+  }
+
+  if (currentPage === 'getupdates') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <GetUpdatesPage onBack={() => navigate('home')} />
       </Suspense>
     );
   }

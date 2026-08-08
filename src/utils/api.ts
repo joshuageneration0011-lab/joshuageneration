@@ -544,6 +544,21 @@ export const api = {
     async getSubscribers(): Promise<Subscriber[]> {
       const res = await fetch(`${API_BASE_URL}/api/admin/subscribers`, { headers: getHeaders() });
       return (await handleResponse(res, 'Failed to fetch subscribers')).json();
+    },
+    async sendBulkEmail(subject: string, htmlBody: string, testEmail?: string): Promise<{ success: boolean; count: number; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/subscribers/email`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ subject, htmlBody, testEmail }),
+      });
+      return (await handleResponse(res, 'Failed to send bulk email')).json();
+    },
+    async deleteSubscriber(id: string): Promise<{ success: boolean; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/subscribers/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      return (await handleResponse(res, 'Failed to delete subscriber')).json();
     }
   }
 };

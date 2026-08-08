@@ -163,6 +163,91 @@ async function sendZeptoEmail(toEmail, toName, subject, htmlBody) {
   }
 }
 
+function wrapInEmailTemplate(subject, content) {
+  const bodyHtml = content
+    .replace(/\r\n/g, '\n')
+    .replace(/\n\n/g, '</p><p style="margin-bottom: 16px; color: #334155; line-height: 1.6; font-size: 16px;">')
+    .replace(/\n/g, '<br />');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="600px" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
+          <!-- Header Banner -->
+          <tr>
+            <td align="center" style="background-color: #0f172a; padding: 30px 20px;">
+              <table border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center" style="padding-bottom: 10px;">
+                    <img src="https://joshuasgeneration.com/favicon.png" alt="Logo" width="40" height="40" style="display: block; width: 40px; height: 40px; border-radius: 50%;" />
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-family: system-ui, sans-serif; font-size: 20px; font-weight: bold; color: #ffffff; letter-spacing: 0.05em;">
+                    <span style="color: #ffffff;">Joshuas</span><span style="color: #d97706;">Generation</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Message Body -->
+          <tr>
+            <td style="padding: 40px 30px; background-color: #ffffff;">
+              <h1 style="margin-top: 0; margin-bottom: 24px; font-size: 22px; font-weight: bold; color: #0f172a; line-height: 1.3;">
+                ${subject}
+              </h1>
+              <div style="font-size: 16px; color: #334155; line-height: 1.6;">
+                <p style="margin-bottom: 16px; color: #334155; line-height: 1.6; font-size: 16px;">
+                  ${bodyHtml}
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 30px;">
+              <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 0;" />
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px; background-color: #ffffff; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                You are receiving this email because you subscribed to our newsletter on <a href="https://joshuasgeneration.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">joshuasgeneration.com</a>.
+              </p>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #94a3b8;">
+                <a href="https://joshuasgeneration.com/api/unsubscribe?email={{RECIPIENT_EMAIL}}" style="color: #64748b; text-decoration: underline; font-weight: 500;">Unsubscribe from this list</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
 const defaultEvents = [
   { id: '1', title: 'Kingdom Conference 2026', date: '2026-01-20', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson', 'Pastor Sarah Williams'], description: 'A life-changing global conference.', imageUrl: '' },
   { id: '2', title: 'Youth Revival Night', date: '2026-01-15', time: '06:00 PM', location: 'JGen Youth Auditorium', registrations: 450, capacity: 500, status: 'Upcoming', speakers: ['Minister Rachel Grace', 'Youth Pastor Mark'], description: 'Revival, praise, and fire for the youth.', imageUrl: '' },
@@ -973,7 +1058,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- SEO DYNAMIC OPENGRAPH HANDLER ---
-  if (pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
+  if (pathname === '/getupdates' || pathname === '/getupdates/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
     const targetPath = pathname;
     try {
       const indexPath = path.join(__dirname, '../dist/index.html');
@@ -986,7 +1071,8 @@ const server = http.createServer(async (req, res) => {
       
       let title = 'Joshua Generation';
       let description = 'A digital ministry platform dedicated to raising a generation of believers who know God, walk in purpose, and transform their world.';
-      let imageUrl = 'https://joshuasgeneration.com/assets/favicon.ico';
+      let imageUrl = 'https://joshuasgeneration.com/favicon.png';
+      let keywords = 'faith, joshua generation, christian growth, ministry';
 
       // Helper to ensure URL is absolute
       const makeAbsolute = (url) => {
@@ -996,7 +1082,11 @@ const server = http.createServer(async (req, res) => {
         return `https://joshuasgeneration.com/${url}`;
       };
 
-      if (targetPath.startsWith('/sermon/')) {
+      if (targetPath === '/getupdates' || targetPath === '/getupdates/') {
+        title = "Get Spiritual Updates - Joshua's Generation";
+        description = "Join our global family to receive spiritual updates, Zoom mentorship invitations, and midnight prayer reminders directly from Apostle Joshua Iyemifokhae.";
+        imageUrl = "https://joshuasgeneration.com/newsletter-preview.jpg";
+      } else if (targetPath.startsWith('/sermon/')) {
         const id = targetPath.split('/').pop();
         if (pool) {
           const result = await pool.query('SELECT title, description, thumbnail as image_url FROM sermons WHERE id = $1', [id]);
@@ -1009,11 +1099,15 @@ const server = http.createServer(async (req, res) => {
       } else if (targetPath.startsWith('/blog/')) {
         const id = targetPath.split('/').pop();
         if (pool) {
-          const result = await pool.query('SELECT title, excerpt as description, image_url FROM blog_posts WHERE id = $1', [id]);
+          const result = await pool.query('SELECT title, excerpt, image_url, seo_title, seo_description, seo_keywords FROM blog_posts WHERE id = $1 OR slug = $1', [id]);
           if (result.rows.length > 0) {
-            title = `${result.rows[0].title} - Joshua Generation Blog`;
-            description = result.rows[0].description || description;
-            imageUrl = makeAbsolute(result.rows[0].image_url) || imageUrl;
+            const post = result.rows[0];
+            title = post.seo_title || `${post.title} - Joshua Generation Blog`;
+            description = post.seo_description || post.excerpt || description;
+            imageUrl = makeAbsolute(post.image_url) || imageUrl;
+            if (post.seo_keywords) {
+              keywords = post.seo_keywords;
+            }
           }
         }
       } else if (targetPath.startsWith('/books/')) {
@@ -1032,10 +1126,12 @@ const server = http.createServer(async (req, res) => {
       html = html.replace(/<meta\s+[^>]*property=["']og:[^"']*["'][^>]*>/gi, '');
       html = html.replace(/<meta\s+[^>]*name=["']twitter:[^"']*["'][^>]*>/gi, '');
       html = html.replace(/<meta\s+[^>]*name=["']description["'][^>]*>/gi, '');
+      html = html.replace(/<meta\s+[^>]*name=["']keywords["'][^>]*>/gi, '');
 
       html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
       const ogTags = `
         <meta name="description" content="${description.replace(/"/g, '&quot;')}">
+        <meta name="keywords" content="${keywords.replace(/"/g, '&quot;')}">
         <meta property="og:title" content="${title.replace(/"/g, '&quot;')}">
         <meta property="og:description" content="${description.replace(/"/g, '&quot;')}">
         <meta property="og:image" content="${imageUrl}">
@@ -1063,6 +1159,48 @@ const server = http.createServer(async (req, res) => {
 
   // Push Notification Public Key
   
+  // --- ZeptoMail Bounce Webhook ---
+  if (pathname === '/api/webhooks/zeptomail' && method === 'POST') {
+    const params = new URLSearchParams(parsedUrl.search);
+    const secret = params.get('secret');
+    if (secret !== 'jgen_zepto_webhook_secret_2026') {
+      return sendJson(res, 401, { error: 'Unauthorized secret key' });
+    }
+
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body);
+        console.log('[Webhook] ZeptoMail event received:', payload.action, payload.actionType);
+
+        if (payload.action === 'bounce' && (payload.actionType === 'hard bounce' || payload.bounce_type === 'hard')) {
+          const events = payload.data || [];
+          for (const ev of events) {
+            const email = ev.contact_email?.trim().toLowerCase();
+            if (email) {
+              console.log('[Webhook] Hard bounce detected. Deleting subscriber:', email);
+              if (pool) {
+                await pool.query('DELETE FROM subscribers WHERE LOWER(email) = $1', [email]);
+              } else {
+                if (fs.existsSync(SUBSCRIBERS_FILE)) {
+                  let subs = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
+                  subs = subs.filter(s => s.email.toLowerCase() !== email);
+                  fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+                }
+              }
+            }
+          }
+        }
+        return sendJson(res, 200, { success: true });
+      } catch (err) {
+        console.error('[Webhook] Failed to process ZeptoMail webhook:', err);
+        return sendJson(res, 500, { error: 'Internal Server Error' });
+      }
+    });
+    return;
+  }
+
   // --- Newsletter Subscriptions ---
   if (pathname === '/api/subscribe' && method === 'POST') {
     let body = '';
@@ -1107,6 +1245,39 @@ const server = http.createServer(async (req, res) => {
           fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subscribers, null, 2), 'utf-8');
         }
 
+        // Send welcome email asynchronously
+        (async () => {
+          const recipientName = name || email.split('@')[0];
+          const nameParts = (name || '').trim().split(/\s+/);
+          const firstName = nameParts[0] || email.split('@')[0];
+
+          const welcomeSubject = "Welcome to Joshua's Generation!";
+          const welcomeBody = `Dear ${firstName}
+
+Welcome to Joshua's Generation!
+
+I am absolutely thrilled to welcome you into this global family of believers who are burning for God, walking in their divine purpose, and transforming their world.
+
+Here is what you now have access to:
+•  Spiritual resources, and apostolic teachings that will help your walk with Jesus.
+•  Private Mentorship Zoom Meetings (invitation details and links will be shared here).
+•  Our Midnight Prayers reminders and join link.
+
+I pray that your connection to this community sparks a fresh fire of revival and purpose in your life. Stay tuned for our upcoming meetings and I await your beautiful testimonies!
+
+In Christ Love,
+Apostle Joshua Iyemifokhae
+Joshua's Generation`;
+
+          const templateHtml = wrapInEmailTemplate(welcomeSubject, welcomeBody);
+          const personalizedHtml = templateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email));
+
+          await sendZeptoEmail(email, recipientName, welcomeSubject, personalizedHtml);
+          console.log(`[Subscription] Welcome email successfully sent to: ${email}`);
+        })().catch(err => {
+          console.error('[Subscription] Failed to send welcome email:', err);
+        });
+
         return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
       } catch (err) {
         console.error('Subscription error:', err);
@@ -1138,7 +1309,148 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
+  if (pathname.startsWith('/api/admin/subscribers/') && method === 'DELETE') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+    const id = pathname.split('/').pop();
+    try {
+      if (pool) {
+        await pool.query('DELETE FROM subscribers WHERE id = $1', [id]);
+      } else {
+        if (fs.existsSync(SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.id !== id);
+          fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+        }
+      }
+      return sendJson(res, 200, { success: true, message: 'Subscriber deleted successfully' });
+    } catch (err) {
+      console.error('Delete subscriber error:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+  }
 
+  if (pathname === '/api/admin/subscribers/email' && method === 'POST') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+
+    let body;
+    try {
+      body = await getJsonBody(req);
+    } catch (e) {
+      return sendJson(res, 400, { error: 'Invalid JSON body' });
+    }
+
+    const { subject, htmlBody, testEmail } = body;
+    if (!subject || !htmlBody) {
+      return sendJson(res, 400, { error: 'Subject and email body are required' });
+    }
+
+    try {
+      let subscribers = [];
+      if (testEmail) {
+        subscribers = [{ name: 'Test Recipient', email: testEmail }];
+      } else {
+        if (pool) {
+          const result = await pool.query('SELECT name, email FROM subscribers WHERE is_active = true');
+          subscribers = result.rows;
+        } else {
+          if (fs.existsSync(SUBSCRIBERS_FILE)) {
+            const allSubs = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
+            subscribers = allSubs.filter(s => s.is_active !== false);
+          }
+        }
+      }
+
+      if (subscribers.length === 0) {
+        return sendJson(res, 200, { success: true, count: 0, message: 'No active subscribers found.' });
+      }
+
+      // Start background sending task to prevent HTTP connection timeouts
+      (async () => {
+        let successCount = 0;
+        let failCount = 0;
+        for (const sub of subscribers) {
+          const email = sub.email;
+          const fullName = sub.name || email.split('@')[0];
+          const nameParts = (sub.name || '').trim().split(/\s+/);
+          const firstName = nameParts[0] || email.split('@')[0];
+          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+          const personalizedSubject = subject
+            .replace(/\{\{name\}\}/gi, fullName)
+            .replace(/\{\{firstName\}\}/gi, firstName)
+            .replace(/\{\{lastName\}\}/gi, lastName);
+
+          const personalizedBodyText = htmlBody
+            .replace(/\{\{name\}\}/gi, fullName)
+            .replace(/\{\{firstName\}\}/gi, firstName)
+            .replace(/\{\{lastName\}\}/gi, lastName);
+
+          const emailTemplateHtml = wrapInEmailTemplate(personalizedSubject, personalizedBodyText);
+          const personalizedHtml = emailTemplateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email));
+
+          const sent = await sendZeptoEmail(email, fullName, personalizedSubject, personalizedHtml);
+          if (sent) successCount++;
+          else failCount++;
+          
+          // Wait 200ms between emails to prevent flooding/rate-limiting on ZeptoMail
+          await new Promise(r => setTimeout(r, 200));
+        }
+        console.log(`[Bulk Email] Broadcaster complete. Sent to: ${subscribers.length}. Success: ${successCount}, Failed: ${failCount}`);
+      })().catch(err => {
+        console.error('[Bulk Email] Background broadcaster encountered an error:', err);
+      });
+
+      return sendJson(res, 202, { success: true, count: subscribers.length, message: `Broadcasting email to ${subscribers.length} active subscribers in the background.` });
+    } catch (err) {
+      console.error('Bulk email sending setup failed:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+  }
+
+  if (pathname === '/api/unsubscribe' && method === 'GET') {
+    const email = parsedUrl.searchParams.get('email');
+    if (!email) {
+      res.writeHead(400, { 'Content-Type': 'text/html' });
+      return res.end('<h1>Invalid Request</h1><p>Missing email parameter.</p>');
+    }
+    try {
+      if (pool) {
+        await pool.query('UPDATE subscribers SET is_active = false WHERE email = $1', [email]);
+      } else {
+        if (fs.existsSync(SUBSCRIBERS_FILE)) {
+          const subs = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
+          const idx = subs.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
+          if (idx !== -1) {
+            subs[idx].is_active = false;
+            fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+          }
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      return res.end(`
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 50px 20px; background-color: #f8fafc; min-height: 100vh; box-sizing: border-box; display: flex; items-center: center; justify-content: center; align-items: center;">
+          <div style="max-width: 480px; width: 100%; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center;">
+            <div style="width: 56px; height: 56px; background-color: #f1f5f9; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            </div>
+            <h1 style="color: #0f172a; margin: 0 0 12px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Unsubscribed successfully</h1>
+            <p style="color: #64748b; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">You have been unsubscribed from our mailing list. You will no longer receive updates, event reminders, or newsletters from us.</p>
+            <a href="https://joshuasgeneration.com" style="display: inline-block; width: 100%; padding: 14px; background-color: #0f172a; color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: background-color 0.2s;">Return to Home Page</a>
+          </div>
+        </div>
+      `);
+    } catch (err) {
+      console.error('Unsubscribe error:', err);
+      res.writeHead(500, { 'Content-Type': 'text/html' });
+      return res.end('<h1>Error</h1><p>An error occurred while unsubscribing.</p>');
+    }
+  }
   if (pathname === '/api/push/public-key' && method === 'GET') {
     sendJson(res, 200, { publicKey: vapidPublicKey });
     return;

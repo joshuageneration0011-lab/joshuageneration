@@ -422,6 +422,37 @@ function SubscribersTab() {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Bulk Email Composer State
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendMode, setSendMode] = useState<'broadcast' | 'test'>('test');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  const insertPlaceholder = (tag: string) => {
+    const textarea = document.getElementById('newsletter-body-textarea') as HTMLTextAreaElement;
+    if (!textarea) {
+      setEmailBody(prev => prev + tag);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+    setEmailBody(before + tag + after);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    }, 0);
+  };
+
   useEffect(() => {
     fetchSubscribers();
   }, []);
@@ -452,6 +483,102 @@ function SubscribersTab() {
     document.body.removeChild(link);
   };
 
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      alert('Please fill in both the Subject and Email Body.');
+      return;
+    }
+
+    if (sendMode === 'test' && !testEmailAddress.trim()) {
+      alert('Please enter a test email address.');
+      return;
+    }
+
+    const activeCount = subscribers.filter(s => s.is_active).length;
+    if (sendMode === 'broadcast' && activeCount === 0) {
+      alert('There are no active subscribers to send this email to.');
+      return;
+    }
+
+    if (sendMode === 'broadcast') {
+      const confirmSend = window.confirm(`Are you sure you want to broadcast this email to all ${activeCount} active subscribers? This action cannot be undone.`);
+      if (!confirmSend) return;
+    }
+
+    setIsSending(true);
+    try {
+      const payloadSubject = emailSubject.trim();
+      const payloadBody = emailBody.trim();
+      
+      const res = await api.admin.sendBulkEmail(
+        payloadSubject, 
+        payloadBody, 
+        sendMode === 'test' ? testEmailAddress.trim() : undefined
+      );
+
+      if (res.success) {
+        alert(sendMode === 'test' ? `Test email sent successfully to ${testEmailAddress.trim()}!` : `Broadcast initiated! Sending email to all ${activeCount} subscribers in the background.`);
+        if (sendMode === 'broadcast') {
+          setIsComposerOpen(false);
+          setEmailSubject('');
+          setEmailBody('');
+        }
+      } else {
+        alert(res.message || 'Failed to send email. Please try again.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'An error occurred while sending email. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDeleteSubscriber = async (id: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${email} from subscribers? This action will permanently remove them.`)) {
+      return;
+    }
+    try {
+      const res = await api.admin.deleteSubscriber(id);
+      if (res.success) {
+        setSubscribers(prev => prev.filter(s => s.id !== id));
+      } else {
+        alert(res.message || 'Failed to delete subscriber');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'An error occurred while deleting subscriber');
+    }
+  };
+
+  // Compute pagination bounds
+  const filteredSubscribers = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return subscribers;
+    return subscribers.filter(s => 
+      (s.name && s.name.toLowerCase().includes(q)) || 
+      s.email.toLowerCase().includes(q)
+    );
+  }, [subscribers, searchQuery]);
+
+  const totalPages = Math.ceil(filteredSubscribers.length / pageSize);
+  const paginatedSubscribers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredSubscribers.slice(start, start + pageSize);
+  }, [filteredSubscribers, currentPage]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredSubscribers.length / pageSize));
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [filteredSubscribers, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -464,13 +591,35 @@ function SubscribersTab() {
           </h2>
           <p className="text-sm text-gray-500 mt-1">Manage and export your newsletter subscribers for ZeptoMail</p>
         </div>
-        <button
-          onClick={handleDownloadCSV}
-          disabled={subscribers.length === 0}
-          className="px-4 py-2 bg-royal-blue-600 text-white font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors text-sm flex items-center gap-2 shadow-sm disabled:opacity-50"
-        >
-          <Download className="w-4 h-4" /> Download CSV
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setIsComposerOpen(true)}
+            className="px-4 py-2 border border-gray-250 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-colors text-sm flex items-center gap-2 shadow-sm bg-white cursor-pointer"
+          >
+            <Mail className="w-4 h-4 text-gray-500" /> Compose Email
+          </button>
+          <button
+            onClick={handleDownloadCSV}
+            disabled={subscribers.length === 0}
+            className="px-4 py-2 bg-royal-blue-600 text-white font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors text-sm flex items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            <Download className="w-4 h-4" /> Download CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-gray-400" />
+        </span>
+        <input
+          type="text"
+          placeholder="Search subscribers by name or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-gray-900 shadow-sm"
+        />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -478,43 +627,299 @@ function SubscribersTab() {
           <div className="p-8 text-center"><RefreshCw className="w-6 h-6 text-royal-blue-500 animate-spin mx-auto" /></div>
         ) : subscribers.length === 0 ? (
           <div className="p-8 text-center text-gray-500">No subscribers yet.</div>
+        ) : filteredSubscribers.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No matching subscribers found.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
-                <tr>
-                  <th className="px-6 py-4">Name</th>
-                  <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Subscribed At</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {subscribers.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">{sub.name || '-'}</td>
-                    <td className="px-6 py-4 text-gray-600">{sub.email}</td>
-                    <td className="px-6 py-4">
-                      {sub.is_active ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                          <CheckCircle className="w-3.5 h-3.5" /> Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-semibold">
-                          Unsubscribed
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                      {new Date(sub.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600">
+                <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">Email</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Subscribed At</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedSubscribers.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900">{sub.name || '-'}</td>
+                      <td className="px-6 py-4 text-gray-600">{sub.email}</td>
+                      <td className="px-6 py-4">
+                        {sub.is_active ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                            <CheckCircle className="w-3.5 h-3.5" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-semibold">
+                            Unsubscribed
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap text-gray-500">
+                        {new Date(sub.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border-none bg-transparent"
+                          title="Delete Subscriber"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Widget */}
+            {subscribers.length > pageSize && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  Showing <span className="font-semibold text-gray-700">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(currentPage * pageSize, subscribers.length)}</span> of <span className="font-semibold text-gray-700">{subscribers.length}</span> subscribers
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="px-2.5 py-1.5 border border-gray-200 text-xs font-semibold rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white text-gray-700 cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={cn(
+                        "w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg cursor-pointer transition-all border",
+                        currentPage === i + 1
+                          ? "bg-royal-blue-600 border-royal-blue-600 text-white shadow-sm"
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    className="px-2.5 py-1.5 border border-gray-200 text-xs font-semibold rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white text-gray-700 cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {/* Compose Newsletter Modal */}
+      {isComposerOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl border border-gray-150 flex flex-col max-h-[90vh] overflow-hidden animate-scale-up">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-150 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-royal-blue-600" /> Compose Newsletter / Bulk Email
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">Send a stylized newsletter template directly via ZeptoMail</p>
+              </div>
+              <button 
+                onClick={() => setIsComposerOpen(false)}
+                className="p-1.5 hover:bg-gray-150 rounded-xl transition-all cursor-pointer border-none bg-transparent text-gray-400 hover:text-gray-900"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Two columns layout */}
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 bg-gray-50/50">
+              {/* Form Section */}
+              <form onSubmit={handleSendEmail} className="space-y-4">
+                {/* Subject Line */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Email Subject</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Weekly Revival Newsletter / Zoom Link Update"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-250 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-gray-900"
+                  />
+                </div>
+
+                {/* Email Body */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Email Body Message</label>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{firstName}}')}
+                        className="px-2 py-0.5 rounded bg-royal-blue-50 hover:bg-royal-blue-100 text-royal-blue-700 text-[10px] font-bold border border-royal-blue-200 transition-colors cursor-pointer"
+                        title="Insert Recipient's First Name"
+                      >
+                        + First Name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{lastName}}')}
+                        className="px-2 py-0.5 rounded bg-royal-blue-50 hover:bg-royal-blue-100 text-royal-blue-700 text-[10px] font-bold border border-royal-blue-200 transition-colors cursor-pointer"
+                        title="Insert Recipient's Last Name"
+                      >
+                        + Last Name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{name}}')}
+                        className="px-2 py-0.5 rounded bg-royal-blue-50 hover:bg-royal-blue-100 text-royal-blue-700 text-[10px] font-bold border border-royal-blue-200 transition-colors cursor-pointer"
+                        title="Insert Recipient's Full Name"
+                      >
+                        + Full Name
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    id="newsletter-body-textarea"
+                    required
+                    rows={8}
+                    placeholder="Type your message content here... Supports standard layout spacing. Recipient details and unsubscribe links are automatically managed."
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-250 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-gray-900 min-h-[160px] font-sans"
+                  />
+                  <p className="text-[10px] text-gray-400">Note: Double newlines convert into paragraphs; single newlines convert to line breaks.</p>
+                </div>
+
+                {/* Delivery Settings */}
+                <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-3">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Delivery Options</label>
+                  
+                  {/* Mode Selectors */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSendMode('test')}
+                      className={cn(
+                        "py-2 px-3 rounded-lg text-xs font-bold transition-all border cursor-pointer",
+                        sendMode === 'test' 
+                          ? "bg-royal-blue-50 border-royal-blue-200 text-royal-blue-700" 
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      Send Test Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSendMode('broadcast')}
+                      className={cn(
+                        "py-2 px-3 rounded-lg text-xs font-bold transition-all border cursor-pointer",
+                        sendMode === 'broadcast' 
+                          ? "bg-red-50 border-red-200 text-red-700" 
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      Broadcast to All
+                    </button>
+                  </div>
+
+                  {/* Dynamic inputs based on mode */}
+                  {sendMode === 'test' ? (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase block">Test Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="e.g. pastor@example.com"
+                        value={testEmailAddress}
+                        onChange={(e) => setTestEmailAddress(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-250 rounded-lg text-xs placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-royal-blue-500 focus:border-royal-blue-500 text-gray-900"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-red-500 font-medium">
+                      ⚠️ Warning: Email will be sent to all {subscribers.filter(s => s.is_active).length} active subscribers.
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Controls */}
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsComposerOpen(false)}
+                    className="px-4 py-2 border border-gray-255 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl cursor-pointer bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSending}
+                    className={cn(
+                      "px-4 py-2 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50 border-none",
+                      sendMode === 'broadcast' ? "bg-red-600 hover:bg-red-700" : "bg-royal-blue-600 hover:bg-royal-blue-700"
+                    )}
+                  >
+                    {isSending ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending...
+                      </>
+                    ) : sendMode === 'broadcast' ? (
+                      <>
+                        Broadcast Now
+                      </>
+                    ) : (
+                      <>
+                        Send Test Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Template Preview Section */}
+              <div className="flex flex-col h-full space-y-1.5 min-h-[300px]">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Live Template Preview</label>
+                <div className="flex-1 bg-white border border-gray-200 rounded-2xl overflow-y-auto p-4 flex flex-col font-sans select-none pointer-events-none scale-[0.9] origin-top shadow-sm max-h-[460px]">
+                  {/* Email Logo Header */}
+                  <div className="bg-slate-900 p-4 text-center rounded-t-xl">
+                    <img src="https://joshuasgeneration.com/favicon.png" alt="Logo" className="w-6 h-6 mx-auto mb-1 opacity-90 inline-block rounded-full" />
+                    <div className="text-white text-sm font-extrabold tracking-wider leading-none">
+                      Joshuas<span className="text-amber-500">Generation</span>
+                    </div>
+                  </div>
+
+                  {/* Email Body Content */}
+                  <div className="p-5 border-x border-gray-100 flex-1">
+                    <h2 className="text-md font-bold text-gray-900 mt-0 mb-3 border-b border-gray-50 pb-2">
+                      {emailSubject.trim() || 'Email Subject Header'}
+                    </h2>
+                    <div className="text-xs text-gray-600 space-y-2 leading-relaxed whitespace-pre-line font-sans break-words">
+                      {emailBody.trim() || 'Your message content will be formatted and displayed here inside the JGen template layout...'}
+                    </div>
+                  </div>
+
+                  {/* Email Footer */}
+                  <div className="bg-gray-50 p-4 border border-t-0 border-gray-100 rounded-b-xl text-center">
+                    <p className="text-[9px] text-gray-400 margin-0">
+                      You are receiving this email because you subscribed to our newsletter on joshuasgeneration.com.
+                    </p>
+                    <p className="text-[9px] text-gray-400 mt-1">
+                      <span className="text-royal-blue-600 underline">Unsubscribe from this list</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
