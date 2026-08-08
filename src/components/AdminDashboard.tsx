@@ -579,6 +579,29 @@ function SubscribersTab() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      if (start > 2) {
+        pages.push('ellipsis-start');
+      }
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (end < totalPages - 1) {
+        pages.push('ellipsis-end');
+      }
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -690,20 +713,29 @@ function SubscribersTab() {
                   >
                     Previous
                   </button>
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={cn(
-                        "w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg cursor-pointer transition-all border",
-                        currentPage === i + 1
-                          ? "bg-royal-blue-600 border-royal-blue-600 text-white shadow-sm"
-                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                      )}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                  {getPageNumbers().map((p, idx) => {
+                    if (typeof p === 'string') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs font-semibold text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        onClick={() => setCurrentPage(p)}
+                        className={cn(
+                          "w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg cursor-pointer transition-all border",
+                          currentPage === p
+                            ? "bg-royal-blue-600 border-royal-blue-600 text-white shadow-sm"
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                        )}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
                   <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
