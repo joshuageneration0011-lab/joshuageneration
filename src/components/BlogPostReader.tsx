@@ -51,6 +51,27 @@ function AdSlot({ htmlCode }: { htmlCode?: string }) {
   );
 }
 
+const formatContent = (content: string) => {
+  if (!content) return '';
+  
+  // If the content already contains HTML paragraph or break tags, return it directly
+  if (/<p>|<br\s*\/?>|<div>/i.test(content)) {
+    return content;
+  }
+  
+  // Otherwise, convert newlines to paragraph blocks
+  return content
+    .split(/\r?\n\s*\r?\n/)
+    .map(para => {
+      const trimmed = para.trim();
+      if (!trimmed) return '';
+      const formatted = trimmed.replace(/\r?\n/g, '<br />');
+      return `<p class="mb-6 leading-relaxed text-justify">${formatted}</p>`;
+    })
+    .filter(Boolean)
+    .join('');
+};
+
 export default function BlogPostReader({ posts, post, onBack, onPostSelect }: BlogPostReaderProps) {
   const [isLiked, setIsLiked] = useState(() => isItemLiked('blog', post.id));
   const [settings, setSettings] = useState<any>(null);
@@ -299,8 +320,8 @@ export default function BlogPostReader({ posts, post, onBack, onPostSelect }: Bl
 
             {/* Body Text */}
             <article 
-              className="prose max-w-none text-gray-700 leading-relaxed text-justify font-serif text-lg selection:bg-royal-blue-100/60"
-              dangerouslySetInnerHTML={{ __html: post.content || post.excerpt }}
+              className="prose max-w-none text-gray-700 leading-relaxed font-serif text-lg selection:bg-royal-blue-100/60"
+              dangerouslySetInnerHTML={{ __html: formatContent(post.content || post.excerpt) }}
             />
 
             <AdSlot htmlCode={settings?.adsense_beneath_blog_code} />
