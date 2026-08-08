@@ -2529,6 +2529,7 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [imageSourceMode, setImageSourceMode] = useState<'upload' | 'url'>('upload');
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   // Form Fields
   const [title, setTitle] = useState('');
@@ -2605,22 +2606,25 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size exceeds 2MB limit. Please choose a smaller image.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB limit. Please choose a smaller image.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setCoverUrl(event.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingCover(true);
+    try {
+      const uploadedUrl = await api.uploadFile(file);
+      setCoverUrl(uploadedUrl);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Failed to upload cover image. Please try again.');
+    } finally {
+      setIsUploadingCover(false);
+    }
   };
 
   const handlePdfUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2949,12 +2953,19 @@ function BooksTab({ books, onUpdateBooks }: BooksTabProps) {
 
                   {imageSourceMode === 'upload' ? (
                     <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-700 hover:file:bg-royal-blue-100 cursor-pointer"
-                      />
+                      {isUploadingCover ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-royal-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <span className="text-xs text-royal-blue-600 font-semibold">Uploading cover...</span>
+                        </div>
+                      ) : (
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-royal-blue-50 file:text-royal-blue-700 hover:file:bg-royal-blue-100 cursor-pointer"
+                        />
+                      )}
                     </div>
                   ) : (
                     <input
@@ -3130,6 +3141,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
   const [showTrash, setShowTrash] = useState(false);
   const [postToDeleteForever, setPostToDeleteForever] = useState<BlogPost | null>(null);
   const [imageSourceMode, setImageSourceMode] = useState<'upload' | 'url'>('upload');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Form Fields
   const [title, setTitle] = useState('');
@@ -3256,22 +3268,25 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
     onUpdatePosts(newPosts);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size exceeds 2MB limit. Please choose a smaller image.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB limit. Please choose a smaller image.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setImageUrl(event.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingImage(true);
+    try {
+      const uploadedUrl = await api.uploadFile(file);
+      setImageUrl(uploadedUrl);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Failed to upload cover image. Please try again.');
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -3697,17 +3712,26 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                     </div>
                   ) : (
                     <div className="border-2 border-dashed border-gray-200 hover:border-royal-blue-400 rounded-2xl p-6 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer bg-gray-50/50 hover:bg-royal-blue-50/10 relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <Upload className="w-8 h-8 text-gray-400 animate-pulse" />
-                      <div className="text-center">
-                        <p className="text-xs font-bold text-gray-700">Upload cover image file</p>
-                        <p className="text-[10px] text-gray-400 mt-1">JPEG, PNG, WEBP, GIF up to 2MB (Converted to offline Base64 format)</p>
-                      </div>
+                      {isUploadingImage ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-6 h-6 border-2 border-royal-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <p className="text-xs font-bold text-royal-blue-600">Uploading image to server...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <Upload className="w-8 h-8 text-gray-400 animate-pulse" />
+                          <div className="text-center">
+                            <p className="text-xs font-bold text-gray-700">Upload cover image file</p>
+                            <p className="text-[10px] text-gray-400 mt-1">JPEG, PNG, WEBP, GIF up to 10MB</p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )
                 ) : (
