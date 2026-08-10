@@ -4276,7 +4276,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                   <div className="w-px h-5 bg-gray-200 mx-1" />
                   <button
                     type="button"
-                    onClick={() => execCommand('formatBlock', 'h2')}
+                    onClick={() => execCommand('formatBlock', '<h2>')}
                     className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors font-extrabold text-[10px] cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
                     title="Heading 2"
                   >
@@ -4284,7 +4284,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => execCommand('formatBlock', 'h3')}
+                    onClick={() => execCommand('formatBlock', '<h3>')}
                     className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors font-extrabold text-[10px] cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
                     title="Heading 3"
                   >
@@ -4292,7 +4292,7 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => execCommand('formatBlock', 'p')}
+                    onClick={() => execCommand('formatBlock', '<p>')}
                     className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
                     title="Paragraph"
                   >
