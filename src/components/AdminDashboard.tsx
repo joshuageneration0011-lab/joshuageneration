@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Home,
   LayoutDashboard, Users, Tv, BookOpen, FileText,
@@ -3589,6 +3589,25 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
   const [imageUrl, setImageUrl] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<'Published' | 'Draft'>('Published');
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Sync editor initial value
+  useEffect(() => {
+    if (isFormOpen && editorRef.current) {
+      editorRef.current.innerHTML = content || '';
+    }
+  }, [isFormOpen]);
+
+  const execCommand = (command: string, value: string = '') => {
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      setContent(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
+    setContent(e.currentTarget.innerHTML);
+  };
 
   // SEO Fields
   const [slug, setSlug] = useState('');
@@ -4211,16 +4230,109 @@ function BlogTab({ posts, onUpdatePosts }: BlogTabProps) {
                 />
               </div>
 
-              {/* Row 5: Content */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Article Content <span className="text-red-500">*</span></label>
-                <textarea
-                  required
-                  rows={8}
-                  placeholder="Write the full body content here. Support paragraphs, list items, quotes..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-gray-950 font-sans leading-relaxed"
+              {/* Row 5: Content (WYSIWYG Rich Text Editor) */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                    Article Content <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-gray-400 font-semibold">Supports rich formatting and pasting</span>
+                </div>
+                
+                {/* Formatting Toolbar */}
+                <div className="flex flex-wrap items-center gap-1 bg-gray-50 border border-gray-200 border-b-0 rounded-t-xl p-2 select-none">
+                  <button
+                    type="button"
+                    onClick={() => execCommand('bold')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors font-bold text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Bold"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => execCommand('italic')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors italic text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Italic"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => execCommand('underline')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors underline text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Underline"
+                  >
+                    U
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => execCommand('strikeThrough')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors line-through text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Strikethrough"
+                  >
+                    S
+                  </button>
+                  <div className="w-px h-5 bg-gray-200 mx-1" />
+                  <button
+                    type="button"
+                    onClick={() => execCommand('formatBlock', 'h2')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors font-extrabold text-[10px] cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Heading 2"
+                  >
+                    H2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => execCommand('formatBlock', 'h3')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors font-extrabold text-[10px] cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Heading 3"
+                  >
+                    H3
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => execCommand('formatBlock', 'p')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Paragraph"
+                  >
+                    P
+                  </button>
+                  <div className="w-px h-5 bg-gray-200 mx-1" />
+                  <button
+                    type="button"
+                    onClick={() => execCommand('insertUnorderedList')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Bullet List"
+                  >
+                    • List
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => execCommand('insertOrderedList')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-900 transition-colors text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Numbered List"
+                  >
+                    1. List
+                  </button>
+                  <div className="w-px h-5 bg-gray-200 mx-1" />
+                  <button
+                    type="button"
+                    onClick={() => execCommand('removeFormat')}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-red-500 hover:text-red-700 transition-colors text-xs cursor-pointer w-8 h-8 flex items-center justify-center border border-transparent hover:border-gray-300"
+                    title="Clear Formatting"
+                  >
+                    Tx
+                  </button>
+                </div>
+
+                {/* Editor Content Area */}
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  onInput={handleEditorInput}
+                  className="w-full min-h-[250px] max-h-[500px] overflow-y-auto px-4 py-3 bg-gray-50 border border-gray-200 rounded-b-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all text-gray-950 font-sans leading-relaxed rich-text-editor"
+                  style={{ outline: 'none' }}
                 />
               </div>
 
