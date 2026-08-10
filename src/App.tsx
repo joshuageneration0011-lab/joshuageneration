@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, useMemo } from 'react';
 import { getSavedBlogPosts, saveBlogPost, deleteBlogPost } from '@/data/blogStore';
 import { getSavedBooks, saveBook, deleteBook } from '@/data/bookStore';
 import { getSavedSermons, saveSermon, deleteSermon } from '@/data/sermonStore';
@@ -93,6 +93,15 @@ export default function App() {
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [isLoadingSermons, setIsLoadingSermons] = useState(true);
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const sortedPosts = useMemo(() => {
+    return [...posts].sort((a, b) => {
+      const dateA = a.date ? new Date(a.date) : null;
+      const dateB = b.date ? new Date(b.date) : null;
+      const timeA = dateA && !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
+      const timeB = dateB && !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [posts]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);  const [donateCause, setDonateCause] = useState<string | undefined>(undefined);
   const [events, setEvents] = useState<Event[]>([]);
 
@@ -486,7 +495,7 @@ export default function App() {
       }>
         <AdminDashboard
           onLogout={handleLogout}
-          posts={posts}
+          posts={sortedPosts}
           onUpdatePosts={async (newPosts) => {
             if (newPosts.length < posts.length) {
               const deleted = posts.find(p => !newPosts.some(x => x.id === p.id));
@@ -769,7 +778,7 @@ export default function App() {
         />
         <Suspense fallback={<PageLoader />}>
           <BlogPage
-            posts={posts}
+            posts={sortedPosts}
             onPostSelect={(post) => {
               setSelectedPost(post);
               navigate('blog-details', post.id);
@@ -797,7 +806,7 @@ export default function App() {
         />
         <Suspense fallback={<PageLoader />}>
           <BlogPostReader
-            posts={posts}
+            posts={sortedPosts}
             post={selectedPost}
             onBack={() => navigate('blog')}
             onPostSelect={(post) => {
@@ -1022,7 +1031,7 @@ export default function App() {
           />
           <EventsSection events={events} />
           <BlogSection
-            posts={posts}
+            posts={sortedPosts}
             onPostSelect={(post) => {
               setSelectedPost(post);
               navigate('blog-details', post.id);
