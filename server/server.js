@@ -1103,7 +1103,7 @@ const server = http.createServer(async (req, res) => {
       } else if (targetPath === '/southafricaupdates' || targetPath === '/southafricaupdates/') {
         title = "Stay Connected (South Africa) - Joshua's Generation";
         description = "Join our South African family to receive updates, Zoom invitations, and meeting details directly from Apostle Joshua Iyemifokhae.";
-        imageUrl = "https://joshuasgeneration.com/newsletter-preview.jpg";
+        imageUrl = "https://joshuasgeneration.com/south-africa-updates.jpg";
       } else if (targetPath.startsWith('/sermon/')) {
         const id = targetPath.split('/').pop();
         if (pool) {
