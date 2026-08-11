@@ -2048,13 +2048,12 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { label: 'Total Users', value: totalUsersCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-royal-blue-500 to-royal-blue-700', up: true },
           { label: 'Sermon Views', value: totalSermonViews.toLocaleString(), change: '+0.0%', icon: Eye, color: 'from-emerald-500 to-emerald-700', up: true },
-          { label: 'Total Donations', value: formatCurrencySum(donations), change: '+0.0%', icon: DollarSign, color: 'from-gold-500 to-gold-600', up: true, superadminOnly: true },
           { label: 'Active Today', value: activeTodayCount.toLocaleString(), change: '+0.0%', icon: Users, color: 'from-violet-500 to-violet-700', up: true },
-        ].filter(stat => !stat.superadminOnly || userRole === 'superadmin').map((stat) => (
+        ].map((stat) => (
           <div key={stat.label} className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/80 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-4">
               <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center', stat.color)}>
@@ -2072,57 +2071,13 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
       </div>
 
       {/* Main Grid Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in">
-        {/* Left Column (2/3 width) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Revenue Chart */}
-          {userRole === 'superadmin' && (
-            <div className="p-4 sm:p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-gray-900 font-semibold">Revenue Overview</h3>
-                <button className="text-gray-400 hover:text-gray-600 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
-              </div>
-              <div className="relative h-48 flex items-end gap-2">
-                {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((month, i) => {
-                  const height = 25 + Math.sin(i * 0.7) * 25 + Math.random() * 15;
-                  return (
-                    <div key={month} className="flex-1 flex flex-col items-center gap-1 group">
-                      <div className="w-full rounded-lg bg-gradient-to-t from-royal-blue-600 to-royal-blue-500 hover:from-gold-500 hover:to-gold-400 transition-all cursor-pointer" style={{ height: `${height}%` }} />
-                      <span className="text-[9px] text-gray-400">{month}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Activity Hub (Tabbed Donations and Members) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in">        <div className="lg:col-span-2 space-y-6">
+          {/* Activity Hub (New Members Only) */}
           <div className="p-4 sm:p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
-              <div className="flex gap-4">
-                {userRole === 'superadmin' && (
-                  <button
-                    onClick={() => setActiveListTab('donations')}
-                    className={cn(
-                      'text-sm font-semibold pb-3 border-b-2 -mb-3.5 transition-all duration-200 cursor-pointer',
-                      activeListTab === 'donations' ? 'border-royal-blue-600 text-royal-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                    )}
-                  >
-                    Recent Donations
-                  </button>
-                )}
-                <button
-                  onClick={() => setActiveListTab('members')}
-                  className={cn(
-                    'text-sm font-semibold pb-3 border-b-2 -mb-3.5 transition-all duration-200 cursor-pointer',
-                    activeListTab === 'members' ? 'border-royal-blue-600 text-royal-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  New Members
-                </button>
-              </div>
+              <h3 className="text-gray-900 font-semibold text-sm">New Members</h3>
               <button 
-                onClick={() => onTabChange(activeListTab === 'donations' ? 'donations' : 'users')}
+                onClick={() => onTabChange('users')}
                 className="text-royal-blue-600 text-xs font-semibold hover:text-royal-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
               >
                 View All <ChevronRight className="w-3 h-3" />
@@ -2130,48 +2085,25 @@ function DashboardTab({ posts, onTabChange, donations, sermons, users, events, b
             </div>
 
             <div className="space-y-3">
-              {activeListTab === 'donations' ? (
-                donations.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500 text-xs">
-                    No recent donations found.
-                  </div>
-                ) : (
-                  donations.slice(0, 4).map((d) => (
-                    <div key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100/80 transition-colors border border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gold-500/10 to-gold-600/10 flex items-center justify-center">
-                          <Gift className="w-4 h-4 text-gold-600" />
-                        </div>
-                        <div>
-                          <p className="text-gray-900 text-sm font-medium">{d.donor}</p>
-                          <p className="text-gray-500 text-[10px]">{d.purpose} • {d.date}</p>
-                        </div>
-                      </div>
-                      <span className="text-emerald-600 font-bold text-sm">+{getCurrencySymbol(d.currency)}{d.amount.toLocaleString()}</span>
+              {users.slice(0, 4).map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 transition-colors border border-transparent">
+                  <div className="flex items-center gap-3">
+                    <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover shadow-sm" />
+                    <div>
+                      <p className="text-gray-900 text-sm font-medium">{user.name}</p>
+                      <p className="text-gray-500 text-[10px]">{user.email} • {user.joined}</p>
                     </div>
-                  ))
-                )
-              ) : (
-                users.slice(0, 4).map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 transition-colors border border-transparent">
-                    <div className="flex items-center gap-3">
-                      <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover shadow-sm" />
-                      <div>
-                        <p className="text-gray-900 text-sm font-medium">{user.name}</p>
-                        <p className="text-gray-500 text-[10px]">{user.email} â€¢ {user.joined}</p>
-                      </div>
-                    </div>
-                    <span className={cn(
-                      'px-2 py-0.5 rounded-full text-[9px] font-semibold border',
-                      user.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                      user.status === 'new' ? 'bg-royal-blue-50 text-royal-blue-600 border-royal-blue-100' :
-                      'bg-gray-50 text-gray-500 border-gray-100'
-                    )}>
-                      {user.status}
-                    </span>
                   </div>
-                ))
-              )}
+                  <span className={cn(
+                    'px-2 py-0.5 rounded-full text-[9px] font-semibold border',
+                    user.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                    user.status === 'new' ? 'bg-royal-blue-50 text-royal-blue-600 border-royal-blue-100' :
+                    'bg-gray-50 text-gray-500 border-gray-100'
+                  )}>
+                    {user.status}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
