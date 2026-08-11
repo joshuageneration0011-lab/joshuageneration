@@ -1086,7 +1086,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- SEO DYNAMIC OPENGRAPH HANDLER ---
-  if (pathname === '/getupdates' || pathname === '/getupdates/' || pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
+  if (pathname === '/getupdates' || pathname === '/getupdates/' || pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' || pathname === '/sondaughter' || pathname === '/sondaughter/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
     const targetPath = pathname;
     try {
       const indexPath = path.join(__dirname, '../dist/index.html');
