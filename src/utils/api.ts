@@ -539,6 +539,18 @@ export const api = {
       return { success: false, error: 'Cannot connect to server' };
     }
   },
+  async subscribeSANewsletter(email: string, name?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/sa/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, error: 'Cannot connect to server' };
+    }
+  },
 
   admin: {
     async getSubscribers(): Promise<Subscriber[]> {
@@ -559,6 +571,25 @@ export const api = {
         headers: getHeaders(),
       });
       return (await handleResponse(res, 'Failed to delete subscriber')).json();
+    },
+    async getSASubscribers(): Promise<Subscriber[]> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/sa/subscribers`, { headers: getHeaders() });
+      return (await handleResponse(res, 'Failed to fetch SA subscribers')).json();
+    },
+    async sendSABulkEmail(subject: string, htmlBody: string, testEmail?: string): Promise<{ success: boolean; count: number; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/sa/subscribers/email`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ subject, htmlBody, testEmail }),
+      });
+      return (await handleResponse(res, 'Failed to send SA bulk email')).json();
+    },
+    async deleteSASubscriber(id: string): Promise<{ success: boolean; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/sa/subscribers/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      return (await handleResponse(res, 'Failed to delete SA subscriber')).json();
     }
   }
 };

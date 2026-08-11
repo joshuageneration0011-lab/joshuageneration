@@ -19,7 +19,7 @@ import { api, resolveApiUrl } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/testimonyStore';
 
-type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'testimonies';
+type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'testimonies';
 
 export const getCurrencySymbol = (currency?: string) => {
   const symbols: Record<string, string> = {
@@ -145,6 +145,7 @@ export default function AdminDashboard({
     { id: 'events', label: 'Events', icon: Calendar, badge: events.length.toString() },
     { id: 'messages', label: 'Messages', icon: Mail, badge: unreadMsgCount > 0 ? String(unreadMsgCount) : undefined },
     { id: 'subscribers', label: 'Subscribers', icon: UserPlus },
+    { id: 'sa-subscribers', label: 'SA Subscribers', icon: Users },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
     { id: 'donations', label: 'Donations', icon: DollarSign },
     { id: 'prayer', label: 'Prayer', icon: Heart },
@@ -218,6 +219,7 @@ export default function AdminDashboard({
       case 'blog': return <BlogTab posts={posts} onUpdatePosts={onUpdatePosts} />;
       case 'events': return <EventsTab events={events} onUpdateEvents={onUpdateEvents} />;
       case 'subscribers': return <SubscribersTab />;
+      case 'sa-subscribers': return <SASubscribersTab />;
       case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
@@ -896,6 +898,535 @@ function SubscribersTab() {
                     className={cn(
                       "px-4 py-2 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50 border-none",
                       sendMode === 'broadcast' ? "bg-red-600 hover:bg-red-700" : "bg-royal-blue-600 hover:bg-royal-blue-700"
+                    )}
+                  >
+                    {isSending ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending...
+                      </>
+                    ) : sendMode === 'broadcast' ? (
+                      <>
+                        Broadcast Now
+                      </>
+                    ) : (
+                      <>
+                        Send Test Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Template Preview Section */}
+              <div className="flex flex-col h-full space-y-1.5 min-h-[300px]">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Live Template Preview</label>
+                <div className="flex-1 bg-white border border-gray-200 rounded-2xl overflow-y-auto p-4 flex flex-col font-sans select-none pointer-events-none scale-[0.9] origin-top shadow-sm max-h-[460px]">
+                  {/* Email Logo Header */}
+                  <div className="bg-slate-900 p-4 text-center rounded-t-xl">
+                    <img src="https://joshuasgeneration.com/favicon.png" alt="Logo" className="w-6 h-6 mx-auto mb-1 opacity-90 inline-block rounded-full" />
+                    <div className="text-white text-sm font-extrabold tracking-wider leading-none">
+                      Joshuas<span className="text-amber-500">Generation</span>
+                    </div>
+                  </div>
+
+                  {/* Email Body Content */}
+                  <div className="p-5 border-x border-gray-100 flex-1">
+                    <h2 className="text-md font-bold text-gray-900 mt-0 mb-3 border-b border-gray-50 pb-2">
+                      {emailSubject.trim() || 'Email Subject Header'}
+                    </h2>
+                    <div className="text-xs text-gray-600 space-y-2 leading-relaxed whitespace-pre-line font-sans break-words">
+                      {emailBody.trim() || 'Your message content will be formatted and displayed here inside the JGen template layout...'}
+                    </div>
+                  </div>
+
+                  {/* Email Footer */}
+                  <div className="bg-gray-50 p-4 border border-t-0 border-gray-100 rounded-b-xl text-center">
+                    <p className="text-[9px] text-gray-400 margin-0">
+                      You are receiving this email because you subscribed to our newsletter on joshuasgeneration.com.
+                    </p>
+                    <p className="text-[9px] text-gray-400 mt-1">
+                      <span className="text-royal-blue-600 underline">Unsubscribe from this list</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SASubscribersTab() {
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Bulk Email Composer State
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendMode, setSendMode] = useState<'broadcast' | 'test'>('test');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  const insertPlaceholder = (tag: string) => {
+    const textarea = document.getElementById('newsletter-body-textarea-sa') as HTMLTextAreaElement;
+    if (!textarea) {
+      setEmailBody(prev => prev + tag);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+    setEmailBody(before + tag + after);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    }, 0);
+  };
+
+  useEffect(() => {
+    fetchSubscribers();
+  }, []);
+
+  const fetchSubscribers = async () => {
+    try {
+      setLoading(true);
+      const data = await api.admin.getSASubscribers();
+      setSubscribers(data);
+    } catch (err) {
+      console.error('Failed to fetch SA subscribers:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadCSV = () => {
+    if (subscribers.length === 0) return;
+    const header = "Name,Email,Subscribed At,Status\n";
+    const csvContent = subscribers.map(s => `${s.name || ''},${s.email},${new Date(s.created_at).toISOString()},${s.is_active ? 'Active' : 'Inactive'}`).join('\n');
+    const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `sa_subscribers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      alert('Please fill in both the Subject and Email Body.');
+      return;
+    }
+
+    if (sendMode === 'test' && !testEmailAddress.trim()) {
+      alert('Please enter a test email address.');
+      return;
+    }
+
+    const activeCount = subscribers.filter(s => s.is_active).length;
+    if (sendMode === 'broadcast' && activeCount === 0) {
+      alert('There are no active SA subscribers to send this email to.');
+      return;
+    }
+
+    if (sendMode === 'broadcast') {
+      const confirmSend = window.confirm(`Are you sure you want to broadcast this email to all ${activeCount} active SA subscribers? This action cannot be undone.`);
+      if (!confirmSend) return;
+    }
+
+    setIsSending(true);
+    try {
+      const payloadSubject = emailSubject.trim();
+      const payloadBody = emailBody.trim();
+      
+      const res = await api.admin.sendSABulkEmail(
+        payloadSubject, 
+        payloadBody, 
+        sendMode === 'test' ? testEmailAddress.trim() : undefined
+      );
+
+      if (res.success) {
+        alert(sendMode === 'test' ? `Test email sent successfully to ${testEmailAddress.trim()}!` : `Broadcast initiated! Sending email to all ${activeCount} SA subscribers in the background.`);
+        if (sendMode === 'broadcast') {
+          setIsComposerOpen(false);
+          setEmailSubject('');
+          setEmailBody('');
+        }
+      } else {
+        alert(res.message || 'Failed to send email. Please try again.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'An error occurred while sending email. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDeleteSubscriber = async (id: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${email} from SA subscribers? This action will permanently remove them.`)) {
+      return;
+    }
+    try {
+      const res = await api.admin.deleteSASubscriber(id);
+      if (res.success) {
+        setSubscribers(prev => prev.filter(s => s.id !== id));
+      } else {
+        alert(res.message || 'Failed to delete SA subscriber');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'An error occurred while deleting SA subscriber');
+    }
+  };
+
+  // Compute pagination bounds
+  const filteredSubscribers = useMemo(() => {
+    return subscribers.filter(s => {
+      const q = searchQuery.toLowerCase();
+      const nameMatch = s.name ? s.name.toLowerCase().includes(q) : false;
+      const emailMatch = s.email.toLowerCase().includes(q);
+      return nameMatch || emailMatch;
+    });
+  }, [subscribers, searchQuery]);
+
+  const totalPages = Math.ceil(filteredSubscribers.length / pageSize);
+  const paginatedSubscribers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredSubscribers.slice(start, start + pageSize);
+  }, [filteredSubscribers, currentPage]);
+
+  const getPageNumbers = (): (number | string)[] => {
+    const maxPage = Math.max(1, Math.ceil(filteredSubscribers.length / pageSize));
+    const pages: (number | string)[] = [];
+    
+    if (maxPage <= 7) {
+      for (let i = 1; i <= maxPage; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) {
+        pages.push('...');
+      }
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(maxPage - 1, currentPage + 1);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (currentPage < maxPage - 2) {
+        pages.push('...');
+      }
+      pages.push(maxPage);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            South Africa Subscribers 🇿🇦
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">
+              {subscribers.length}
+            </span>
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">Manage and export South African updates list subscribers</p>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setIsComposerOpen(true)}
+            className="px-4 py-2 border border-gray-250 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-colors text-sm flex items-center gap-2 shadow-sm bg-white cursor-pointer"
+          >
+            <Mail className="w-4 h-4 text-gray-500" /> Compose Email
+          </button>
+          <button
+            onClick={handleDownloadCSV}
+            disabled={subscribers.length === 0}
+            className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer border-none"
+          >
+            <Download className="w-4 h-4" /> Download CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-gray-400" />
+        </span>
+        <input
+          type="text"
+          placeholder="Search SA subscribers by name or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-gray-900 shadow-sm"
+        />
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center"><RefreshCw className="w-6 h-6 text-emerald-600 animate-spin mx-auto" /></div>
+        ) : subscribers.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No South Africa subscribers yet.</div>
+        ) : filteredSubscribers.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No matching subscribers found.</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600">
+                <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">Email</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Subscribed At</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedSubscribers.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900">{sub.name || '-'}</td>
+                      <td className="px-6 py-4 text-gray-600">{sub.email}</td>
+                      <td className="px-6 py-4">
+                        {sub.is_active ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                            <CheckCircle className="w-3.5 h-3.5" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-semibold">
+                            Unsubscribed
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap text-gray-500">
+                        {new Date(sub.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border-none bg-transparent"
+                          title="Delete Subscriber"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Widget */}
+            {filteredSubscribers.length > pageSize && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  Showing <span className="font-semibold text-gray-700">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(currentPage * pageSize, filteredSubscribers.length)}</span> of <span className="font-semibold text-gray-700">{filteredSubscribers.length}</span> subscribers
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="px-2.5 py-1.5 border border-gray-200 text-xs font-semibold rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white text-gray-700 cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  {getPageNumbers().map((p, idx) => {
+                    if (typeof p === 'string') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs font-semibold text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        onClick={() => setCurrentPage(p)}
+                        className={cn(
+                          "w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg cursor-pointer transition-all border",
+                          currentPage === p
+                            ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                        )}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    className="px-2.5 py-1.5 border border-gray-200 text-xs font-semibold rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white text-gray-700 cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Compose Newsletter Modal */}
+      {isComposerOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl border border-gray-150 flex flex-col max-h-[90vh] overflow-hidden animate-scale-up">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-150 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-emerald-600" /> Compose South Africa Update Email 🇿🇦
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">Send a stylized newsletter template directly to South Africa list</p>
+              </div>
+              <button 
+                onClick={() => setIsComposerOpen(false)}
+                className="p-1.5 hover:bg-gray-150 rounded-xl transition-all cursor-pointer border-none bg-transparent text-gray-400 hover:text-gray-900"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Two columns layout */}
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 bg-gray-50/50">
+              {/* Form Section */}
+              <form onSubmit={handleSendEmail} className="space-y-4">
+                {/* Subject Line */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Email Subject</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. South Africa Zoom Fellowship Meeting"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-255 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-gray-900"
+                  />
+                </div>
+
+                {/* Email Body */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Email Body Message</label>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{firstName}}')}
+                        className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200 transition-colors cursor-pointer"
+                        title="Insert Recipient's First Name"
+                      >
+                        + First Name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{lastName}}')}
+                        className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200 transition-colors cursor-pointer"
+                        title="Insert Recipient's Last Name"
+                      >
+                        + Last Name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{name}}')}
+                        className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200 transition-colors cursor-pointer"
+                        title="Insert Recipient's Full Name"
+                      >
+                        + Full Name
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    id="newsletter-body-textarea-sa"
+                    required
+                    rows={8}
+                    placeholder="Type your message content here... Supports standard layout spacing. Recipient details and unsubscribe links are automatically managed."
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-255 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-gray-900 min-h-[160px] font-sans"
+                  />
+                  <p className="text-[10px] text-gray-400">Note: Double newlines convert into paragraphs; single newlines convert to line breaks.</p>
+                </div>
+
+                {/* Delivery Settings */}
+                <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-3">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Delivery Options</label>
+                  
+                  {/* Mode Selectors */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSendMode('test')}
+                      className={cn(
+                        "py-2 px-3 rounded-lg text-xs font-bold transition-all border cursor-pointer",
+                        sendMode === 'test' 
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      Send Test Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSendMode('broadcast')}
+                      className={cn(
+                        "py-2 px-3 rounded-lg text-xs font-bold transition-all border cursor-pointer",
+                        sendMode === 'broadcast' 
+                          ? "bg-red-50 border-red-200 text-red-700" 
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      Broadcast to All
+                    </button>
+                  </div>
+
+                  {/* Dynamic inputs based on mode */}
+                  {sendMode === 'test' ? (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase block">Test Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="e.g. pastor@example.com"
+                        value={testEmailAddress}
+                        onChange={(e) => setTestEmailAddress(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-255 rounded-lg text-xs placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-red-500 font-medium">
+                      ⚠️ Warning: Email will be sent to all {subscribers.filter(s => s.is_active).length} active SA subscribers.
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Controls */}
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsComposerOpen(false)}
+                    className="px-4 py-2 border border-gray-255 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl cursor-pointer bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSending}
+                    className={cn(
+                      "px-4 py-2 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50 border-none",
+                      sendMode === 'broadcast' ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"
                     )}
                   >
                     {isSending ? (

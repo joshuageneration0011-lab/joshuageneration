@@ -37,6 +37,7 @@ const PrivacyPolicyPage = lazy(() => import('@/components/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('@/components/TermsOfServicePage'));
 const CookiePolicyPage = lazy(() => import('@/components/CookiePolicyPage'));
 const GetUpdatesPage = lazy(() => import('@/components/GetUpdatesPage'));
+const SouthAfricaUpdatesPage = lazy(() => import('@/components/SouthAfricaUpdatesPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -72,7 +73,7 @@ const getPageFromPath = (): Page => {
   if (rawPath.startsWith('sermon/')) return 'sermon-player';
   if (rawPath.startsWith('books/')) return 'book-details';
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -475,6 +476,14 @@ export default function App() {
     return (
       <Suspense fallback={<PageLoader />}>
         <GetUpdatesPage onBack={() => navigate('home')} />
+      </Suspense>
+    );
+  }
+
+  if (currentPage === 'southafricaupdates') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SouthAfricaUpdatesPage onBack={() => navigate('home')} />
       </Suspense>
     );
   }
