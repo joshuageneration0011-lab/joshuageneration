@@ -551,6 +551,18 @@ export const api = {
       return { success: false, error: 'Cannot connect to server' };
     }
   },
+  async subscribeSDNewsletter(email: string, name?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/sd/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, error: 'Cannot connect to server' };
+    }
+  },
 
   admin: {
     async getSubscribers(): Promise<Subscriber[]> {
@@ -590,6 +602,25 @@ export const api = {
         headers: getHeaders(),
       });
       return (await handleResponse(res, 'Failed to delete SA subscriber')).json();
+    },
+    async getSDSubscribers(): Promise<Subscriber[]> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/sd/subscribers`, { headers: getHeaders() });
+      return (await handleResponse(res, 'Failed to fetch SD subscribers')).json();
+    },
+    async sendSDBulkEmail(subject: string, htmlBody: string, testEmail?: string): Promise<{ success: boolean; count: number; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/sd/subscribers/email`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ subject, htmlBody, testEmail }),
+      });
+      return (await handleResponse(res, 'Failed to send SD bulk email')).json();
+    },
+    async deleteSDSubscriber(id: string): Promise<{ success: boolean; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/sd/subscribers/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      return (await handleResponse(res, 'Failed to delete SD subscriber')).json();
     }
   }
 };

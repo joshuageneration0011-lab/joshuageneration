@@ -70,6 +70,7 @@ const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SUBSCRIBERS_FILE = path.join(DATA_DIR, 'subscribers.json');
 const SA_SUBSCRIBERS_FILE = path.join(DATA_DIR, 'sa_subscribers.json');
+const SD_SUBSCRIBERS_FILE = path.join(DATA_DIR, 'sd_subscribers.json');
 const TESTIMONIES_FILE = path.join(DATA_DIR, 'testimonies.json');
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
@@ -452,6 +453,10 @@ function initLocalData() {
     fs.writeFileSync(SA_SUBSCRIBERS_FILE, JSON.stringify([], null, 2), 'utf-8');
     console.log('Initialized local South Africa subscribers database.');
   }
+  if (!fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+    fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify([], null, 2), 'utf-8');
+    console.log('Initialized local Sons and Daughters subscribers database.');
+  }
 }
 
 // --- Combined DB Initializer ---
@@ -492,6 +497,15 @@ async function initDb() {
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sa_subscribers (
+          id VARCHAR PRIMARY KEY,
+          email VARCHAR UNIQUE NOT NULL,
+          name VARCHAR,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS sd_subscribers (
           id VARCHAR PRIMARY KEY,
           email VARCHAR UNIQUE NOT NULL,
           name VARCHAR,
@@ -1104,6 +1118,10 @@ const server = http.createServer(async (req, res) => {
         title = "Stay Connected (South Africa) - Joshua's Generation";
         description = "Join our South African family to receive updates, Zoom invitations, and meeting details directly from Apostle Joshua Iyemifokhae.";
         imageUrl = "https://joshuasgeneration.com/south-africa-updates.jpg";
+      } else if (targetPath === '/sondaughter' || targetPath === '/sondaughter/') {
+        title = "Sons & Daughters Mentorship - Joshua's Generation";
+        description = "Connect as a son or daughter under the mentorship of Apostle Joshua Iyemifokhae. Receive specialized teachings, resources, and meetings updates.";
+        imageUrl = "https://joshuasgeneration.com/newsletter-preview.jpg";
       } else if (targetPath.startsWith('/sermon/')) {
         const id = targetPath.split('/').pop();
         if (pool) {
@@ -1201,6 +1219,7 @@ const server = http.createServer(async (req, res) => {
               if (pool) {
                 await pool.query('DELETE FROM subscribers WHERE LOWER(email) = $1', [email]);
                 await pool.query('DELETE FROM sa_subscribers WHERE LOWER(email) = $1', [email]);
+                await pool.query('DELETE FROM sd_subscribers WHERE LOWER(email) = $1', [email]);
               } else {
                 if (fs.existsSync(SUBSCRIBERS_FILE)) {
                   let subs = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
@@ -1211,6 +1230,11 @@ const server = http.createServer(async (req, res) => {
                   let saSubs = JSON.parse(fs.readFileSync(SA_SUBSCRIBERS_FILE, 'utf-8'));
                   saSubs = saSubs.filter(s => s.email.toLowerCase() !== email);
                   fs.writeFileSync(SA_SUBSCRIBERS_FILE, JSON.stringify(saSubs, null, 2), 'utf-8');
+                }
+                if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+                  let sdSubs = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+                  sdSubs = sdSubs.filter(s => s.email.toLowerCase() !== email);
+                  fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(sdSubs, null, 2), 'utf-8');
                 }
               }
             }
@@ -1385,6 +1409,91 @@ Joshua's Generation`;
         return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
       } catch (err) {
         console.error('SA Subscription error:', err);
+        return sendJson(res, 500, { success: false, error: 'Internal Server Error' });
+      }
+    });
+    return;
+  }
+
+  // --- Sons & Daughters Newsletter Subscriptions ---
+  if (pathname === '/api/sd/subscribe' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const data = JSON.parse(body);
+        const email = data.email?.trim().toLowerCase();
+        const name = data.name?.trim() || '';
+        
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return sendJson(res, 400, { success: false, error: 'Invalid email address' });
+        }
+
+        const id = crypto.randomUUID();
+        
+        if (pool) {
+          await pool.query(`
+            INSERT INTO sd_subscribers (id, email, name, is_active) 
+            VALUES ($1, $2, $3, true)
+            ON CONFLICT (email) DO UPDATE SET is_active = true, name = EXCLUDED.name
+          `, [id, email, name]);
+        } else {
+          let subscribers = [];
+          if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+            subscribers = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+          }
+          const index = subscribers.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
+          if (index !== -1) {
+            subscribers[index].is_active = true;
+            if (name) subscribers[index].name = name;
+          } else {
+            subscribers.push({
+              id,
+              email,
+              name,
+              is_active: true,
+              created_at: new Date().toISOString()
+            });
+          }
+          fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(subscribers, null, 2), 'utf-8');
+        }
+
+        // Send welcome email asynchronously
+        (async () => {
+          const recipientName = name || email.split('@')[0];
+          const nameParts = (name || '').trim().split(/\s+/);
+          const firstName = nameParts[0] || email.split('@')[0];
+
+          const welcomeSubject = "Welcome to the Sons & Daughters Mentorship!";
+          const welcomeBody = `Dear ${firstName}
+
+Welcome to Joshua's Generation Sons & Daughters Mentorship!
+
+I am absolutely thrilled to welcome you into this special mentorship family. As a son/daughter under this mandate, you are called to walk in power, character, and apostolic alignment.
+
+Here is what this mentorship list gives you access to:
+•  Direct access to specialized teachings, books, and study materials.
+•  Private Mentorship Zoom Links and interactive Q&A sessions.
+•  Midnight Prayers priority alerts and direct apostolic guidance.
+
+Stay tuned for our next scheduled meeting details and links. I declare that the fire of God will burn continuously upon the altar of your heart!
+
+In Christ Love,
+Apostle Joshua Iyemifokhae
+Joshua's Generation`;
+
+          const templateHtml = wrapInEmailTemplate(welcomeSubject, welcomeBody);
+          const personalizedHtml = templateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email) + '&segment=sd');
+
+          await sendZeptoEmail(email, recipientName, welcomeSubject, personalizedHtml);
+          console.log(`[SD Subscription] Welcome email successfully sent to: ${email}`);
+        })().catch(err => {
+          console.error('[SD Subscription] Failed to send welcome email:', err);
+        });
+
+        return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
+      } catch (err) {
+        console.error('SD Subscription error:', err);
         return sendJson(res, 500, { success: false, error: 'Internal Server Error' });
       }
     });
@@ -1645,6 +1754,134 @@ Joshua's Generation`;
     }
   }
 
+  // --- GET SD Subscribers ---
+  if (pathname === '/api/admin/sd/subscribers' && method === 'GET') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM sd_subscribers ORDER BY created_at DESC');
+        return sendJson(res, 200, result.rows);
+      } else {
+        let subscribers = [];
+        if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+          subscribers = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+        }
+        return sendJson(res, 200, subscribers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      }
+    } catch (err) {
+      console.error('Fetch SD subscribers error:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+    return;
+  }
+
+  // --- DELETE SD Subscriber ---
+  if (pathname.startsWith('/api/admin/sd/subscribers/') && method === 'DELETE') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+    const id = pathname.split('/').pop();
+    try {
+      if (pool) {
+        await pool.query('DELETE FROM sd_subscribers WHERE id = $1', [id]);
+      } else {
+        if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.id !== id);
+          fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+        }
+      }
+      return sendJson(res, 200, { success: true, message: 'Subscriber deleted successfully' });
+    } catch (err) {
+      console.error('Delete SD subscriber error:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+  }
+
+  // --- Send Bulk Email to SD Subscribers ---
+  if (pathname === '/api/admin/sd/subscribers/email' && method === 'POST') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+
+    let body;
+    try {
+      body = await getJsonBody(req);
+    } catch (e) {
+      return sendJson(res, 400, { error: 'Invalid JSON body' });
+    }
+
+    const { subject, htmlBody, testEmail } = body;
+    if (!subject || !htmlBody) {
+      return sendJson(res, 400, { error: 'Subject and email body are required' });
+    }
+
+    try {
+      let subscribers = [];
+      if (testEmail) {
+        subscribers = [{ name: 'Test SD Recipient', email: testEmail }];
+      } else {
+        if (pool) {
+          const result = await pool.query('SELECT name, email FROM sd_subscribers WHERE is_active = true');
+          subscribers = result.rows;
+        } else {
+          if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+            const allSubs = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+            subscribers = allSubs.filter(s => s.is_active !== false);
+          }
+        }
+      }
+
+      if (subscribers.length === 0) {
+        return sendJson(res, 200, { success: true, count: 0, message: 'No active Sons & Daughters subscribers found.' });
+      }
+
+      (async () => {
+        let successCount = 0;
+        let failCount = 0;
+        for (const sub of subscribers) {
+          const email = sub.email;
+          const fullName = sub.name || email.split('@')[0];
+          const nameParts = (sub.name || '').trim().split(/\s+/);
+          const firstName = nameParts[0] || email.split('@')[0];
+          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+          const personalizedSubject = subject
+            .replace(/\{\{name\}\}/gi, fullName)
+            .replace(/\{\{firstName\}\}/gi, firstName)
+            .replace(/\{\{lastName\}\}/gi, lastName);
+
+          const personalizedBodyText = htmlBody
+            .replace(/\{\{name\}\}/gi, fullName)
+            .replace(/\{\{firstName\}\}/gi, firstName)
+            .replace(/\{\{lastName\}\}/gi, lastName);
+
+          const emailTemplateHtml = wrapInEmailTemplate(personalizedSubject, personalizedBodyText);
+          const personalizedHtml = emailTemplateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email) + '&segment=sd');
+
+          const sent = await sendZeptoEmail(email, fullName, personalizedSubject, personalizedHtml);
+          if (sent) successCount++;
+          else failCount++;
+          
+          await new Promise(r => setTimeout(r, 200));
+        }
+        console.log(`[SD Bulk Email] Broadcaster complete. Sent to: ${subscribers.length}. Success: ${successCount}, Failed: ${failCount}`);
+      })().catch(err => {
+        console.error('[SD Bulk Email] Background broadcaster encountered an error:', err);
+      });
+
+      return sendJson(res, 202, { success: true, count: subscribers.length, message: `Broadcasting email to ${subscribers.length} Sons & Daughters subscribers in the background.` });
+    } catch (err) {
+      console.error('SD Bulk email sending setup failed:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+  }
+
   // --- Unsubscribe ---
   if (pathname === '/api/unsubscribe' && method === 'GET') {
     const email = parsedUrl.searchParams.get('email');
@@ -1664,6 +1901,19 @@ Joshua's Generation`;
             if (idx !== -1) {
               subs[idx].is_active = false;
               fs.writeFileSync(SA_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+            }
+          }
+        }
+      } else if (segment === 'sd') {
+        if (pool) {
+          await pool.query('UPDATE sd_subscribers SET is_active = false WHERE email = $1', [email]);
+        } else {
+          if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+            const subs = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+            const idx = subs.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
+            if (idx !== -1) {
+              subs[idx].is_active = false;
+              fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
             }
           }
         }
