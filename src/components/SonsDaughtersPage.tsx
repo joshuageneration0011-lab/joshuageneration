@@ -156,7 +156,7 @@ export default function SonsDaughtersPage({ onBack }: SonsDaughtersPageProps) {
                         <span>Joining...</span>
                       </>
                     ) : (
-                      <span>Join Mentorship list ✨</span>
+                      <span>Join Sons & Daughters list ✨</span>
                     )}
                   </button>
                 </div>
