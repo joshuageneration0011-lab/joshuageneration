@@ -3416,7 +3416,14 @@ Joshua's Generation`;
       // --- BANNERBEAR API THUMBNAIL GENERATOR ENGINE ---
       if (engine === 'bannerbear' || model === 'bannerbear') {
         const bbApiKey = process.env.BANNERBEAR_API_KEY || 'bb_ak_v5_084a8fb7c228172a554ab20d1f3bb39e6f7f7c52';
-        const templateUid = bannerbear_template || process.env.BANNERBEAR_TEMPLATE_ID || 'sample_template';
+        const templateUid = bannerbear_template || process.env.BANNERBEAR_TEMPLATE_ID || '';
+
+        if (!templateUid || templateUid === 'sample_template') {
+          sendJson(res, 400, {
+            error: `Bannerbear Template UID Required: Please enter your Bannerbear Template UID in the Template UID input box below. (You can copy your Template UID from Bannerbear Dashboard -> Image Templates).`
+          });
+          return;
+        }
 
         const payload = {
           template: templateUid,
@@ -3427,8 +3434,7 @@ Joshua's Generation`;
           ]
         };
 
-        // Try Bannerbear v5 endpoint with Origin header first, then fallback to v2
-        let bbRes = await fetch('https://api.bannerbear.com/v5/images', {
+        const bbRes = await fetch('https://api.bannerbear.com/v5/images', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${bbApiKey}`,
@@ -3439,26 +3445,18 @@ Joshua's Generation`;
           body: JSON.stringify(payload)
         });
 
-        let bbData = await bbRes.json().catch(() => ({}));
-
-        if (!bbRes.ok) {
-          // Retry on v2 endpoint
-          bbRes = await fetch('https://api.bannerbear.com/v2/images', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${bbApiKey}`,
-              'Content-Type': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
-            },
-            body: JSON.stringify(payload)
-          });
-          bbData = await bbRes.json().catch(() => ({}));
-        }
+        const bbData = await bbRes.json().catch(() => ({}));
 
         if (!bbRes.ok) {
           const errMsg = bbData.message || bbData.error || `Bannerbear HTTP ${bbRes.status}`;
+          if (bbRes.status === 404 || errMsg.toLowerCase().includes('template not found')) {
+            sendJson(res, 400, {
+              error: `Bannerbear Template Not Found: The template UID "${templateUid}" was not found in your Bannerbear account. Please check Bannerbear Dashboard -> Image Templates for your template UID.`
+            });
+            return;
+          }
           sendJson(res, 400, {
-            error: `Bannerbear API Error: ${errMsg}. Please check that your Bannerbear API key (${bbApiKey.slice(0, 14)}...) has 'images:write' permissions in your Bannerbear dashboard.`
+            error: `Bannerbear API Error: ${errMsg}. Please check your Bannerbear project settings.`
           });
           return;
         }
