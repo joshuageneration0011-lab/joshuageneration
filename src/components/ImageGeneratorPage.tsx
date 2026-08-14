@@ -263,7 +263,7 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
                 required
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="admin@joshuagen.org"
+                placeholder=""
                 className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl p-3.5 text-slate-100 text-xs outline-none transition"
               />
             </div>
@@ -277,7 +277,7 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
                 required
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="••••••••••••"
+                placeholder=""
                 className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl p-3.5 text-slate-100 text-xs outline-none transition"
               />
             </div>
