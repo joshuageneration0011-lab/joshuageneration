@@ -3400,7 +3400,7 @@ Joshua's Generation`;
   // --- REPLICATE IMAGE GENERATOR ---
   if (pathname === '/api/generate-image' && method === 'POST') {
     try {
-      const { prompt, size = '1024x1024', n = 1, model = 'flux-schnell', customApiKey } = await getJsonBody(req);
+      const { prompt, size = '1024x1024', n = 4, model = 'flux-schnell', customApiKey } = await getJsonBody(req);
       
       if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
         sendJson(res, 400, { error: 'Prompt is required' });
@@ -3416,91 +3416,104 @@ Joshua's Generation`;
       }
 
       let targetModelUrl = 'https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions';
-      let payload = {
-        input: {
-          prompt: prompt.trim(),
-          aspect_ratio: '1:1',
-          output_format: 'webp',
-          output_quality: 95
-        }
-      };
+      let modelLabel = 'FLUX.1 Schnell';
 
       if (model === 'flux-dev') {
         targetModelUrl = 'https://api.replicate.com/v1/models/black-forest-labs/flux-dev/predictions';
+        modelLabel = 'FLUX.1 Dev Studio';
       } else if (model === 'realvis-xl') {
         targetModelUrl = 'https://api.replicate.com/v1/models/cjwbw/realvisxl-v4.0/predictions';
+        modelLabel = 'RealVisXL 4.0';
       } else if (model === 'recraft-v3') {
         targetModelUrl = 'https://api.replicate.com/v1/models/recraft-ai/recraft-v3/predictions';
+        modelLabel = 'Recraft V3';
       }
 
-      let response = await fetch(targetModelUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'wait=30'
-        },
-        body: JSON.stringify(payload)
-      });
+      const numImages = Math.min(Math.max(parseInt(n) || 4, 1), 4);
 
-      let prediction = await response.json();
-
-      if (!response.ok) {
-        console.error('Replicate API error response:', prediction);
-        sendJson(res, response.status || 500, { 
-          error: prediction.detail || prediction.error || 'Failed to call Replicate API' 
-        });
-        return;
-      }
-
-      let attempts = 0;
-      const maxAttempts = 30;
-      while (
-        (prediction.status === 'starting' || prediction.status === 'processing') &&
-        attempts < maxAttempts
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        attempts++;
-        if (prediction.urls && prediction.urls.get) {
-          const pollRes = await fetch(prediction.urls.get, {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          if (pollRes.ok) {
-            prediction = await pollRes.json();
+      // Helper function for a single prediction with zero fallbacks
+      async function runSinglePrediction(seedOffset) {
+        let payload = {
+          input: {
+            prompt: prompt.trim(),
+            aspect_ratio: '1:1',
+            output_format: 'webp',
+            output_quality: 95,
+            seed: Math.floor(Math.random() * 1000000) + seedOffset
           }
+        };
+
+        let response = await fetch(targetModelUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'wait=30'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        let prediction = await response.json();
+
+        if (!response.ok) {
+          throw new Error(prediction.detail || prediction.error || `Replicate API error: ${response.status}`);
+        }
+
+        let attempts = 0;
+        const maxAttempts = 30;
+        while (
+          (prediction.status === 'starting' || prediction.status === 'processing') &&
+          attempts < maxAttempts
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          attempts++;
+          if (prediction.urls && prediction.urls.get) {
+            const pollRes = await fetch(prediction.urls.get, {
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            if (pollRes.ok) {
+              prediction = await pollRes.json();
+            }
+          }
+        }
+
+        if (prediction.status === 'succeeded') {
+          return Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+        } else {
+          throw new Error(prediction.error || `Prediction failed with status ${prediction.status}`);
         }
       }
 
-      if (prediction.status === 'succeeded') {
-        const output = Array.isArray(prediction.output) ? prediction.output : [prediction.output];
-        sendJson(res, 200, {
-          success: true,
-          output,
-          id: prediction.id,
-          prompt: prompt.trim(),
-          metrics: prediction.metrics
-        });
-        return;
-      } else if (prediction.status === 'failed' || prediction.status === 'canceled') {
-        sendJson(res, 500, {
-          error: prediction.error || `Prediction ${prediction.status}`
-        });
-        return;
-      } else {
-        sendJson(res, 504, {
-          error: 'Image generation timed out. Please try again.',
-          id: prediction.id
-        });
+      // Execute predictions in parallel for 4 images
+      const results = await Promise.allSettled(
+        Array.from({ length: numImages }).map((_, idx) => runSinglePrediction(idx * 137))
+      );
+
+      const successfulUrls = results
+        .filter(r => r.status === 'fulfilled' && r.value)
+        .map(r => r.value);
+
+      if (successfulUrls.length === 0) {
+        const firstError = results.find(r => r.status === 'rejected')?.reason?.message || 'Failed to generate images';
+        sendJson(res, 500, { error: firstError });
         return;
       }
 
-    } catch (err) {
-      console.error('Error generating image via Replicate:', err);
-      sendJson(res, 500, { error: err.message || 'Internal server error' });
+      sendJson(res, 200, {
+        success: true,
+        output: successfulUrls,
+        model: model,
+        modelLabel: modelLabel,
+        prompt: prompt.trim()
+      });
       return;
+
+    } catch (err) {
+      console.error('Image generator route error:', err);
+      sendJson(res, 500, { error: err.message || 'Internal server error' });
     }
   }
 

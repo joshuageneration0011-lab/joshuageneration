@@ -22,6 +22,8 @@ interface GeneratedImage {
   url: string;
   prompt: string;
   size: string;
+  model: string;
+  modelLabel: string;
   createdAt: string;
 }
 
@@ -61,7 +63,6 @@ export default function ImageGeneratorPage() {
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('1024x1024');
   const [selectedModel, setSelectedModel] = useState<string>('flux-schnell');
-  const [numOutputs, setNumOutputs] = useState(1);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   
   const [customApiKey, setCustomApiKey] = useState('');
@@ -69,6 +70,7 @@ export default function ImageGeneratorPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentResults, setCurrentResults] = useState<GeneratedImage[]>([]);
   const [currentResult, setCurrentResult] = useState<GeneratedImage | null>(null);
   const [history, setHistory] = useState<GeneratedImage[]>([]);
 
@@ -138,23 +140,31 @@ export default function ImageGeneratorPage() {
       const res = await api.generateImage({
         prompt: finalPrompt,
         size: selectedSize,
-        n: numOutputs,
+        n: 4,
         model: selectedModel,
         customApiKey: customApiKey || undefined
       });
 
       if (res.output && res.output.length > 0) {
-        const newImage: GeneratedImage = {
-          id: res.id || String(Date.now()),
-          url: res.output[0],
+        const selectedModelObj = AI_MODELS.find(m => m.id === selectedModel);
+        const modelLabel = (res as any).modelLabel || (selectedModelObj ? selectedModelObj.label : selectedModel);
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const newImages: GeneratedImage[] = res.output.map((url: string, idx: number) => ({
+          id: `${Date.now()}-${idx}`,
+          url,
           prompt: finalPrompt,
           size: selectedSize,
-          createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
+          model: selectedModel,
+          modelLabel: modelLabel,
+          createdAt: timestamp
+        }));
 
-        setCurrentResult(newImage);
+        setCurrentResults(newImages);
+        setCurrentResult(newImages[0]);
+
         setHistory(prev => {
-          const updated = [newImage, ...prev].slice(0, 20);
+          const updated = [...newImages, ...prev].slice(0, 36);
           localStorage.setItem('jg_image_gen_history', JSON.stringify(updated));
           return updated;
         });
@@ -400,12 +410,12 @@ export default function ImageGeneratorPage() {
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Generating Image with DALL-E 2...</span>
+                    <span>Generating 4 Image Variations...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>Generate Artwork</span>
+                    <span>Generate 4 Artworks (1-Click)</span>
                   </>
                 )}
               </button>
@@ -423,21 +433,21 @@ export default function ImageGeneratorPage() {
                   <span>Output Preview</span>
                 </span>
                 {currentResult && (
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    {currentResult.size} • {currentResult.createdAt}
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold">
+                    {currentResult.modelLabel}
                   </span>
                 )}
               </div>
 
-              {/* Output Canvas Area */}
+              {/* Main Output Canvas Area */}
               <div className="relative aspect-square w-full bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center group">
                 
                 {isLoading ? (
                   <div className="flex flex-col items-center gap-4 p-6 text-center">
                     <div className="w-16 h-16 rounded-full border-4 border-amber-500/20 border-t-amber-400 animate-spin" />
                     <div>
-                      <p className="text-slate-200 text-sm font-semibold animate-pulse">Contacting Replicate API...</p>
-                      <p className="text-slate-500 text-xs mt-1">DALL-E 2 is rendering your creation</p>
+                      <p className="text-slate-200 text-sm font-semibold animate-pulse">Rendering 4 unique images...</p>
+                      <p className="text-slate-500 text-xs mt-1">Directly contacting {AI_MODELS.find(m=>m.id===selectedModel)?.label} engine</p>
                     </div>
                   </div>
                 ) : currentResult ? (
@@ -474,12 +484,42 @@ export default function ImageGeneratorPage() {
                     <div>
                       <p className="text-slate-300 text-sm font-medium">No Image Generated Yet</p>
                       <p className="text-xs text-slate-500 mt-1 max-w-xs">
-                        Enter a detailed prompt on the left and click Generate Artwork to start.
+                        Enter a prompt on the left and click Generate to create 4 variations simultaneously.
                       </p>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* 4-Variation Selector Grid */}
+              {currentResults.length > 1 && !isLoading && (
+                <div className="mt-4 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    4 Generated Variations (Click to select)
+                  </span>
+                  <div className="grid grid-cols-4 gap-2">
+                    {currentResults.map((item, idx) => {
+                      const isActive = currentResult?.id === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => setCurrentResult(item)}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            isActive 
+                              ? 'border-amber-400 ring-2 ring-amber-500/50 scale-105 z-10' 
+                              : 'border-slate-800 opacity-70 hover:opacity-100 hover:border-slate-600'
+                          }`}
+                        >
+                          <img src={item.url} alt={`Var ${idx+1}`} className="w-full h-full object-cover" />
+                          <span className="absolute bottom-1 right-1 px-1 bg-slate-950/80 rounded text-[9px] font-bold text-amber-300">
+                            #{idx + 1}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons for Current Result */}
               {currentResult && !isLoading && (
@@ -536,9 +576,17 @@ export default function ImageGeneratorPage() {
               {history.map((img) => (
                 <div
                   key={img.id}
-                  onClick={() => setCurrentResult(img)}
+                  onClick={() => {
+                    setCurrentResult(img);
+                    setCurrentResults([img]);
+                  }}
                   className="group relative aspect-square bg-slate-900 rounded-xl overflow-hidden border border-slate-800 cursor-pointer hover:border-amber-500/50 transition-all shadow-md"
                 >
+                  {/* Model Tag Pill */}
+                  <span className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded bg-slate-950/85 backdrop-blur-md border border-amber-500/40 text-[9px] font-bold text-amber-300 shadow-md">
+                    {img.modelLabel || img.model}
+                  </span>
+
                   <img
                     src={img.url}
                     alt={img.prompt}
