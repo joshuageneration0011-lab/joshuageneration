@@ -50,9 +50,15 @@ const SIZES = [
   { label: '256 x 256', value: '256x256', desc: 'Fast Preview' },
 ];
 
+const AI_MODELS = [
+  { id: 'flux-schnell', label: 'FLUX.1 Schnell', desc: 'Ultra-fast 8K Photorealistic (Recommended)' },
+  { id: 'dall-e-2', label: 'OpenAI DALL-E 2', desc: 'Classic OpenAI DALL-E 2 Model' },
+];
+
 export default function ImageGeneratorPage() {
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('1024x1024');
+  const [selectedModel, setSelectedModel] = useState<'flux-schnell' | 'dall-e-2'>('flux-schnell');
   const [numOutputs, setNumOutputs] = useState(1);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   
@@ -131,6 +137,7 @@ export default function ImageGeneratorPage() {
         prompt: finalPrompt,
         size: selectedSize,
         n: numOutputs,
+        model: selectedModel,
         customApiKey: customApiKey || undefined
       });
 
@@ -297,6 +304,36 @@ export default function ImageGeneratorPage() {
                         }`}
                       >
                         {style} {isActive ? '✓' : '+'}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* AI Engine Model Selection */}
+              <div className="space-y-2.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <Wand2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>AI Engine / Model</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {AI_MODELS.map((m) => {
+                    const isSelected = selectedModel === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSelectedModel(m.id as any)}
+                        className={`p-3.5 rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? 'bg-amber-500/10 border-amber-500 text-white shadow-md'
+                            : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className={`text-xs font-bold ${isSelected ? 'text-amber-400' : 'text-slate-200'}`}>
+                          {m.label} {isSelected ? '✓' : ''}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{m.desc}</div>
                       </button>
                     );
                   })}
