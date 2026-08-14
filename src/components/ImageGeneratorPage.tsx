@@ -184,11 +184,179 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
     setSelectedStyle(style);
   };
 
+// --- CLICKLY-STYLE YOUTUBE THUMBNAIL CANVAS COMPOSITOR ---
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(err);
+    img.src = src;
+  });
+}
+
+async function createClicklyThumbnail(params: {
+  bgUrl: string;
+  title: string;
+  subtitle?: string;
+  photoUrl?: string | null;
+  styleName?: string | null;
+}): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1280;
+  canvas.height = 720;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return params.bgUrl;
+
+  // 1. Draw AI Background Image
+  try {
+    const bgImg = await loadImage(params.bgUrl);
+    ctx.drawImage(bgImg, 0, 0, 1280, 720);
+  } catch (e) {
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, 1280, 720);
+  }
+
+  // Add dark gradient overlay on left 65% for high-CTR text contrast
+  const grad = ctx.createLinearGradient(0, 0, 1280, 0);
+  grad.addColorStop(0, 'rgba(5, 8, 22, 0.94)');
+  grad.addColorStop(0.55, 'rgba(5, 8, 22, 0.78)');
+  grad.addColorStop(0.82, 'rgba(5, 8, 22, 0.25)');
+  grad.addColorStop(1, 'rgba(5, 8, 22, 0.05)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1280, 720);
+
+  // 2. Draw Subject Portrait on Right Side if provided
+  if (params.photoUrl) {
+    try {
+      const userImg = await loadImage(params.photoUrl);
+      
+      // Draw outer glowing halo on right side
+      ctx.save();
+      const haloGrad = ctx.createRadialGradient(980, 360, 100, 980, 360, 320);
+      haloGrad.addColorStop(0, 'rgba(245, 158, 11, 0.45)');
+      haloGrad.addColorStop(0.6, 'rgba(234, 179, 8, 0.20)');
+      haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = haloGrad;
+      ctx.beginPath();
+      ctx.arc(980, 360, 320, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Draw Subject Image with rounded vignetted golden frame
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(740, 50, 480, 620, 28);
+      ctx.clip();
+      
+      const imgRatio = userImg.width / userImg.height;
+      const targetW = 480;
+      const targetH = 620;
+      let drawW = targetW;
+      let drawH = targetW / imgRatio;
+      if (drawH < targetH) {
+        drawH = targetH;
+        drawW = targetH * imgRatio;
+      }
+      const drawX = 740 + (targetW - drawW) / 2;
+      const drawY = 50 + (targetH - drawH) / 2;
+
+      ctx.drawImage(userImg, drawX, drawY, drawW, drawH);
+      ctx.restore();
+
+      // Gold accent border around portrait
+      ctx.save();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#F59E0B';
+      ctx.beginPath();
+      ctx.roundRect(740, 50, 480, 620, 28);
+      ctx.stroke();
+      ctx.restore();
+    } catch (e) {
+      console.error('Failed to composite user photo:', e);
+    }
+  }
+
+  // 3. Draw Crisp 2-Tone Typography on Left Side
+  const rawTitle = params.title.trim().toUpperCase() || "THE ANOINTING THAT BREAKS YOKES";
+  const words = rawTitle.split(/\s+/);
+  
+  let line1 = "";
+  let line2 = "";
+  let line3 = "";
+
+  if (words.length <= 4) {
+    line1 = words.slice(0, Math.ceil(words.length / 2)).join(" ");
+    line2 = words.slice(Math.ceil(words.length / 2)).join(" ");
+  } else {
+    const third = Math.ceil(words.length / 3);
+    line1 = words.slice(0, third).join(" ");
+    line2 = words.slice(third, third * 2).join(" ");
+    line3 = words.slice(third * 2).join(" ");
+  }
+
+  const lines = [line1, line2, line3].filter(Boolean);
+  const startX = 65;
+  let startY = lines.length === 3 ? 200 : 250;
+
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  // Subtitle / Host Pill Badge
+  if (params.subtitle && params.subtitle.trim()) {
+    const badgeText = params.subtitle.trim().toUpperCase();
+    ctx.font = '900 20px system-ui, -apple-system, sans-serif';
+    
+    const badgeWidth = ctx.measureText(badgeText).width + 34;
+    ctx.fillStyle = '#F59E0B';
+    ctx.beginPath();
+    ctx.roundRect(startX, startY - 65, badgeWidth, 38, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#0F172A';
+    ctx.fillText(badgeText, startX + 17, startY - 45);
+  }
+
+  // Title Lines with 2-Tone Colors (Yellow for line 2 / hook, White for others)
+  lines.forEach((line, idx) => {
+    let fontSize = 66;
+    if (line.length > 20) fontSize = 50;
+    if (line.length > 28) fontSize = 42;
+
+    ctx.font = `900 ${fontSize}px system-ui, -apple-system, Impact, sans-serif`;
+
+    // Drop Shadow for 3D Pop Effect
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetX = 4;
+    ctx.shadowOffsetY = 6;
+
+    // Heavy dark stroke outline
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#000000';
+    ctx.strokeText(line, startX, startY);
+
+    // Color: Line 2 is Clickly Gold Yellow (#FFE600), Line 1 & 3 are White (#FFFFFF)
+    if (idx === 1 || (lines.length === 2 && idx === 0)) {
+      ctx.fillStyle = '#FFE600';
+    } else {
+      ctx.fillStyle = '#FFFFFF';
+    }
+
+    ctx.fillText(line, startX, startY);
+    startY += fontSize + 24;
+  });
+
+  ctx.restore();
+
+  return canvas.toDataURL('image/png');
+}
+
   const getFinalPrompt = () => {
     if (studioMode === 'thumbnail') {
       const mainTitle = thumbnailTitle.trim() || "THE ANOINTING";
-      const subTitle = thumbnailSubtitle.trim();
-      let p = `A professional 16:9 widescreen YouTube thumbnail background featuring bold headline title "${mainTitle}"${subTitle ? ` and subtext "${subTitle}"` : ''}, dramatic lighting, 8K resolution`;
+      let p = `A 16:9 widescreen atmospheric cinematic background featuring golden beams of divine light, holy sanctuary atmosphere, 8k resolution, dark dramatic lighting, clean composition, no text`;
       if (selectedStyle) {
         p += `, ${selectedStyle.toLowerCase()} style`;
       }
@@ -244,13 +412,29 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
         const modelLabel = (res as any).modelLabel || (selectedModelObj ? selectedModelObj.label : selectedModel);
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        const newImages: GeneratedImage[] = res.output.map((url: string, idx: number) => ({
+        // Apply Clickly Compositing for YouTube Thumbnail Studio mode
+        let finalOutputs: string[] = res.output;
+        if (studioMode === 'thumbnail' && selectedModel !== 'bannerbear') {
+          finalOutputs = await Promise.all(
+            res.output.map((bgUrl: string) =>
+              createClicklyThumbnail({
+                bgUrl,
+                title: thumbnailTitle || "THE ANOINTING",
+                subtitle: thumbnailSubtitle,
+                photoUrl: referenceImage,
+                styleName: selectedStyle
+              })
+            )
+          );
+        }
+
+        const newImages: GeneratedImage[] = finalOutputs.map((url: string, idx: number) => ({
           id: `${Date.now()}-${idx}`,
           url,
-          prompt: finalPrompt,
+          prompt: studioMode === 'thumbnail' ? thumbnailTitle || finalPrompt : finalPrompt,
           size: studioMode === 'thumbnail' ? '16:9 Widescreen' : selectedSize,
           model: selectedModel,
-          modelLabel: modelLabel,
+          modelLabel: studioMode === 'thumbnail' && selectedModel !== 'bannerbear' ? `${modelLabel} (Clickly Studio)` : modelLabel,
           createdAt: timestamp
         }));
 
