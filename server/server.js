@@ -3439,7 +3439,15 @@ Joshua's Generation`;
 
         const bbData = await bbRes.json();
         if (!bbRes.ok) {
-          throw new Error(bbData.message || bbData.error || `Bannerbear API error (${bbRes.status})`);
+          const errMsg = bbData.message || bbData.error || `Bannerbear HTTP ${bbRes.status}`;
+          if (bbRes.status === 401 || bbRes.status === 403) {
+            sendJson(res, 400, {
+              error: `Bannerbear Service Key Error: The key (${bbApiKey.slice(0, 10)}...) was rejected by Bannerbear (${errMsg}). Please check your Bannerbear project API key.`
+            });
+            return;
+          }
+          sendJson(res, 400, { error: `Bannerbear service error: ${errMsg}` });
+          return;
         }
 
         let imageUrl = bbData.image_url || bbData.image_url_png;

@@ -265,7 +265,7 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
       }
     } catch (err: any) {
       console.error('Generation error:', err);
-      if (err.message && err.message.toLowerCase().includes('unauthorized')) {
+      if (err.message && err.message.toLowerCase().includes('admin access required')) {
         setIsAuthenticated(false);
         setError('Admin session expired. Please authenticate again.');
       } else {
