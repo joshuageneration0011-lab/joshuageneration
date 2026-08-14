@@ -3400,17 +3400,23 @@ Joshua's Generation`;
   // --- REPLICATE IMAGE GENERATOR ---
   if (pathname === '/api/generate-image' && method === 'POST') {
     try {
-      const { prompt, size = '1024x1024', n = 4, model = 'flux-schnell', customApiKey } = await getJsonBody(req);
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) {
+        sendJson(res, 401, { error: 'Unauthorized: Admin access required to generate AI images.' });
+        return;
+      }
+
+      const { prompt, size = '1024x1024', n = 4, model = 'flux-schnell' } = await getJsonBody(req);
       
       if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
         sendJson(res, 400, { error: 'Prompt is required' });
         return;
       }
 
-      const apiKey = customApiKey || process.env.REPLICATE_API_TOKEN;
+      const apiKey = process.env.REPLICATE_API_TOKEN;
       if (!apiKey) {
         sendJson(res, 400, { 
-          error: 'Replicate API token missing. Please set REPLICATE_API_TOKEN in your environment or provide a custom API key.' 
+          error: 'Image engine service error: API credentials missing on server.' 
         });
         return;
       }

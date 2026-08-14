@@ -623,17 +623,18 @@ export const api = {
       return (await handleResponse(res, 'Failed to delete SD subscriber')).json();
     }
   },
-  async generateImage(params: { prompt: string; size?: string; n?: number; model?: string; customApiKey?: string }): Promise<{
+  async generateImage(params: { prompt: string; size?: string; n?: number; model?: string }): Promise<{
     success: boolean;
     output: string[];
     id?: string;
     prompt?: string;
-    metrics?: any;
+    model?: string;
+    modelLabel?: string;
     error?: string;
   }> {
     const res = await fetch(`${API_BASE_URL}/api/generate-image`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(params),
     });
     const data = await res.json();

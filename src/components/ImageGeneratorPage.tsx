@@ -59,14 +59,21 @@ const AI_MODELS = [
   { id: 'recraft-v3', label: 'Recraft V3', desc: 'Graphic Design, Vectors & Logos' },
 ];
 
-export default function ImageGeneratorPage() {
+interface ImageGeneratorPageProps {
+  onNavigate?: (page: string) => void;
+}
+
+export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPageProps) {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => api.isAuthenticated());
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('1024x1024');
   const [selectedModel, setSelectedModel] = useState<string>('flux-schnell');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
-  
-  const [customApiKey, setCustomApiKey] = useState('');
-  const [showKeyModal, setShowKeyModal] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,11 +85,8 @@ export default function ImageGeneratorPage() {
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
 
-  // Load saved API key & history from localStorage
+  // Load saved history from localStorage
   useEffect(() => {
-    const savedKey = localStorage.getItem('jg_replicate_api_key') || '';
-    if (savedKey) setCustomApiKey(savedKey);
-
     const savedHistory = localStorage.getItem('jg_image_gen_history');
     if (savedHistory) {
       try {
@@ -93,14 +97,26 @@ export default function ImageGeneratorPage() {
     }
   }, []);
 
-  const saveCustomKey = (key: string) => {
-    setCustomApiKey(key);
-    if (key.trim()) {
-      localStorage.setItem('jg_replicate_api_key', key.trim());
-    } else {
-      localStorage.removeItem('jg_replicate_api_key');
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminEmail.trim() || !adminPassword.trim()) {
+      setAuthError('Please enter both admin email and password.');
+      return;
     }
-    setShowKeyModal(false);
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const res = await api.login(adminEmail.trim(), adminPassword.trim());
+      if (res.success) {
+        setIsAuthenticated(true);
+      } else {
+        setAuthError(res.error || 'Invalid administrator credentials.');
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Failed to authenticate.');
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const handleSurpriseMe = () => {
@@ -141,8 +157,7 @@ export default function ImageGeneratorPage() {
         prompt: finalPrompt,
         size: selectedSize,
         n: 4,
-        model: selectedModel,
-        customApiKey: customApiKey || undefined
+        model: selectedModel
       });
 
       if (res.output && res.output.length > 0) {
@@ -171,7 +186,12 @@ export default function ImageGeneratorPage() {
       }
     } catch (err: any) {
       console.error('Generation error:', err);
-      setError(err.message || 'Failed to generate image. Please try again.');
+      if (err.message && err.message.toLowerCase().includes('unauthorized')) {
+        setIsAuthenticated(false);
+        setError('Admin session expired. Please authenticate again.');
+      } else {
+        setError(err.message || 'Failed to generate image. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +216,7 @@ export default function ImageGeneratorPage() {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `dalle-image-${Date.now()}.png`;
+      link.download = `jg-artwork-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -205,6 +225,85 @@ export default function ImageGeneratorPage() {
       window.open(imageUrl, '_blank');
     }
   };
+
+  // --- ADMIN LOCK SCREEN IF NOT AUTHENTICATED ---
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 pt-28 pb-16 px-4 flex items-center justify-center relative overflow-hidden">
+        {/* Ambient Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-md w-full bg-slate-900/90 backdrop-blur-2xl border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6 relative z-10">
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
+              <Key className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-black tracking-tight text-white">
+              Admin Access <span className="text-amber-400">Required</span>
+            </h2>
+            <p className="text-slate-400 text-xs leading-relaxed max-w-xs mx-auto">
+              The AI Image Studio is restricted to authorized Joshua's Generation ministry administrators.
+            </p>
+          </div>
+
+          <form onSubmit={handleAdminLogin} className="space-y-4 pt-2">
+            {authError && (
+              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 block mb-1.5">
+                Admin Email
+              </label>
+              <input
+                type="email"
+                required
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                placeholder="admin@joshuagen.org"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl p-3.5 text-slate-100 text-xs outline-none transition"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 block mb-1.5">
+                Admin Password
+              </label>
+              <input
+                type="password"
+                required
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl p-3.5 text-slate-100 text-xs outline-none transition"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isAuthenticating}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold text-xs tracking-wider uppercase shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-2"
+            >
+              {isAuthenticating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Authenticate & Unlock Studio</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -221,34 +320,14 @@ export default function ImageGeneratorPage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>AI Studio • Replicate DALL-E 2 API</span>
+              <span>AI Studio • Premium Creative Engine</span>
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
               AI Image <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent">Generator</span>
             </h1>
             <p className="mt-2 text-slate-400 text-sm sm:text-base max-w-2xl">
-              Transform your words and vision into high-quality visual art powered by OpenAI DALL-E 2 model hosted on Replicate.
+              Transform your words and vision into high-quality visual art powered by advanced AI.
             </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowKeyModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700/60 text-slate-300 hover:text-white hover:border-amber-500/50 transition-all text-xs font-medium"
-            >
-              <Key className="w-4 h-4 text-amber-400" />
-              <span>{customApiKey ? 'API Key Configured' : 'Configure Replicate Key'}</span>
-            </button>
-
-            <a
-              href="https://replicate.com/openai/dall-e-2/api"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-800 text-slate-400 hover:text-slate-200 transition text-xs"
-            >
-              <span>Doc</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
           </div>
         </div>
 
@@ -617,62 +696,6 @@ export default function ImageGeneratorPage() {
               <X className="w-5 h-5" />
             </button>
             <img src={zoomImage} alt="Full view" className="max-w-full max-h-[85vh] object-contain" />
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Custom Replicate API Key Config */}
-      {showKeyModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Key className="w-5 h-5 text-amber-400" />
-                <span>Replicate API Token</span>
-              </h3>
-              <button
-                onClick={() => setShowKeyModal(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-xs text-slate-400 leading-relaxed">
-                By default, the server uses the <code className="text-amber-300">REPLICATE_API_TOKEN</code> in your server environment file. You can also provide a custom token here to override it in your browser session.
-              </p>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  API Token (r8_...)
-                </label>
-                <input
-                  type="password"
-                  value={customApiKey}
-                  onChange={(e) => setCustomApiKey(e.target.value)}
-                  placeholder="r8_********************************"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-3 text-slate-100 text-xs outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => saveCustomKey('')}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-medium"
-                >
-                  Clear Key
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveCustomKey(customApiKey)}
-                  className="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400 text-xs font-bold"
-                >
-                  Save Token
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
