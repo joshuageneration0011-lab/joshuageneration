@@ -3415,7 +3415,7 @@ Joshua's Generation`;
 
       // --- BANNERBEAR API THUMBNAIL GENERATOR ENGINE ---
       if (engine === 'bannerbear' || model === 'bannerbear') {
-        const bbApiKey = process.env.BANNERBEAR_API_KEY || 'bb_ak_v5_d72818154399bf546b596404a09082d4775c9f1b';
+        const bbApiKey = process.env.BANNERBEAR_API_KEY || 'bb_ak_v5_084a8fb7c228172a554ab20d1f3bb39e6f7f7c52';
         const templateUid = bannerbear_template || process.env.BANNERBEAR_TEMPLATE_ID || 'sample_template';
 
         const payload = {
@@ -3427,32 +3427,60 @@ Joshua's Generation`;
           ]
         };
 
-        const bbRes = await fetch('https://api.bannerbear.com/v2/images', {
+        // Try Bannerbear v5 endpoint with Origin header first, then fallback to v2
+        let bbRes = await fetch('https://api.bannerbear.com/v5/images', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${bbApiKey}`,
             'Content-Type': 'application/json',
+            'Origin': 'https://joshuasgeneration.com',
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
           },
           body: JSON.stringify(payload)
         });
 
-        const bbData = await bbRes.json();
+        let bbData = await bbRes.json();
+
+        if (!bbRes.ok) {
+          // Retry on v2 endpoint
+          bbRes = await fetch('https://api.bannerbear.com/v2/images', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${bbApiKey}`,
+              'Content-Type': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+            },
+            body: JSON.stringify(payload)
+          });
+          bbData = await bbRes.json();
+        }
+
         if (!bbRes.ok) {
           const errMsg = bbData.message || bbData.error || `Bannerbear HTTP ${bbRes.status}`;
-          if (bbRes.status === 401 || bbRes.status === 403) {
-            sendJson(res, 400, {
-              error: `Bannerbear Service Key Error: The key (${bbApiKey.slice(0, 10)}...) was rejected by Bannerbear (${errMsg}). Please check your Bannerbear project API key.`
-            });
-            return;
-          }
-          sendJson(res, 400, { error: `Bannerbear service error: ${errMsg}` });
+          sendJson(res, 400, {
+            error: `Bannerbear API Key Error: ${errMsg}. Please verify that your Bannerbear API key (${bbApiKey.slice(0, 14)}...) has 'images:write' permissions in your Bannerbear dashboard.`
+          });
           return;
         }
 
         let imageUrl = bbData.image_url || bbData.image_url_png;
         let attempts = 0;
         while (!imageUrl && attempts < 15) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          attempts++;
+          if (bbData.self) {
+            const poll = await fetch(bbData.self, {
+              headers: { 
+                'Authorization': `Bearer ${bbApiKey}`,
+                'Origin': 'https://joshuasgeneration.com'
+              }
+            });
+            if (poll.ok) {
+              const updated = await poll.json();
+              imageUrl = updated.image_url || updated.image_url_png;
+            }
+          }
+        }
           await new Promise((resolve) => setTimeout(resolve, 1500));
           attempts++;
           if (bbData.self) {
