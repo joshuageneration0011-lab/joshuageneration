@@ -622,6 +622,25 @@ export const api = {
       });
       return (await handleResponse(res, 'Failed to delete SD subscriber')).json();
     }
+  },
+  async generateImage(params: { prompt: string; size?: string; n?: number; customApiKey?: string }): Promise<{
+    success: boolean;
+    output: string[];
+    id?: string;
+    prompt?: string;
+    metrics?: any;
+    error?: string;
+  }> {
+    const res = await fetch(`${API_BASE_URL}/api/generate-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to generate image');
+    }
+    return data;
   }
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Search, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail } from 'lucide-react';
+import { Menu, X, Search, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail, Sparkles } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
 import LovePopup from './LovePopup';
@@ -9,6 +9,7 @@ const navLinks = [
   { name: 'Sermons', href: '/sermons', icon: Tv, page: 'sermons' as Page },
   { name: 'Books', href: '/books', icon: BookOpen, page: 'books' as Page },
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
+  { name: 'AI Studio', href: '/createimage', icon: Sparkles, page: 'createimage' as Page },
   // { name: 'Partnership', href: '/partnership', icon: Heart, page: 'partnership' as Page },
   { name: 'Events', href: '#events', icon: Gift },
   // { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },

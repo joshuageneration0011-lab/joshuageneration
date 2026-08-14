@@ -39,6 +39,7 @@ const CookiePolicyPage = lazy(() => import('@/components/CookiePolicyPage'));
 const GetUpdatesPage = lazy(() => import('@/components/GetUpdatesPage'));
 const SouthAfricaUpdatesPage = lazy(() => import('@/components/SouthAfricaUpdatesPage'));
 const SonsDaughtersPage = lazy(() => import('@/components/SonsDaughtersPage'));
+const ImageGeneratorPage = lazy(() => import('@/components/ImageGeneratorPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -74,7 +75,7 @@ const getPageFromPath = (): Page => {
   if (rawPath.startsWith('sermon/')) return 'sermon-player';
   if (rawPath.startsWith('books/')) return 'book-details';
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -984,6 +985,24 @@ export default function App() {
     );
   }
 
+
+  if (currentPage === 'createimage' || currentPage === 'create-image' || currentPage === 'image-generator' || currentPage === 'ai-generator' || currentPage === 'dall-e') {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <Navbar
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <main>
+          <Suspense fallback={<PageLoader />}>
+            <ImageGeneratorPage />
+          </Suspense>
+        </main>
+        <Footer onNavigate={navigate} />
+      </div>
+    );
+  }
 
   if (currentPage === 'events' || currentPage === 'encounter' || currentPage === 'encounters') {
     return (

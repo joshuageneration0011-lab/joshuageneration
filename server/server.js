@@ -1086,7 +1086,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- SEO DYNAMIC OPENGRAPH HANDLER ---
-  if (pathname === '/getupdates' || pathname === '/getupdates/' || pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' || pathname === '/sondaughter' || pathname === '/sondaughter/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
+  if (pathname === '/createimage' || pathname === '/createimage/' || pathname === '/image-generator' || pathname === '/getupdates' || pathname === '/getupdates/' || pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' || pathname === '/sondaughter' || pathname === '/sondaughter/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
     const targetPath = pathname;
     try {
       const indexPath = path.join(__dirname, '../dist/index.html');
@@ -3395,6 +3395,103 @@ Joshua's Generation`;
       sendJson(res, 500, { error: 'Failed to submit message' });
     }
     return;
+  }
+
+  // --- REPLICATE DALL-E 2 IMAGE GENERATOR ---
+  if (pathname === '/api/generate-image' && method === 'POST') {
+    try {
+      const { prompt, size = '1024x1024', n = 1, customApiKey } = await getJsonBody(req);
+      
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        sendJson(res, 400, { error: 'Prompt is required' });
+        return;
+      }
+
+      const apiKey = customApiKey || process.env.REPLICATE_API_TOKEN;
+      if (!apiKey) {
+        sendJson(res, 400, { 
+          error: 'Replicate API token missing. Please set REPLICATE_API_TOKEN in your environment or provide a custom API key.' 
+        });
+        return;
+      }
+
+      const payload = {
+        input: {
+          prompt: prompt.trim(),
+          n: Number(n) || 1,
+          size: size || '1024x1024'
+        }
+      };
+
+      const response = await fetch('https://api.replicate.com/v1/models/openai/dall-e-2/predictions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'wait=30'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      let prediction = await response.json();
+
+      if (!response.ok) {
+        console.error('Replicate API error response:', prediction);
+        sendJson(res, response.status || 500, { 
+          error: prediction.detail || prediction.error || 'Failed to call Replicate API' 
+        });
+        return;
+      }
+
+      let attempts = 0;
+      const maxAttempts = 30;
+      while (
+        (prediction.status === 'starting' || prediction.status === 'processing') &&
+        attempts < maxAttempts
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        attempts++;
+        if (prediction.urls && prediction.urls.get) {
+          const pollRes = await fetch(prediction.urls.get, {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (pollRes.ok) {
+            prediction = await pollRes.json();
+          }
+        }
+      }
+
+      if (prediction.status === 'succeeded') {
+        const output = Array.isArray(prediction.output) ? prediction.output : [prediction.output];
+        sendJson(res, 200, {
+          success: true,
+          output,
+          id: prediction.id,
+          prompt: prompt.trim(),
+          metrics: prediction.metrics
+        });
+        return;
+      } else if (prediction.status === 'failed' || prediction.status === 'canceled') {
+        sendJson(res, 500, {
+          error: prediction.error || `Prediction ${prediction.status}`
+        });
+        return;
+      } else {
+        sendJson(res, 504, {
+          error: 'Image generation timed out. Please try again.',
+          id: prediction.id
+        });
+        return;
+      }
+
+    } catch (err) {
+      console.error('Error generating image via Replicate:', err);
+      sendJson(res, 500, { error: err.message || 'Internal server error' });
+      return;
+    }
   }
 
   // GET Public Settings (Unauthenticated)
