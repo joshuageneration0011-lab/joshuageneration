@@ -78,21 +78,21 @@ const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 // In-memory sessions store
 const sessions = new Map(); // token -> { username, expiresAt }
 
-// --- Database Connection Pool (Supabase Postgres) ---
+// --- Database Connection Pool (Postgres) ---
 let pool = null;
-if (process.env.DATABASE_URL) {
-  try {
-    const pgModule = await import('pg');
-    pool = new pgModule.default.Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false
-      }
-    });
-    console.log('DATABASE_URL detected. Connecting to PostgreSQL database...');
-  } catch (err) {
-    console.error('Failed to load pg module. Database pool inactive.', err);
-  }
+const dbConnectionString = process.env.DATABASE_URL || 'postgresql://jg_admin:GgCXXuFM5H40Yj4uv@localhost:5432/joshuagen';
+
+try {
+  const pgModule = await import('pg');
+  pool = new pgModule.default.Pool({
+    connectionString: dbConnectionString,
+    ssl: dbConnectionString.includes('sslmode=require') || dbConnectionString.includes('supabase') ? {
+      rejectUnauthorized: false
+    } : false
+  });
+  console.log('Connecting to PostgreSQL database:', dbConnectionString.replace(/:[^:@]+@/, ':****@'));
+} catch (err) {
+  console.error('Failed to load pg module. Database pool inactive.', err);
 }
 
 // --- Crypto Helpers ---
@@ -3415,7 +3415,6 @@ Joshua's Generation`;
         return;
       }
 
-      // We use black-forest-labs/flux-schnell as primary high-performance model on Replicate
       let targetModelUrl = 'https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions';
       let payload = {
         input: {
@@ -3446,30 +3445,6 @@ Joshua's Generation`;
       });
 
       let prediction = await response.json();
-
-      // If DALL-E 2 fails due to Replicate's internal API wrapper bug, automatically fallback to FLUX.1 Schnell
-      if (!response.ok || prediction.error) {
-        if (model === 'dall-e-2' || (prediction.error && prediction.error.includes('response_format'))) {
-          console.warn('Replicate DALL-E 2 model issue detected, falling back to FLUX.1 Schnell...');
-          response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'wait=30'
-            },
-            body: JSON.stringify({
-              input: {
-                prompt: prompt.trim(),
-                aspect_ratio: '1:1',
-                output_format: 'webp',
-                output_quality: 95
-              }
-            })
-          });
-          prediction = await response.json();
-        }
-      }
 
       if (!response.ok) {
         console.error('Replicate API error response:', prediction);
