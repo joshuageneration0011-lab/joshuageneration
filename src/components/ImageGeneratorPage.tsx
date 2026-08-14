@@ -52,10 +52,8 @@ const SIZES = [
 
 const AI_MODELS = [
   { id: 'flux-schnell', label: 'FLUX.1 Schnell', desc: 'Ultra-fast 8K Photorealistic AI (Recommended)' },
-  { id: 'flux-dev', label: 'FLUX.1 Dev Studio', desc: 'High-Precision & Detailed Art Engine' },
   { id: 'sd-3.5', label: 'Stable Diffusion 3.5', desc: 'Stability AI Flagship Render Engine' },
-  { id: 'realvis-xl', label: 'RealVisXL 4.0', desc: 'Hyper-Realistic Human Portraits & Photos' },
-  { id: 'recraft-v3', label: 'Recraft V3', desc: 'Graphic Design, Vectors & Logos' },
+  { id: 'flux-dev', label: 'FLUX.1 Dev Studio', desc: 'High-Precision & Detailed Art Engine' },
 ];
 
 export default function ImageGeneratorPage() {
