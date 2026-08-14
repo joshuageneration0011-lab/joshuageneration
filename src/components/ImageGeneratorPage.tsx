@@ -51,14 +51,17 @@ const SIZES = [
 ];
 
 const AI_MODELS = [
-  { id: 'flux-schnell', label: 'FLUX.1 Schnell', desc: 'Ultra-fast 8K Photorealistic (Recommended)' },
-  { id: 'dall-e-2', label: 'OpenAI DALL-E 2', desc: 'Classic OpenAI DALL-E 2 Model' },
+  { id: 'flux-schnell', label: 'FLUX.1 Schnell', desc: 'Ultra-fast 8K Photorealistic AI (Recommended)' },
+  { id: 'flux-dev', label: 'FLUX.1 Dev Studio', desc: 'High-Precision & Detailed Art Engine' },
+  { id: 'sdxl', label: 'Stable Diffusion XL', desc: 'Classic SDXL Digital Art & Paintings' },
+  { id: 'realvis-xl', label: 'RealVisXL 4.0', desc: 'Hyper-Realistic Human Portraits & Photos' },
+  { id: 'recraft-v3', label: 'Recraft V3', desc: 'Graphic Design, Vectors & Logos' },
 ];
 
 export default function ImageGeneratorPage() {
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('1024x1024');
-  const [selectedModel, setSelectedModel] = useState<'flux-schnell' | 'dall-e-2'>('flux-schnell');
+  const [selectedModel, setSelectedModel] = useState<string>('flux-schnell');
   const [numOutputs, setNumOutputs] = useState(1);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   
