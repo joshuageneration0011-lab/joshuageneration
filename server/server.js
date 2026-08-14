@@ -3437,36 +3437,60 @@ Joshua's Generation`;
 
       const numImages = Math.min(Math.max(parseInt(n) || 4, 1), 4);
 
-      // Helper function for a single prediction with zero fallbacks
-      async function runSinglePrediction(seedOffset) {
+      // Helper function for a single prediction with 429 rate limit retry logic
+      async function runSinglePrediction(index) {
+        // Small initial staggered delay to prevent hitting concurrency burst limit
+        if (index > 0) {
+          await new Promise((resolve) => setTimeout(resolve, index * 600));
+        }
+
         let payload = {
           input: {
             prompt: prompt.trim(),
             aspect_ratio: '1:1',
             output_format: 'webp',
             output_quality: 95,
-            seed: Math.floor(Math.random() * 1000000) + seedOffset
+            seed: Math.floor(Math.random() * 1000000) + (index * 137)
           }
         };
 
-        let response = await fetch(targetModelUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'wait=30'
-          },
-          body: JSON.stringify(payload)
-        });
+        let prediction = null;
+        let startAttempts = 0;
+        const maxStartAttempts = 4;
 
-        let prediction = await response.json();
+        while (startAttempts < maxStartAttempts) {
+          startAttempts++;
+          let response = await fetch(targetModelUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'wait=30'
+            },
+            body: JSON.stringify(payload)
+          });
 
-        if (!response.ok) {
-          throw new Error(prediction.detail || prediction.error || `Replicate API error: ${response.status}`);
+          prediction = await response.json();
+
+          if (response.status === 429) {
+            // Rate limited: wait 1.8 seconds and retry
+            await new Promise((resolve) => setTimeout(resolve, 1800));
+            continue;
+          }
+
+          if (!response.ok) {
+            throw new Error(prediction.detail || prediction.error || `Replicate API error: ${response.status}`);
+          }
+
+          break; // Successfully created prediction!
+        }
+
+        if (!prediction || (prediction.status !== 'starting' && prediction.status !== 'processing' && prediction.status !== 'succeeded')) {
+          throw new Error(prediction?.error || 'Failed to start prediction on Replicate');
         }
 
         let attempts = 0;
-        const maxAttempts = 30;
+        const maxAttempts = 35;
         while (
           (prediction.status === 'starting' || prediction.status === 'processing') &&
           attempts < maxAttempts
@@ -3493,9 +3517,9 @@ Joshua's Generation`;
         }
       }
 
-      // Execute predictions in parallel for 4 images
+      // Execute predictions with retry handling for 4 images
       const results = await Promise.allSettled(
-        Array.from({ length: numImages }).map((_, idx) => runSinglePrediction(idx * 137))
+        Array.from({ length: numImages }).map((_, idx) => runSinglePrediction(idx))
       );
 
       const successfulUrls = results
