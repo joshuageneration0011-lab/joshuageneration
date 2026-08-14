@@ -3406,11 +3406,70 @@ Joshua's Generation`;
         return;
       }
 
-      const { prompt, size = '1024x1024', n = 4, model = 'flux-schnell', aspect_ratio = '1:1', image } = await getJsonBody(req);
+      const { prompt, size = '1024x1024', n = 4, model = 'flux-schnell', aspect_ratio = '1:1', image, engine, bannerbear_template } = await getJsonBody(req);
       
       if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
         sendJson(res, 400, { error: 'Prompt is required' });
         return;
+      }
+
+      // --- BANNERBEAR API THUMBNAIL GENERATOR ENGINE ---
+      if (engine === 'bannerbear' || model === 'bannerbear') {
+        const bbApiKey = process.env.BANNERBEAR_API_KEY || 'bb_ak_v5_d72818154399bf546b596404a09082d4775c9f1b';
+        const templateUid = bannerbear_template || process.env.BANNERBEAR_TEMPLATE_ID || 'sample_template';
+
+        const payload = {
+          template: templateUid,
+          modifications: [
+            { name: 'title', text: prompt.trim() },
+            { name: 'headline', text: prompt.trim() },
+            ...(image ? [{ name: 'image', url: image }, { name: 'photo', url: image }] : [])
+          ]
+        };
+
+        const bbRes = await fetch('https://api.bannerbear.com/v2/images', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${bbApiKey}`,
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const bbData = await bbRes.json();
+        if (!bbRes.ok) {
+          throw new Error(bbData.message || bbData.error || `Bannerbear API error (${bbRes.status})`);
+        }
+
+        let imageUrl = bbData.image_url || bbData.image_url_png;
+        let attempts = 0;
+        while (!imageUrl && attempts < 15) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          attempts++;
+          if (bbData.self) {
+            const poll = await fetch(bbData.self, {
+              headers: { 'Authorization': `Bearer ${bbApiKey}` }
+            });
+            if (poll.ok) {
+              const updated = await poll.json();
+              imageUrl = updated.image_url || updated.image_url_png;
+            }
+          }
+        }
+
+        if (imageUrl) {
+          sendJson(res, 200, {
+            success: true,
+            output: [imageUrl],
+            model: 'bannerbear',
+            modelLabel: 'Bannerbear Engine',
+            prompt: prompt.trim()
+          });
+          return;
+        } else {
+          throw new Error('Bannerbear image generation timed out');
+        }
       }
 
       const apiKey = process.env.REPLICATE_API_TOKEN;

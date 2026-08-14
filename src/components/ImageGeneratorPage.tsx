@@ -64,7 +64,8 @@ const SIZES = [
 ];
 
 const AI_MODELS = [
-  { id: 'flux-schnell', label: 'FLUX.1 Schnell', desc: 'Ultra-fast 8K Photorealistic AI (Recommended)' },
+  { id: 'bannerbear', label: 'Bannerbear API', desc: 'YouTube Thumbnail Template Engine (v5 / v2 API)' },
+  { id: 'flux-schnell', label: 'FLUX.1 Schnell', desc: 'Ultra-fast 8K Photorealistic AI' },
   { id: 'flux-dev', label: 'FLUX.1 Dev Studio', desc: 'High-Precision & Detailed Art Engine' },
   { id: 'realvis-xl', label: 'RealVisXL 4.0', desc: 'Hyper-Realistic Human Portraits & Photos' },
   { id: 'recraft-v3', label: 'Recraft V3', desc: 'Graphic Design, Vectors & Logos' },
@@ -84,16 +85,17 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
   // Studio Mode: 'thumbnail' (YouTube Widescreen + Ref Image + Text) vs 'art' (Square AI Art)
   const [studioMode, setStudioMode] = useState<'thumbnail' | 'art'>('thumbnail');
 
-  // Thumbnail Specific State
+  // Thumbnail & Bannerbear State
   const [thumbnailTitle, setThumbnailTitle] = useState('');
   const [thumbnailSubtitle, setThumbnailSubtitle] = useState('');
+  const [bannerbearTemplate, setBannerbearTemplate] = useState('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [referenceImageName, setReferenceImageName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('16:9');
-  const [selectedModel, setSelectedModel] = useState<string>('flux-schnell');
+  const [selectedModel, setSelectedModel] = useState<string>('bannerbear');
   const [selectedStyle, setSelectedStyle] = useState<string | null>("Golden Anointing & Light");
 
   const [isLoading, setIsLoading] = useState(false);
@@ -229,8 +231,10 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
       const res = await api.generateImage({
         prompt: finalPrompt,
         size: selectedSize,
-        n: 4,
+        n: selectedModel === 'bannerbear' ? 1 : 4,
         model: selectedModel,
+        engine: selectedModel === 'bannerbear' ? 'bannerbear' : 'replicate',
+        bannerbear_template: bannerbearTemplate.trim() || undefined,
         aspect_ratio: aspectRatio,
         image: referenceImage || undefined
       });
@@ -546,6 +550,28 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
                       className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-2 focus:ring-amber-500/20 rounded-xl p-3 text-slate-100 placeholder-slate-600 text-xs outline-none transition"
                     />
                   </div>
+
+                  {/* Bannerbear Template UID (Optional) */}
+                  {selectedModel === 'bannerbear' && (
+                    <div className="space-y-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                          <span>Bannerbear Template UID (Optional)</span>
+                        </label>
+                        <span className="text-[10px] text-amber-400 font-mono">bb_ak_v5_... Connected</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={bannerbearTemplate}
+                        onChange={(e) => setBannerbearTemplate(e.target.value)}
+                        placeholder="e.g. g4m89xLK3W0... (Leave blank for standard template)"
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-3 text-slate-100 placeholder-slate-600 text-xs font-mono outline-none transition"
+                      />
+                      <p className="text-[10px] text-slate-400 leading-tight">
+                        Uses Bannerbear API v5 rendering with API Key <code className="text-amber-400 font-mono">bb_ak_v5_d72...</code>
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 /* Square AI Art Prompt Textarea */
