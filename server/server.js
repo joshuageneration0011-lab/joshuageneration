@@ -3397,10 +3397,10 @@ Joshua's Generation`;
     return;
   }
 
-  // --- REPLICATE DALL-E 2 IMAGE GENERATOR ---
+  // --- REPLICATE IMAGE GENERATOR ---
   if (pathname === '/api/generate-image' && method === 'POST') {
     try {
-      const { prompt, size = '1024x1024', n = 1, customApiKey } = await getJsonBody(req);
+      const { prompt, size = '1024x1024', n = 1, model = 'flux-schnell', customApiKey } = await getJsonBody(req);
       
       if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
         sendJson(res, 400, { error: 'Prompt is required' });
@@ -3415,15 +3415,27 @@ Joshua's Generation`;
         return;
       }
 
-      const payload = {
+      // We use black-forest-labs/flux-schnell as primary high-performance model on Replicate
+      let targetModelUrl = 'https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions';
+      let payload = {
         input: {
           prompt: prompt.trim(),
-          n: Number(n) || 1,
-          size: size || '1024x1024'
+          aspect_ratio: '1:1',
+          output_format: 'webp',
+          output_quality: 95
         }
       };
 
-      const response = await fetch('https://api.replicate.com/v1/models/openai/dall-e-2/predictions', {
+      if (model === 'dall-e-2') {
+        targetModelUrl = 'https://api.replicate.com/v1/models/openai/dall-e-2/predictions';
+        payload = {
+          input: {
+            prompt: prompt.trim()
+          }
+        };
+      }
+
+      let response = await fetch(targetModelUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -3434,6 +3446,30 @@ Joshua's Generation`;
       });
 
       let prediction = await response.json();
+
+      // If DALL-E 2 fails due to Replicate's internal API wrapper bug, automatically fallback to FLUX.1 Schnell
+      if (!response.ok || prediction.error) {
+        if (model === 'dall-e-2' || (prediction.error && prediction.error.includes('response_format'))) {
+          console.warn('Replicate DALL-E 2 model issue detected, falling back to FLUX.1 Schnell...');
+          response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'wait=30'
+            },
+            body: JSON.stringify({
+              input: {
+                prompt: prompt.trim(),
+                aspect_ratio: '1:1',
+                output_format: 'webp',
+                output_quality: 95
+              }
+            })
+          });
+          prediction = await response.json();
+        }
+      }
 
       if (!response.ok) {
         console.error('Replicate API error response:', prediction);
@@ -3449,7 +3485,7 @@ Joshua's Generation`;
         (prediction.status === 'starting' || prediction.status === 'processing') &&
         attempts < maxAttempts
       ) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
         attempts++;
         if (prediction.urls && prediction.urls.get) {
           const pollRes = await fetch(prediction.urls.get, {
