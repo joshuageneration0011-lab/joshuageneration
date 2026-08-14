@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, 
   Image as ImageIcon, 
@@ -13,7 +13,10 @@ import {
   History, 
   AlertCircle,
   Maximize2,
-  X
+  X,
+  Upload,
+  Video,
+  Layers
 } from 'lucide-react';
 import { api } from '@/utils/api';
 
@@ -46,10 +49,18 @@ const STYLE_TAGS = [
   "Fantasy Concept Art"
 ];
 
+const THUMBNAIL_STYLES = [
+  "Golden Anointing & Light",
+  "Cinematic 4K Ministry Widescreen",
+  "High-Impact 3D Glow",
+  "Bold Modern Typographic",
+  "Celestial Fire & Glory"
+];
+
 const SIZES = [
+  { label: '16:9 Widescreen', value: '16:9', desc: 'YouTube Thumbnail (1280x720)' },
   { label: '1024 x 1024', value: '1024x1024', desc: 'High Quality Square' },
   { label: '512 x 512', value: '512x512', desc: 'Standard Square' },
-  { label: '256 x 256', value: '256x256', desc: 'Fast Preview' },
 ];
 
 const AI_MODELS = [
@@ -70,10 +81,20 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // Studio Mode: 'thumbnail' (YouTube Widescreen + Ref Image + Text) vs 'art' (Square AI Art)
+  const [studioMode, setStudioMode] = useState<'thumbnail' | 'art'>('thumbnail');
+
+  // Thumbnail Specific State
+  const [thumbnailTitle, setThumbnailTitle] = useState('');
+  const [thumbnailSubtitle, setThumbnailSubtitle] = useState('');
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [referenceImageName, setReferenceImageName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [prompt, setPrompt] = useState('');
-  const [selectedSize, setSelectedSize] = useState('1024x1024');
+  const [selectedSize, setSelectedSize] = useState('16:9');
   const [selectedModel, setSelectedModel] = useState<string>('flux-schnell');
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<string | null>("Golden Anointing & Light");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,9 +140,38 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Image file must be smaller than 10MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setReferenceImage(event.target?.result as string);
+        setReferenceImageName(file.name);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSurpriseMe = () => {
-    const randomPrompt = PROMPT_SUGGESTIONS[Math.floor(Math.random() * PROMPT_SUGGESTIONS.length)];
-    setPrompt(randomPrompt);
+    if (studioMode === 'thumbnail') {
+      const titles = [
+        "THE ANOINTING THAT BREAKS YOKES",
+        "WALKING IN DIVINE AUTHORITY",
+        "UNSHAKABLE FAITH IN TRYING TIMES",
+        "THE SUPERNATURAL BREAKTHROUGH",
+        "VICTORY THROUGH PRAISE AND PRAYER"
+      ];
+      const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+      setThumbnailTitle(randomTitle);
+      setThumbnailSubtitle("Apostle Joshua Iyemifokhae");
+    } else {
+      const randomPrompt = PROMPT_SUGGESTIONS[Math.floor(Math.random() * PROMPT_SUGGESTIONS.length)];
+      setPrompt(randomPrompt);
+    }
   };
 
   const handleAddStyle = (style: string) => {
@@ -133,6 +183,16 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
   };
 
   const getFinalPrompt = () => {
+    if (studioMode === 'thumbnail') {
+      const mainTitle = thumbnailTitle.trim() || "THE ANOINTING";
+      const subTitle = thumbnailSubtitle.trim();
+      let p = `A professional 16:9 widescreen YouTube thumbnail background featuring bold headline title "${mainTitle}"${subTitle ? ` and subtext "${subTitle}"` : ''}, dramatic lighting, 8K resolution`;
+      if (selectedStyle) {
+        p += `, ${selectedStyle.toLowerCase()} style`;
+      }
+      return p;
+    }
+
     let p = prompt.trim();
     if (selectedStyle) {
       p = `${p}, ${selectedStyle.toLowerCase()} style`;
@@ -142,11 +202,24 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
 
   const handleGenerate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const finalPrompt = getFinalPrompt();
+    
+    let finalPrompt = '';
+    let aspectRatio = '16:9';
 
-    if (!finalPrompt) {
-      setError('Please enter a description for the image you want to generate.');
-      return;
+    if (studioMode === 'thumbnail') {
+      if (!thumbnailTitle.trim() && !prompt.trim()) {
+        setError('Please enter a Title for your YouTube thumbnail.');
+        return;
+      }
+      finalPrompt = getFinalPrompt();
+      aspectRatio = '16:9';
+    } else {
+      finalPrompt = getFinalPrompt();
+      if (!finalPrompt) {
+        setError('Please enter a description for the image you want to generate.');
+        return;
+      }
+      aspectRatio = selectedSize === '16:9' ? '16:9' : '1:1';
     }
 
     setIsLoading(true);
@@ -157,7 +230,9 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
         prompt: finalPrompt,
         size: selectedSize,
         n: 4,
-        model: selectedModel
+        model: selectedModel,
+        aspect_ratio: aspectRatio,
+        image: referenceImage || undefined
       });
 
       if (res.output && res.output.length > 0) {
@@ -169,7 +244,7 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
           id: `${Date.now()}-${idx}`,
           url,
           prompt: finalPrompt,
-          size: selectedSize,
+          size: studioMode === 'thumbnail' ? '16:9 Widescreen' : selectedSize,
           model: selectedModel,
           modelLabel: modelLabel,
           createdAt: timestamp
@@ -336,52 +411,188 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
           
           {/* Controls Panel (7 Cols) */}
           <div className="lg:col-span-7 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
-            <form onSubmit={handleGenerate} className="space-y-6">
-              
-              {/* Prompt Textarea */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <Wand2 className="w-4 h-4 text-amber-400" />
-                    <span>Image Prompt</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleSurpriseMe}
-                    className="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>Surprise Me</span>
-                  </button>
-                </div>
+            
+            {/* Mode Switcher Tabs */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/80 border border-slate-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setStudioMode('thumbnail');
+                  setSelectedSize('16:9');
+                }}
+                className={`py-2.5 px-4 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  studioMode === 'thumbnail'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                }`}
+              >
+                <Video className="w-4 h-4" />
+                <span>YouTube Thumbnail Studio</span>
+              </button>
 
-                <div className="relative">
-                  <textarea
-                    rows={4}
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe the image you want to generate in detail..."
-                    className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-2 focus:ring-amber-500/20 rounded-xl p-4 text-slate-100 placeholder-slate-500 text-sm outline-none transition resize-none"
-                  />
-                  {prompt && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStudioMode('art');
+                  setSelectedSize('1024x1024');
+                }}
+                className={`py-2.5 px-4 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  studioMode === 'art'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span>Custom AI Art Studio</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleGenerate} className="space-y-6">
+
+              {studioMode === 'thumbnail' ? (
+                <>
+                  {/* YouTube Reference Image Upload */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-amber-400" />
+                        <span>Reference Photo / Picture (Optional)</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500">Your photo for the thumbnail</span>
+                    </label>
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+
+                    {referenceImage ? (
+                      <div className="flex items-center justify-between p-3 bg-slate-950/90 border border-amber-500/50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={referenceImage}
+                            alt="Reference"
+                            className="w-12 h-12 rounded-lg object-cover border border-slate-700"
+                          />
+                          <div>
+                            <p className="text-xs font-semibold text-white truncate max-w-[200px]">
+                              {referenceImageName || 'Uploaded Picture'}
+                            </p>
+                            <p className="text-[10px] text-amber-400">Reference Photo Loaded ✓</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReferenceImage(null);
+                            setReferenceImageName(null);
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-400 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full p-4 rounded-xl border border-dashed border-slate-800 hover:border-amber-500/50 bg-slate-950/40 hover:bg-amber-500/5 text-slate-400 hover:text-amber-300 text-xs font-medium flex flex-col items-center justify-center gap-2 transition"
+                      >
+                        <Upload className="w-6 h-6 text-amber-400/80" />
+                        <span>Click to Upload Reference Picture (Pastor photo / Subject)</span>
+                        <span className="text-[10px] text-slate-500">PNG, JPG, WEBP up to 10MB</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Title */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <Wand2 className="w-4 h-4 text-amber-400" />
+                        <span>Thumbnail Main Title</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleSurpriseMe}
+                        className="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Sample Title</span>
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={thumbnailTitle}
+                      onChange={(e) => setThumbnailTitle(e.target.value)}
+                      placeholder="e.g. THE ANOINTING THAT BREAKS YOKES"
+                      className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-2 focus:ring-amber-500/20 rounded-xl p-3.5 text-slate-100 placeholder-slate-600 text-sm outline-none transition"
+                    />
+                  </div>
+
+                  {/* Thumbnail Subtitle */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+                      Sub-Title / Host Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={thumbnailSubtitle}
+                      onChange={(e) => setThumbnailSubtitle(e.target.value)}
+                      placeholder="e.g. Apostle Joshua Iyemifokhae • Live Service"
+                      className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-2 focus:ring-amber-500/20 rounded-xl p-3 text-slate-100 placeholder-slate-600 text-xs outline-none transition"
+                    />
+                  </div>
+                </>
+              ) : (
+                /* Square AI Art Prompt Textarea */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <Wand2 className="w-4 h-4 text-amber-400" />
+                      <span>Image Prompt</span>
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setPrompt('')}
-                      className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 transition"
+                      onClick={handleSurpriseMe}
+                      className="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition"
                     >
-                      <X className="w-4 h-4" />
+                      <Sparkles className="w-3 h-3" />
+                      <span>Surprise Me</span>
                     </button>
-                  )}
+                  </div>
+
+                  <div className="relative">
+                    <textarea
+                      rows={4}
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="Describe the image you want to generate in detail..."
+                      className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-2 focus:ring-amber-500/20 rounded-xl p-4 text-slate-100 placeholder-slate-500 text-sm outline-none transition resize-none"
+                    />
+                    {prompt && (
+                      <button
+                        type="button"
+                        onClick={() => setPrompt('')}
+                        className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Style Presets */}
               <div className="space-y-2.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Art Style Presets
+                  {studioMode === 'thumbnail' ? 'YouTube Design Style Presets' : 'Art Style Presets'}
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {STYLE_TAGS.map((style) => {
+                  {(studioMode === 'thumbnail' ? THUMBNAIL_STYLES : STYLE_TAGS).map((style) => {
                     const isActive = selectedStyle === style;
                     return (
                       <button
@@ -467,15 +678,6 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="font-semibold">{error}</p>
-                    {error.includes('token missing') && (
-                      <button
-                        type="button"
-                        onClick={() => setShowKeyModal(true)}
-                        className="underline text-red-300 font-bold mt-1 inline-block"
-                      >
-                        Click here to set your Replicate API Token
-                      </button>
-                    )}
                   </div>
                 </div>
               )}
@@ -483,18 +685,18 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
               {/* Submit / Generate Button */}
               <button
                 type="submit"
-                disabled={isLoading || !prompt.trim()}
+                disabled={isLoading || (studioMode === 'thumbnail' ? !thumbnailTitle.trim() && !prompt.trim() : !prompt.trim())}
                 className="w-full py-4 rounded-xl font-bold text-sm tracking-wide bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300 transform active:scale-[0.99]"
               >
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Generating 4 Image Variations...</span>
+                    <span>Generating 4 {studioMode === 'thumbnail' ? 'YouTube Thumbnails' : 'Art Variations'}...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>Generate 4 Artworks (1-Click)</span>
+                    <span>Generate 4 {studioMode === 'thumbnail' ? 'YouTube Thumbnails' : 'Artworks'} (1-Click)</span>
                   </>
                 )}
               </button>

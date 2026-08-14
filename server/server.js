@@ -3406,7 +3406,7 @@ Joshua's Generation`;
         return;
       }
 
-      const { prompt, size = '1024x1024', n = 4, model = 'flux-schnell' } = await getJsonBody(req);
+      const { prompt, size = '1024x1024', n = 4, model = 'flux-schnell', aspect_ratio = '1:1', image } = await getJsonBody(req);
       
       if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
         sendJson(res, 400, { error: 'Prompt is required' });
@@ -3447,12 +3447,16 @@ Joshua's Generation`;
         let payload = {
           input: {
             prompt: prompt.trim(),
-            aspect_ratio: '1:1',
+            aspect_ratio: aspect_ratio || '1:1',
             output_format: 'webp',
             output_quality: 95,
             seed: Math.floor(Math.random() * 1000000) + (index * 137)
           }
         };
+
+        if (image) {
+          payload.input.image = image;
+        }
 
         let prediction = null;
         let startAttempts = 0;

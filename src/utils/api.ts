@@ -623,7 +623,7 @@ export const api = {
       return (await handleResponse(res, 'Failed to delete SD subscriber')).json();
     }
   },
-  async generateImage(params: { prompt: string; size?: string; n?: number; model?: string }): Promise<{
+  async generateImage(params: { prompt: string; size?: string; n?: number; model?: string; aspect_ratio?: string; image?: string }): Promise<{
     success: boolean;
     output: string[];
     id?: string;
