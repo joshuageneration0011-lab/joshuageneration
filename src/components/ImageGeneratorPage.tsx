@@ -64,7 +64,6 @@ const SIZES = [
 ];
 
 const AI_MODELS = [
-  { id: 'bannerbear', label: 'Bannerbear API', desc: 'YouTube Thumbnail Template Engine (v5 / v2 API)' },
   { id: 'flux-schnell', label: 'FLUX.1 Schnell', desc: 'Ultra-fast 8K Photorealistic AI' },
   { id: 'flux-dev', label: 'FLUX.1 Dev Studio', desc: 'High-Precision & Detailed Art Engine' },
   { id: 'realvis-xl', label: 'RealVisXL 4.0', desc: 'Hyper-Realistic Human Portraits & Photos' },
@@ -85,17 +84,16 @@ export default function ImageGeneratorPage({ onNavigate }: ImageGeneratorPagePro
   // Studio Mode: 'thumbnail' (YouTube Widescreen + Ref Image + Text) vs 'art' (Square AI Art)
   const [studioMode, setStudioMode] = useState<'thumbnail' | 'art'>('thumbnail');
 
-  // Thumbnail & Bannerbear State
+  // Thumbnail State
   const [thumbnailTitle, setThumbnailTitle] = useState('');
   const [thumbnailSubtitle, setThumbnailSubtitle] = useState('');
-  const [bannerbearTemplate, setBannerbearTemplate] = useState('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [referenceImageName, setReferenceImageName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('16:9');
-  const [selectedModel, setSelectedModel] = useState<string>('bannerbear');
+  const [selectedModel, setSelectedModel] = useState<string>('flux-schnell');
   const [selectedStyle, setSelectedStyle] = useState<string | null>("Golden Anointing & Light");
 
   const [isLoading, setIsLoading] = useState(false);
@@ -399,10 +397,9 @@ async function createClicklyThumbnail(params: {
       const res = await api.generateImage({
         prompt: finalPrompt,
         size: selectedSize,
-        n: selectedModel === 'bannerbear' ? 1 : 4,
+        n: 4,
         model: selectedModel,
-        engine: selectedModel === 'bannerbear' ? 'bannerbear' : 'replicate',
-        bannerbear_template: bannerbearTemplate.trim() || undefined,
+        engine: 'replicate',
         aspect_ratio: aspectRatio,
         image: referenceImage || undefined
       });
@@ -414,7 +411,7 @@ async function createClicklyThumbnail(params: {
 
         // Apply Clickly Compositing for YouTube Thumbnail Studio mode
         let finalOutputs: string[] = res.output;
-        if (studioMode === 'thumbnail' && selectedModel !== 'bannerbear') {
+        if (studioMode === 'thumbnail') {
           finalOutputs = await Promise.all(
             res.output.map((bgUrl: string) =>
               createClicklyThumbnail({
@@ -434,7 +431,7 @@ async function createClicklyThumbnail(params: {
           prompt: studioMode === 'thumbnail' ? thumbnailTitle || finalPrompt : finalPrompt,
           size: studioMode === 'thumbnail' ? '16:9 Widescreen' : selectedSize,
           model: selectedModel,
-          modelLabel: studioMode === 'thumbnail' && selectedModel !== 'bannerbear' ? `${modelLabel} (Clickly Studio)` : modelLabel,
+          modelLabel: studioMode === 'thumbnail' ? `${modelLabel} (Clickly Studio)` : modelLabel,
           createdAt: timestamp
         }));
 
