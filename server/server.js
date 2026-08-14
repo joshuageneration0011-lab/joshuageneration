@@ -801,6 +801,19 @@ async function initDb() {
         );
       `);
 
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS redirect_links (
+          id SERIAL PRIMARY KEY,
+          slug VARCHAR(255) UNIQUE NOT NULL,
+          target_url TEXT NOT NULL,
+          title VARCHAR(255) DEFAULT '',
+          click_count INT DEFAULT 0,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
       const testimonyCheck = await pool.query('SELECT 1 FROM testimonies LIMIT 1');
       if (testimonyCheck.rowCount === 0) {
         for (const t of defaultTestimonies) {
@@ -1083,6 +1096,44 @@ const server = http.createServer(async (req, res) => {
     });
     res.end();
     return;
+  }
+
+  // --- SHORT REDIRECT LINKS HANDLER (Pretty Links) ---
+  if ((method === 'GET' || method === 'HEAD') && pathname !== '/' && !pathname.startsWith('/api/') && !pathname.startsWith('/assets/') && !pathname.startsWith('/static/')) {
+    const rawSlug = pathname.replace(/^\/+|\/+$/g, '').trim();
+    const reservedSlugs = [
+      'admin', 'sermons', 'books', 'blog', 'events', 'radio', 'donate',
+      'contact', 'privacy-policy', 'terms', 'cookie-policy', 'createimage',
+      'getupdates', 'southafricaupdates', 'sondaughter', 'thank-you', 'podcast', 'counter'
+    ];
+
+    if (rawSlug && !reservedSlugs.includes(rawSlug.toLowerCase()) && !rawSlug.includes('.')) {
+      if (pool) {
+        try {
+          const linkRes = await pool.query(
+            'SELECT * FROM redirect_links WHERE LOWER(slug) = LOWER($1) AND is_active = TRUE LIMIT 1',
+            [rawSlug]
+          );
+          if (linkRes.rows.length > 0) {
+            const link = linkRes.rows[0];
+            // Asynchronously increment click count
+            pool.query('UPDATE redirect_links SET click_count = click_count + 1, updated_at = NOW() WHERE id = $1', [link.id])
+              .catch(err => console.error('Error incrementing link click count:', err));
+
+            let targetUrl = link.target_url.trim();
+            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+              targetUrl = `https://${targetUrl}`;
+            }
+
+            res.writeHead(302, { 'Location': targetUrl });
+            res.end();
+            return;
+          }
+        } catch (err) {
+          console.error('Redirect link lookup error:', err);
+        }
+      }
+    }
   }
 
   // --- SEO DYNAMIC OPENGRAPH HANDLER ---
@@ -4549,6 +4600,166 @@ except Exception as e:
     return;
   }
 
+  // --- PRETTY REDIRECT LINKS CRUD ENDPOINTS ---
+  // GET /api/redirect-links
+  if (pathname === '/api/redirect-links' && method === 'GET') {
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM redirect_links ORDER BY created_at DESC');
+        sendJson(res, 200, { success: true, links: result.rows });
+      } else {
+        sendJson(res, 200, { success: true, links: [] });
+      }
+    } catch (e) {
+      console.error('Failed to fetch redirect links:', e);
+      sendJson(res, 500, { error: 'Failed to fetch redirect links' });
+    }
+    return;
+  }
+
+  // POST /api/redirect-links
+  if (pathname === '/api/redirect-links' && method === 'POST') {
+    try {
+      const auth = getAuthUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+
+      const body = await getJsonBody(req);
+      let { slug, target_url, title, is_active } = body;
+      if (!slug || !target_url) {
+        sendJson(res, 400, { error: 'Slug and Target URL are required' });
+        return;
+      }
+
+      slug = slug.trim().replace(/^\/+|\/+$/g, '').toLowerCase();
+      target_url = target_url.trim();
+      if (!target_url.startsWith('http://') && !target_url.startsWith('https://')) {
+        target_url = `https://${target_url}`;
+      }
+      title = (title || '').trim();
+      const active = is_active !== false;
+
+      const reservedSlugs = [
+        'admin', 'sermons', 'books', 'blog', 'events', 'radio', 'donate',
+        'contact', 'privacy-policy', 'terms', 'cookie-policy', 'createimage',
+        'getupdates', 'southafricaupdates', 'sondaughter', 'thank-you', 'podcast', 'counter', 'api'
+      ];
+
+      if (reservedSlugs.includes(slug)) {
+        sendJson(res, 400, { error: `The slug "/${slug}" is reserved for system pages. Please choose a different slug.` });
+        return;
+      }
+
+      if (pool) {
+        const check = await pool.query('SELECT 1 FROM redirect_links WHERE LOWER(slug) = $1', [slug]);
+        if (check.rows.length > 0) {
+          sendJson(res, 400, { error: `Slug "/${slug}" is already in use. Please choose another slug.` });
+          return;
+        }
+
+        const insertRes = await pool.query(
+          `INSERT INTO redirect_links (slug, target_url, title, is_active)
+           VALUES ($1, $2, $3, $4)
+           RETURNING *`,
+          [slug, target_url, title, active]
+        );
+        sendJson(res, 201, { success: true, link: insertRes.rows[0] });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to create redirect link:', e);
+      sendJson(res, 500, { error: e.message || 'Failed to create redirect link' });
+    }
+    return;
+  }
+
+  // PUT /api/redirect-links/:id
+  if (pathname.startsWith('/api/redirect-links/') && method === 'PUT') {
+    try {
+      const auth = getAuthUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+
+      const id = pathname.split('/').pop();
+      const body = await getJsonBody(req);
+      let { slug, target_url, title, is_active } = body;
+      if (!slug || !target_url) {
+        sendJson(res, 400, { error: 'Slug and Target URL are required' });
+        return;
+      }
+
+      slug = slug.trim().replace(/^\/+|\/+$/g, '').toLowerCase();
+      target_url = target_url.trim();
+      if (!target_url.startsWith('http://') && !target_url.startsWith('https://')) {
+        target_url = `https://${target_url}`;
+      }
+      title = (title || '').trim();
+      const active = is_active !== false;
+
+      const reservedSlugs = [
+        'admin', 'sermons', 'books', 'blog', 'events', 'radio', 'donate',
+        'contact', 'privacy-policy', 'terms', 'cookie-policy', 'createimage',
+        'getupdates', 'southafricaupdates', 'sondaughter', 'thank-you', 'podcast', 'counter', 'api'
+      ];
+
+      if (reservedSlugs.includes(slug)) {
+        sendJson(res, 400, { error: `The slug "/${slug}" is reserved for system pages.` });
+        return;
+      }
+
+      if (pool) {
+        const check = await pool.query('SELECT 1 FROM redirect_links WHERE LOWER(slug) = $1 AND id != $2', [slug, id]);
+        if (check.rows.length > 0) {
+          sendJson(res, 400, { error: `Slug "/${slug}" is already used by another link.` });
+          return;
+        }
+
+        const updateRes = await pool.query(
+          `UPDATE redirect_links
+           SET slug = $1, target_url = $2, title = $3, is_active = $4, updated_at = NOW()
+           WHERE id = $5
+           RETURNING *`,
+          [slug, target_url, title, active, id]
+        );
+        sendJson(res, 200, { success: true, link: updateRes.rows[0] });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to update redirect link:', e);
+      sendJson(res, 500, { error: e.message || 'Failed to update redirect link' });
+    }
+    return;
+  }
+
+  // DELETE /api/redirect-links/:id
+  if (pathname.startsWith('/api/redirect-links/') && method === 'DELETE') {
+    try {
+      const auth = getAuthUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+
+      const id = pathname.split('/').pop();
+      if (pool) {
+        await pool.query('DELETE FROM redirect_links WHERE id = $1', [id]);
+        sendJson(res, 200, { success: true });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to delete redirect link:', e);
+      sendJson(res, 500, { error: 'Failed to delete redirect link' });
+    }
+    return;
+  }
+
   // DELETE /api/testimonies/:id
   if (pathname.startsWith('/api/testimonies/') && method === 'DELETE') {
     try {
@@ -4771,6 +4982,20 @@ except Exception as e:
       sendJson(res, 500, { error: 'Failed to delete comment' });
     }
     return;
+  }
+
+  // SPA Fallback for non-API GET/HEAD requests
+  if ((method === 'GET' || method === 'HEAD') && !pathname.startsWith('/api/')) {
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    if (fs.existsSync(indexPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      if (method === 'HEAD') {
+        res.end();
+      } else {
+        fs.createReadStream(indexPath).pipe(res);
+      }
+      return;
+    }
   }
 
   // If no match found

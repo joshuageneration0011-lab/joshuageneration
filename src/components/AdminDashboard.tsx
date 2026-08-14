@@ -8,18 +8,18 @@ import {
   Heart, Gift, ArrowUp, ArrowDown, Plus, Edit3, Trash2,
   Filter, Star, CheckCircle, AlertCircle, Globe,
   Monitor, Moon, Sun, Mail, Phone,
-  Upload,
+  Upload, ExternalLink, Link2, Copy,
   Check, AlertTriangle, RefreshCw, PenTool,
   Type, TrendingUp, Radio, Headphones,
   Calendar, MapPin, Quote
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event, Testimony } from '@/types';
-import { api, resolveApiUrl } from '@/utils/api';
+import { api, resolveApiUrl, type RedirectLink } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/testimonyStore';
 
-type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'sd-subscribers' | 'testimonies';
+type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'sd-subscribers' | 'testimonies' | 'redirect-links';
 
 export const getCurrencySymbol = (currency?: string) => {
   const symbols: Record<string, string> = {
@@ -147,6 +147,7 @@ export default function AdminDashboard({
     { id: 'subscribers', label: 'Subscribers', icon: UserPlus },
     { id: 'sa-subscribers', label: 'SA Subscribers', icon: Users },
     { id: 'sd-subscribers', label: 'Sons & Daughters', icon: Users },
+    { id: 'redirect-links', label: 'Pretty Links', icon: Link2 },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
     { id: 'donations', label: 'Donations', icon: DollarSign },
     { id: 'prayer', label: 'Prayer', icon: Heart },
@@ -156,7 +157,7 @@ export default function AdminDashboard({
 
   const visibleSidebarItems = sidebarItems.filter(item => {
     if (userRole !== 'superadmin') {
-      const allowedTabsForAdmin = ['dashboard', 'sermons', 'sons-daughters-sermons', 'partners-sermons', 'testimonies', 'events', 'blog'];
+      const allowedTabsForAdmin = ['dashboard', 'sermons', 'sons-daughters-sermons', 'partners-sermons', 'testimonies', 'events', 'blog', 'redirect-links'];
       return allowedTabsForAdmin.includes(item.id);
     }
     return true;
@@ -204,7 +205,7 @@ export default function AdminDashboard({
 
   const renderTabContent = () => {
     if (userRole !== 'superadmin') {
-      const allowedTabsForAdmin = ['dashboard', 'sermons', 'sons-daughters-sermons', 'partners-sermons', 'testimonies', 'events', 'blog'];
+      const allowedTabsForAdmin = ['dashboard', 'sermons', 'sons-daughters-sermons', 'partners-sermons', 'testimonies', 'events', 'blog', 'redirect-links'];
       if (!allowedTabsForAdmin.includes(activeTab)) {
         return <DashboardTab posts={posts} onTabChange={setActiveTab} donations={donations} sermons={sermons} users={users} events={events} books={books} />;
       }
@@ -222,6 +223,7 @@ export default function AdminDashboard({
       case 'subscribers': return <SubscribersTab />;
       case 'sa-subscribers': return <SASubscribersTab />;
       case 'sd-subscribers': return <SDSubscribersTab />;
+      case 'redirect-links': return <RedirectLinksTab />;
       case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
@@ -8668,6 +8670,454 @@ function TestimoniesTab({ onCountChange }: { onCountChange?: (count: number) => 
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ====== PRETTY REDIRECT LINKS TAB COMPONENT ======
+function RedirectLinksTab() {
+  const [links, setLinks] = useState<RedirectLink[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLink, setEditingLink] = useState<RedirectLink | null>(null);
+  const [slug, setSlug] = useState('');
+  const [targetUrl, setTargetUrl] = useState('');
+  const [title, setTitle] = useState('');
+  const [isActive, setIsActive] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  
+  // Copy state
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  const fetchLinks = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.getRedirectLinks();
+      setLinks(data);
+    } catch (err: any) {
+      console.error('Failed to fetch redirect links:', err);
+      setError(err.message || 'Failed to load redirect links');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLinks();
+  }, []);
+
+  const openCreateModal = () => {
+    setEditingLink(null);
+    setSlug('');
+    setTargetUrl('');
+    setTitle('');
+    setIsActive(true);
+    setModalError(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (link: RedirectLink) => {
+    setEditingLink(link);
+    setSlug(link.slug);
+    setTargetUrl(link.target_url);
+    setTitle(link.title || '');
+    setIsActive(link.is_active);
+    setModalError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCopyLink = (linkSlug: string, linkId: number) => {
+    const fullUrl = `https://joshuasgeneration.com/${linkSlug}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedId(linkId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slug.trim() || !targetUrl.trim()) {
+      setModalError('Please provide both a Short Slug and a Destination URL.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setModalError(null);
+
+    try {
+      if (editingLink) {
+        await api.updateRedirectLink(editingLink.id, {
+          slug: slug.trim(),
+          target_url: targetUrl.trim(),
+          title: title.trim(),
+          is_active: isActive,
+        });
+      } else {
+        await api.createRedirectLink({
+          slug: slug.trim(),
+          target_url: targetUrl.trim(),
+          title: title.trim(),
+          is_active: isActive,
+        });
+      }
+      setIsModalOpen(false);
+      fetchLinks();
+    } catch (err: any) {
+      setModalError(err.message || 'Failed to save redirect link');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (link: RedirectLink) => {
+    if (!window.confirm(`Are you sure you want to delete the short link "/${link.slug}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.deleteRedirectLink(link.id);
+      fetchLinks();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete redirect link');
+    }
+  };
+
+  const handleToggleActive = async (link: RedirectLink) => {
+    try {
+      await api.updateRedirectLink(link.id, {
+        slug: link.slug,
+        target_url: link.target_url,
+        title: link.title,
+        is_active: !link.is_active,
+      });
+      fetchLinks();
+    } catch (err: any) {
+      alert(err.message || 'Failed to toggle active status');
+    }
+  };
+
+  const filteredLinks = links.filter(l => 
+    l.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    l.target_url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (l.title && l.title.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const totalClicks = links.reduce((sum, l) => sum + (l.click_count || 0), 0);
+  const activeLinksCount = links.filter(l => l.is_active).length;
+
+  return (
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Link2 className="w-7 h-7 text-amber-500" />
+            Pretty Short Redirect Links
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Create branded short links (e.g. <code className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-mono text-xs">joshuasgeneration.com/amazon</code>) that redirect visitors and track total click counts.
+          </p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm rounded-xl shadow-md transition shrink-0 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          Create Short Link
+        </button>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+            <Link2 className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Short Links</p>
+            <p className="text-2xl font-black text-gray-900">{links.length}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Redirect Clicks</p>
+            <p className="text-2xl font-black text-gray-900">{totalClicks.toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+            <CheckCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Links</p>
+            <p className="text-2xl font-black text-gray-900">{activeLinksCount}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search & List */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by slug, title, or destination URL..."
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+            />
+          </div>
+          <button
+            onClick={fetchLinks}
+            className="p-2.5 text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-xl transition flex items-center gap-2 text-xs font-medium cursor-pointer"
+          >
+            <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+            Refresh
+          </button>
+        </div>
+
+        {error && (
+          <div className="m-4 p-4 rounded-xl bg-red-50 text-red-600 text-sm flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="p-12 text-center text-gray-400 flex flex-col items-center gap-2">
+            <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
+            <span>Loading short links...</span>
+          </div>
+        ) : filteredLinks.length === 0 ? (
+          <div className="p-12 text-center text-gray-500 space-y-3">
+            <Link2 className="w-12 h-12 text-gray-300 mx-auto" />
+            <p className="font-semibold text-gray-700">No redirect links found.</p>
+            <p className="text-xs text-gray-400">Click "Create Short Link" above to add your first Pretty Link (e.g. /amazon).</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {filteredLinks.map((link) => {
+              const fullShortUrl = `https://joshuasgeneration.com/${link.slug}`;
+              const isCopied = copiedId === link.id;
+
+              return (
+                <div key={link.id} className="p-5 hover:bg-gray-50/80 transition flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="font-bold text-gray-900 text-base">
+                        {link.title || `/${link.slug}`}
+                      </span>
+                      <span className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider",
+                        link.is_active ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-500"
+                      )}>
+                        {link.is_active ? "Active" : "Inactive"}
+                      </span>
+                      <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-amber-600" />
+                        {link.click_count.toLocaleString()} Clicks
+                      </span>
+                    </div>
+
+                    {/* Short Link Display */}
+                    <div className="flex items-center gap-2 flex-wrap text-sm">
+                      <span className="text-gray-400 font-medium">Short Link:</span>
+                      <code className="bg-slate-900 text-amber-400 px-2.5 py-1 rounded-lg font-mono text-xs font-semibold select-all">
+                        {fullShortUrl}
+                      </code>
+                      <button
+                        onClick={() => handleCopyLink(link.slug, link.id)}
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer",
+                          isCopied 
+                            ? "bg-emerald-600 text-white" 
+                            : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                        )}
+                      >
+                        {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        {isCopied ? "Copied!" : "Copy Link"}
+                      </button>
+                    </div>
+
+                    {/* Target URL */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500 truncate">
+                      <span className="font-medium text-gray-400">Destination:</span>
+                      <a 
+                        href={link.target_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-blue-600 hover:underline flex items-center gap-1 truncate font-mono"
+                      >
+                        <span className="truncate">{link.target_url}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Action Controls */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleToggleActive(link)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer",
+                        link.is_active
+                          ? "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                          : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
+                      )}
+                    >
+                      {link.is_active ? "Disable" : "Enable"}
+                    </button>
+
+                    <button
+                      onClick={() => openEditModal(link)}
+                      className="p-2 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition cursor-pointer"
+                      title="Edit Short Link"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(link)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                      title="Delete Short Link"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Modal Dialog */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative border border-gray-100">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-amber-500" />
+                {editingLink ? "Edit Short Link" : "Create New Short Link"}
+              </h3>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {modalError && (
+                <div className="p-3 rounded-xl bg-red-50 text-red-600 text-xs font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
+              {/* Title / Description */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block mb-1.5">
+                  Link Label / Title (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Amazon Ministry Book Store"
+                  className="w-full bg-gray-50 border border-gray-200 focus:border-amber-500 rounded-xl p-3 text-sm text-gray-900 outline-none"
+                />
+              </div>
+
+              {/* Short Slug */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block mb-1.5">
+                  Short URL Slug *
+                </label>
+                <div className="flex items-center">
+                  <span className="bg-gray-100 text-gray-500 px-3 py-3 rounded-l-xl text-xs border border-r-0 border-gray-200 font-mono font-medium shrink-0">
+                    joshuasgeneration.com/
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    placeholder="amazon"
+                    className="w-full bg-white border border-gray-200 focus:border-amber-500 rounded-r-xl p-3 text-sm text-gray-900 font-mono outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Preview: <span className="font-mono font-semibold text-amber-600">joshuasgeneration.com/{slug || 'your-slug'}</span>
+                </p>
+              </div>
+
+              {/* Target URL */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block mb-1.5">
+                  Destination URL (Where to redirect) *
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={targetUrl}
+                  onChange={(e) => setTargetUrl(e.target.value)}
+                  placeholder="https://www.amazon.com/dp/B0CX12345"
+                  className="w-full bg-gray-50 border border-gray-200 focus:border-amber-500 rounded-xl p-3 text-sm text-gray-900 font-mono outline-none"
+                />
+              </div>
+
+              {/* Active Toggle */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Enable Link Redirect</span>
+                <button
+                  type="button"
+                  onClick={() => setIsActive(!isActive)}
+                  className={cn(
+                    "w-12 h-6 rounded-full transition-colors relative p-1 cursor-pointer",
+                    isActive ? "bg-amber-500" : "bg-gray-300"
+                  )}
+                >
+                  <div className={cn(
+                    "w-4 h-4 rounded-full bg-white transition-transform",
+                    isActive ? "translate-x-6" : "translate-x-0"
+                  )} />
+                </button>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-semibold text-gray-600 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  {editingLink ? "Save Changes" : "Create Link"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

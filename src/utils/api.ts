@@ -653,8 +653,59 @@ export const api = {
       throw new Error(data.error || 'Failed to generate image');
     }
     return data;
+  },
+
+  // --- SHORT REDIRECT LINKS (PRETTY LINKS) ---
+  async getRedirectLinks(): Promise<RedirectLink[]> {
+    const res = await fetch(`${API_BASE_URL}/api/redirect-links`, {
+      headers: getHeaders(),
+    });
+    const data = await res.json();
+    return data.links || [];
+  },
+
+  async createRedirectLink(link: { slug: string; target_url: string; title?: string; is_active?: boolean }): Promise<RedirectLink> {
+    const res = await fetch(`${API_BASE_URL}/api/redirect-links`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(link),
+    });
+    const data = await handleResponse(res, 'Failed to create redirect link');
+    const json = await data.json();
+    return json.link;
+  },
+
+  async updateRedirectLink(id: number | string, link: { slug: string; target_url: string; title?: string; is_active?: boolean }): Promise<RedirectLink> {
+    const res = await fetch(`${API_BASE_URL}/api/redirect-links/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(link),
+    });
+    const data = await handleResponse(res, 'Failed to update redirect link');
+    const json = await data.json();
+    return json.link;
+  },
+
+  async deleteRedirectLink(id: number | string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/redirect-links/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    await handleResponse(res, 'Failed to delete redirect link');
+    return true;
   }
 };
+
+export interface RedirectLink {
+  id: number;
+  slug: string;
+  target_url: string;
+  title: string;
+  click_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export function resolveApiUrl(url: string | undefined): string {
   if (!url) return '';
