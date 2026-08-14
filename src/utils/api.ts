@@ -637,7 +637,18 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(params),
     });
-    const data = await res.json();
+    
+    let data: any = {};
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      if (!res.ok) {
+        throw new Error(`Server Service Error (${res.status}): Please try again.`);
+      }
+      throw new Error('Invalid response received from server.');
+    }
+
     if (!res.ok || !data.success) {
       throw new Error(data.error || 'Failed to generate image');
     }

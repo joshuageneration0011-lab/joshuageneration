@@ -3439,7 +3439,7 @@ Joshua's Generation`;
           body: JSON.stringify(payload)
         });
 
-        let bbData = await bbRes.json();
+        let bbData = await bbRes.json().catch(() => ({}));
 
         if (!bbRes.ok) {
           // Retry on v2 endpoint
@@ -3452,13 +3452,13 @@ Joshua's Generation`;
             },
             body: JSON.stringify(payload)
           });
-          bbData = await bbRes.json();
+          bbData = await bbRes.json().catch(() => ({}));
         }
 
         if (!bbRes.ok) {
           const errMsg = bbData.message || bbData.error || `Bannerbear HTTP ${bbRes.status}`;
           sendJson(res, 400, {
-            error: `Bannerbear API Key Error: ${errMsg}. Please verify that your Bannerbear API key (${bbApiKey.slice(0, 14)}...) has 'images:write' permissions in your Bannerbear dashboard.`
+            error: `Bannerbear API Error: ${errMsg}. Please check that your Bannerbear API key (${bbApiKey.slice(0, 14)}...) has 'images:write' permissions in your Bannerbear dashboard.`
           });
           return;
         }
@@ -3476,19 +3476,7 @@ Joshua's Generation`;
               }
             });
             if (poll.ok) {
-              const updated = await poll.json();
-              imageUrl = updated.image_url || updated.image_url_png;
-            }
-          }
-        }
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          attempts++;
-          if (bbData.self) {
-            const poll = await fetch(bbData.self, {
-              headers: { 'Authorization': `Bearer ${bbApiKey}` }
-            });
-            if (poll.ok) {
-              const updated = await poll.json();
+              const updated = await poll.json().catch(() => ({}));
               imageUrl = updated.image_url || updated.image_url_png;
             }
           }
@@ -3504,7 +3492,8 @@ Joshua's Generation`;
           });
           return;
         } else {
-          throw new Error('Bannerbear image generation timed out');
+          sendJson(res, 400, { error: 'Bannerbear image generation timed out. Please try again.' });
+          return;
         }
       }
 
