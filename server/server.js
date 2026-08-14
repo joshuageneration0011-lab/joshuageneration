@@ -3427,6 +3427,10 @@ Joshua's Generation`;
 
       if (model === 'flux-dev') {
         targetModelUrl = 'https://api.replicate.com/v1/models/black-forest-labs/flux-dev/predictions';
+      } else if (model === 'realvis-xl') {
+        targetModelUrl = 'https://api.replicate.com/v1/models/cjwbw/realvisxl-v4.0/predictions';
+      } else if (model === 'recraft-v3') {
+        targetModelUrl = 'https://api.replicate.com/v1/models/recraft-ai/recraft-v3/predictions';
       }
 
       let response = await fetch(targetModelUrl, {
