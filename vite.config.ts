@@ -18,7 +18,14 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
-        navigateFallbackDenylist: [/^\/counter/, /^\/sitemap\.xml/]
+        skipWaiting: true,
+        clientsClaim: true,
+        navigateFallbackDenylist: [
+          /^\/api/,
+          /^\/counter/,
+          /^\/sitemap\.xml/,
+          /^\/(?!(admin|admin-login|sermons|books|blog|events|radio|donate|contact|privacy-policy|terms|cookie-policy|createimage|getupdates|southafricaupdates|sondaughter|thank-you|podcast|partnership|sons-daughters|partners|$)).*$/
+        ]
       }
     })
   ],
