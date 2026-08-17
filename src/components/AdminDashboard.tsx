@@ -309,23 +309,30 @@ export default function AdminDashboard({
 
       {/* Mobile Sidebar */}
       {isMobileSidebarOpen && (
-        <div className="fixed inset-0 z-20 lg:hidden">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMobileSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gray-950 flex items-center justify-center overflow-hidden border border-gray-200/10">
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsMobileSidebarOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-72 sm:w-80 bg-white border-r border-gray-200 p-4 flex flex-col h-full shadow-2xl animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-3 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gray-950 flex items-center justify-center overflow-hidden border border-gray-200/10 shadow-sm">
                   <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
                 </div>
-                <span className="text-gray-900 font-bold text-sm">
-                  Joshuas<span className="text-gold-600">Generation</span>
-                </span>
+                <div>
+                  <span className="text-gray-900 font-bold text-sm block">
+                    Joshuas<span className="text-gold-600">Generation</span>
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-medium block">Admin Panel</span>
+                </div>
               </div>
-              <button onClick={() => setIsMobileSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
+              <button 
+                onClick={() => setIsMobileSidebarOpen(false)} 
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <nav className="space-y-1">
+
+            <nav className="flex-1 overflow-y-auto space-y-1.5 pr-1 py-1 scrollbar-thin">
               {visibleSidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -334,28 +341,29 @@ export default function AdminDashboard({
                     key={item.id}
                     onClick={() => { setActiveTab(item.id); setIsMobileSidebarOpen(false); }}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors border',
+                      'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all border text-left',
                       isActive 
-                        ? 'bg-royal-blue-50 text-royal-blue-600 border-royal-blue-100/50 shadow-sm' 
+                        ? 'bg-royal-blue-50 text-royal-blue-600 border-royal-blue-100/50 shadow-sm font-semibold' 
                         : 'text-gray-600 hover:text-royal-blue-600 hover:bg-gray-50 border-transparent'
                     )}
                   >
-                    <Icon className={cn('w-4 h-4', isActive ? 'text-royal-blue-600' : 'text-gray-400')} />
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-royal-blue-600' : 'text-gray-400')} />
+                    <span className="flex-1 truncate">{item.label}</span>
                     {item.badge && (
                       <span className={cn(
-                        'px-1.5 py-0.5 rounded-md text-[9px] font-semibold',
-                        item.badge === 'Live' ? 'bg-red-50 text-red-500 font-semibold' : 'bg-gray-100 text-gray-500'
+                        'px-1.5 py-0.5 rounded-md text-[9px] font-semibold flex-shrink-0',
+                        item.badge === 'Live' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500'
                       )}>{item.badge}</span>
                     )}
                   </button>
                 );
               })}
             </nav>
-            <div className="p-3 border-t border-gray-200 mt-auto">
+
+            <div className="pt-3 border-t border-gray-100 mt-auto flex-shrink-0">
               <button 
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-sm font-medium cursor-pointer"
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all text-sm font-medium cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Sign Out</span>
@@ -620,17 +628,17 @@ function SubscribersTab() {
           </h2>
           <p className="text-sm text-gray-500 mt-1">Manage and export your newsletter subscribers for ZeptoMail</p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={() => setIsComposerOpen(true)}
-            className="px-4 py-2 border border-gray-250 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-colors text-sm flex items-center gap-2 shadow-sm bg-white cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2.5 border border-gray-250 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-colors text-sm flex items-center justify-center gap-2 shadow-sm bg-white cursor-pointer"
           >
             <Mail className="w-4 h-4 text-gray-500" /> Compose Email
           </button>
           <button
             onClick={handleDownloadCSV}
             disabled={subscribers.length === 0}
-            className="px-4 py-2 bg-royal-blue-600 text-white font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors text-sm flex items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2.5 bg-royal-blue-600 text-white font-semibold rounded-xl hover:bg-royal-blue-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
           >
             <Download className="w-4 h-4" /> Download CSV
           </button>
@@ -660,7 +668,8 @@ function SubscribersTab() {
           <div className="p-8 text-center text-gray-500">No matching subscribers found.</div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm text-gray-600">
                 <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
                   <tr>
@@ -703,6 +712,39 @@ function SubscribersTab() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="block md:hidden divide-y divide-gray-100">
+              {paginatedSubscribers.map((sub) => (
+                <div key={sub.id} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-gray-900 font-semibold text-sm truncate">{sub.name || 'Subscriber'}</p>
+                      <p className="text-gray-500 text-xs truncate mt-0.5">{sub.email}</p>
+                    </div>
+                    {sub.is_active ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100 shrink-0">
+                        <CheckCircle className="w-3 h-3" /> Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold shrink-0">
+                        Unsubscribed
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between pt-2 text-xs text-gray-400 border-t border-gray-50">
+                    <span>Subscribed: {new Date(sub.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    <button
+                      onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Subscriber"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Pagination Widget */}
