@@ -115,14 +115,16 @@ async function sendZeptoEmail(toEmail, toName, subject, htmlBody) {
   const senderEmail = process.env.ZEPTOMAIL_SENDER_EMAIL || "noreply@joshuagen.org";
   const senderName = process.env.ZEPTOMAIL_SENDER_NAME || "Joshua Generation";
 
+  const cleanToEmail = (toEmail || '').trim().replace(/^\.+/, '');
+
+  if (!cleanToEmail) {
+    console.error('[ZeptoMail Error] Recipient email is empty or invalid:', toEmail);
+    return { success: false, error: 'Recipient email address is invalid.' };
+  }
+
   if (!token) {
-    console.log(`[ZeptoMail Fallback] No Token found in environment. Logging email content instead:`);
-    console.log(`To: ${toName} <${toEmail}>`);
-    console.log(`Sender: ${senderName} <${senderEmail}>`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Body:\n${htmlBody}`);
-    console.log("-----------------------------------------");
-    return true;
+    console.error('[ZeptoMail Error] ZEPTOMAIL_TOKEN is missing in environment variables.');
+    return { success: false, error: 'ZeptoMail Send Mail Token (ZEPTOMAIL_TOKEN) is not configured in server/.env.' };
   }
 
   try {
@@ -141,8 +143,8 @@ async function sendZeptoEmail(toEmail, toName, subject, htmlBody) {
         "to": [
           {
             "email_address": {
-              "address": toEmail,
-              "name": toName || toEmail
+              "address": cleanToEmail,
+              "name": toName || cleanToEmail
             }
           }
         ],
@@ -153,15 +155,22 @@ async function sendZeptoEmail(toEmail, toName, subject, htmlBody) {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[ZeptoMail Error] Failed to send email to ${toEmail}. Status: ${response.status}. Response: ${errText}`);
-      return false;
+      console.error(`[ZeptoMail Error] Failed to send email to ${cleanToEmail}. Status: ${response.status}. Response: ${errText}`);
+      let parsedError = 'ZeptoMail API Error';
+      try {
+        const errJson = JSON.parse(errText);
+        parsedError = errJson.message || errJson.error?.message || errText;
+      } catch (e) {
+        parsedError = errText;
+      }
+      return { success: false, error: parsedError };
     }
 
-    console.log(`[ZeptoMail Success] Email sent successfully to ${toEmail}`);
-    return true;
+    console.log(`[ZeptoMail Success] Email sent successfully to ${cleanToEmail}`);
+    return { success: true };
   } catch (err) {
-    console.error(`[ZeptoMail Exception] Exception while sending email to ${toEmail}:`, err);
-    return false;
+    console.error(`[ZeptoMail Exception] Exception while sending email to ${cleanToEmail}:`, err);
+    return { success: false, error: err.message || 'Network exception connecting to ZeptoMail' };
   }
 }
 
@@ -1659,7 +1668,7 @@ Joshua's Generation`;
           const personalizedHtml = emailTemplateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email));
 
           const sent = await sendZeptoEmail(email, fullName, personalizedSubject, personalizedHtml);
-          if (sent) successCount++;
+          if (sent && sent.success) successCount++;
           else failCount++;
           
           // Wait 200ms between emails to prevent flooding/rate-limiting on ZeptoMail
@@ -1788,7 +1797,7 @@ Joshua's Generation`;
           const personalizedHtml = emailTemplateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email) + '&segment=sa');
 
           const sent = await sendZeptoEmail(email, fullName, personalizedSubject, personalizedHtml);
-          if (sent) successCount++;
+          if (sent && sent.success) successCount++;
           else failCount++;
           
           await new Promise(r => setTimeout(r, 200));
@@ -1916,7 +1925,7 @@ Joshua's Generation`;
           const personalizedHtml = emailTemplateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email) + '&segment=sd');
 
           const sent = await sendZeptoEmail(email, fullName, personalizedSubject, personalizedHtml);
-          if (sent) successCount++;
+          if (sent && sent.success) successCount++;
           else failCount++;
           
           await new Promise(r => setTimeout(r, 200));
@@ -4620,7 +4629,7 @@ except Exception as e:
   // POST /api/redirect-links
   if (pathname === '/api/redirect-links' && method === 'POST') {
     try {
-      const auth = getAuthUser(req);
+      const auth = await getAuthenticatedUser(req);
       if (!auth) {
         sendJson(res, 401, { error: 'Admin access required' });
         return;
@@ -4679,7 +4688,7 @@ except Exception as e:
   // PUT /api/redirect-links/:id
   if (pathname.startsWith('/api/redirect-links/') && method === 'PUT') {
     try {
-      const auth = getAuthUser(req);
+      const auth = await getAuthenticatedUser(req);
       if (!auth) {
         sendJson(res, 401, { error: 'Admin access required' });
         return;
@@ -4740,7 +4749,7 @@ except Exception as e:
   // DELETE /api/redirect-links/:id
   if (pathname.startsWith('/api/redirect-links/') && method === 'DELETE') {
     try {
-      const auth = getAuthUser(req);
+      const auth = await getAuthenticatedUser(req);
       if (!auth) {
         sendJson(res, 401, { error: 'Admin access required' });
         return;

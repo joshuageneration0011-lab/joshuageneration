@@ -238,7 +238,7 @@ export default function AdminDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex w-full max-w-full overflow-x-hidden">
       {/* Desktop Sidebar */}
       <aside className={cn(
         'hidden lg:flex fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex-col transition-transform duration-300',
@@ -374,7 +374,7 @@ export default function AdminDashboard({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 max-w-full overflow-x-hidden">
         {/* Top Bar */}
         <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-200">
           <div className="flex items-center justify-between px-3 sm:px-6 py-2.5">
@@ -412,7 +412,7 @@ export default function AdminDashboard({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6 bg-gray-50">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 bg-gray-50 w-full max-w-full min-w-0">
           {renderTabContent()}
         </main>
       </div>
