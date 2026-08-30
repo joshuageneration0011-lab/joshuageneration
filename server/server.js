@@ -3823,6 +3823,25 @@ Joshua's Generation`;
         };
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(mergedData, null, 2), 'utf-8');
       }
+
+      // Sync adsense_auto_code into dist/index.html static file on disk so Google AdSense crawler detects it
+      if (data.adsense_auto_code) {
+        try {
+          const distIndexPath = path.join(__dirname, '..', 'dist', 'index.html');
+          if (fs.existsSync(distIndexPath)) {
+            let html = fs.readFileSync(distIndexPath, 'utf-8');
+            if (!html.includes(data.adsense_auto_code)) {
+              // Inject before </head>
+              html = html.replace('</head>', `${data.adsense_auto_code}\n</head>`);
+              fs.writeFileSync(distIndexPath, html, 'utf-8');
+              console.log('Synced AdSense code directly into dist/index.html');
+            }
+          }
+        } catch (err) {
+          console.error('Error syncing AdSense code to dist/index.html:', err);
+        }
+      }
+
       sendJson(res, 200, { success: true });
     } catch (e) {
       console.error('Failed to save settings:', e);
