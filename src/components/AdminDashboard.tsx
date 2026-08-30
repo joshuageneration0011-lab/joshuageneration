@@ -11,7 +11,7 @@ import {
   Upload, ExternalLink, Link2, Copy,
   Check, AlertTriangle, RefreshCw, PenTool,
   Type, TrendingUp, Radio, Headphones,
-  Calendar, MapPin, Quote
+  Calendar, MapPin, Quote, Code
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event, Testimony } from '@/types';
@@ -7330,18 +7330,36 @@ function SettingsTab() {
 
         {activeSetting === 'adsense' && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">Google AdSense Configuration</h3>
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-amber-500" />
+                Google AdSense &amp; Header Script Configuration
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">Manage your website's AdSense site verification code, head tags, and ad placement units.</p>
+            </div>
+            
             <form onSubmit={handleSaveSettings} className="space-y-6 max-w-3xl">
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-gray-55/50 border border-gray-100">
-                  <h4 className="font-semibold text-gray-800 text-sm mb-2">Google AdSense Auto Ads</h4>
-                  <p className="text-xs text-gray-500 mb-3">Paste your AdSense auto ads script tag here. This code will load ads automatically across the website pages.</p>
+              <div className="space-y-6">
+                {/* DEDICATED HEAD / HEADER SCRIPT SECTION */}
+                <div className="p-5 rounded-2xl bg-amber-50/80 border-2 border-amber-300 shadow-sm">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Code className="w-5 h-5 text-amber-600" />
+                      <h4 className="font-bold text-gray-900 text-sm">Header (&lt;head&gt; ... &lt;/head&gt;) Code &amp; AdSense Verification Script</h4>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-amber-200/80 text-amber-900 text-[11px] font-mono font-bold border border-amber-300">
+                      &lt;head&gt; &lt;/head&gt;
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-700 mb-3 leading-relaxed">
+                    <strong>Paste your Google AdSense code snippet or verification tag below.</strong> Anything you paste here will be injected directly into the <strong>&lt;head&gt; &lt;/head&gt;</strong> section of your website so Google AdSense can verify and approve your site.
+                  </p>
                   <textarea
                     value={adsenseAutoCode}
                     onChange={(e) => setAdsenseAutoCode(e.target.value)}
-                    rows={4}
-                    placeholder="<!-- Paste Auto Ads Script Tag here -->"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-mono bg-white text-gray-800 focus:ring-2 focus:ring-royal-blue-500 focus:outline-none"
+                    rows={5}
+                    placeholder="<!-- Paste your Google AdSense <head> </head> code here -->&#10;<script async src=&quot;https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX&quot; crossorigin=&quot;anonymous&quot;></script>"
+                    className="w-full px-4 py-3 rounded-xl border border-amber-400 text-xs font-mono bg-white text-gray-900 focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-inner"
                   />
                 </div>
 
