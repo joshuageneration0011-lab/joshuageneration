@@ -91,95 +91,107 @@ export default function EventsSection({ events }: EventsSectionProps) {
           </button>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {events.map((event) => {
-            let day = 1;
-            let month = 'Jan';
-            try {
-              const eventDate = new Date(event.date);
-              if (!isNaN(eventDate.getTime())) {
-                day = eventDate.getDate();
-                month = eventDate.toLocaleString('default', { month: 'short' });
-              } else {
-                const parts = event.date.split(' ');
-                if (parts.length >= 2) {
-                  month = parts[0].slice(0, 3);
-                  day = parseInt(parts[1]) || 1;
+        {/* Grid or Empty State */}
+        {events.length === 0 ? (
+          <div className="text-center py-16 px-6 bg-white/[0.02] border border-white/[0.06] rounded-3xl space-y-3 shadow-xl">
+            <div className="w-14 h-14 rounded-2xl bg-gold-400/10 border border-gold-400/20 flex items-center justify-center mx-auto text-gold-400">
+              <Calendar className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-bold text-white">No Upcoming Programs Scheduled</h3>
+            <p className="text-sm text-white/50 max-w-md mx-auto leading-relaxed">
+              There are currently no active programs scheduled. New events and gatherings will be announced here soon.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {events.map((event) => {
+              let day = 1;
+              let month = 'Jan';
+              try {
+                const eventDate = new Date(event.date);
+                if (!isNaN(eventDate.getTime())) {
+                  day = eventDate.getDate();
+                  month = eventDate.toLocaleString('default', { month: 'short' });
+                } else {
+                  const parts = event.date.split(' ');
+                  if (parts.length >= 2) {
+                    month = parts[0].slice(0, 3);
+                    day = parseInt(parts[1]) || 1;
+                  }
                 }
+              } catch (e) {
+                console.error('Error parsing date:', e);
               }
-            } catch (e) {
-              console.error('Error parsing date:', e);
-            }
 
-            const isRegistered = registeredEventIds.includes(event.id);
+              const isRegistered = registeredEventIds.includes(event.id);
 
-            return (
-              <div
-                key={event.id}
-                className="group flex flex-col rounded-3xl overflow-hidden border border-white/[0.07] hover:border-gold-500/25 bg-white/[0.03] hover:bg-white/[0.06] transition-all duration-500 hover:-translate-y-1"
-                style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
-              >
-                {/* Image */}
-                <div className="relative h-44 overflow-hidden">
-                  <img
-                    src={resolveApiUrl(event.imageUrl)}
-                    alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70 group-hover:opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              return (
+                <div
+                  key={event.id}
+                  className="group flex flex-col rounded-3xl overflow-hidden border border-white/[0.07] hover:border-gold-500/25 bg-white/[0.03] hover:bg-white/[0.06] transition-all duration-500 hover:-translate-y-1"
+                  style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
+                >
+                  {/* Image */}
+                  <div className="relative h-44 overflow-hidden">
+                    <img
+                      src={resolveApiUrl(event.imageUrl)}
+                      alt={event.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70 group-hover:opacity-90"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-                  {/* Date badge */}
-                  <div
-                    className="absolute top-3 left-3 w-12 h-14 rounded-xl flex flex-col items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)', boxShadow: '0 4px 12px rgba(212,175,55,0.4)' }}
-                  >
-                    <span className="text-white/80 text-[9px] font-bold uppercase tracking-wider">{month}</span>
-                    <span className="text-white text-xl font-extrabold leading-none">{day}</span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="flex flex-col flex-1 p-5 gap-4">
-                  <h3 className="text-sm font-bold text-white group-hover:text-gold-300 transition-colors line-clamp-2 leading-snug">
-                    {event.title}
-                  </h3>
-
-                  <div className="space-y-2 text-xs text-white/40 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-gold-400/60 flex-shrink-0" />
-                      <span>{event.time}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-gold-400/60 flex-shrink-0" />
-                      <span className="line-clamp-1">{event.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-gold-400/60 flex-shrink-0" />
-                      <span>{(event.speakers || []).length} Speaker{((event.speakers || []).length) > 1 ? 's' : ''}</span>
+                    {/* Date badge */}
+                    <div
+                      className="absolute top-3 left-3 w-12 h-14 rounded-xl flex flex-col items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)', boxShadow: '0 4px 12px rgba(212,175,55,0.4)' }}
+                    >
+                      <span className="text-white/80 text-[9px] font-bold uppercase tracking-wider">{month}</span>
+                      <span className="text-white text-xl font-extrabold leading-none">{day}</span>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => openRegistration(event)}
-                    className="w-full py-2.5 rounded-xl font-semibold text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer"
-                    style={{
-                      background: isRegistered 
-                        ? 'linear-gradient(135deg, #10b981, #059669)'
-                        : 'linear-gradient(135deg, #d4af37, #b8942f)',
-                      boxShadow: isRegistered
-                        ? '0 4px 12px rgba(16,185,129,0.25)'
-                        : '0 4px 12px rgba(212,175,55,0.25)',
-                      color: '#fff',
-                    }}
-                  >
-                    {isRegistered ? 'Registered ✓' : 'Register Now'}
-                  </button>
+                  {/* Content */}
+                  <div className="flex flex-col flex-1 p-5 gap-4">
+                    <h3 className="text-sm font-bold text-white group-hover:text-gold-300 transition-colors line-clamp-2 leading-snug">
+                      {event.title}
+                    </h3>
+
+                    <div className="space-y-2 text-xs text-white/40 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-gold-400/60 flex-shrink-0" />
+                        <span>{event.time}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-gold-400/60 flex-shrink-0" />
+                        <span className="line-clamp-1">{event.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-gold-400/60 flex-shrink-0" />
+                        <span>{(event.speakers || []).length} Speaker{((event.speakers || []).length) > 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => openRegistration(event)}
+                      className="w-full py-2.5 rounded-xl font-semibold text-xs transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer"
+                      style={{
+                        background: isRegistered 
+                          ? 'linear-gradient(135deg, #10b981, #059669)'
+                          : 'linear-gradient(135deg, #d4af37, #b8942f)',
+                        boxShadow: isRegistered
+                          ? '0 4px 12px rgba(16,185,129,0.25)'
+                          : '0 4px 12px rgba(212,175,55,0.25)',
+                        color: '#fff',
+                      }}
+                    >
+                      {isRegistered ? 'Registered ✓' : 'Register Now'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Registration Modal */}
