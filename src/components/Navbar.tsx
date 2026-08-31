@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Search, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail, Sparkles } from 'lucide-react';
+import { Menu, X, Search, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radio, Mail, Sparkles, Target } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
 import LovePopup from './LovePopup';
@@ -10,6 +10,7 @@ const navLinks = [
   { name: 'Sermons', href: '/sermons', icon: Tv, page: 'sermons' as Page },
   { name: 'Books', href: '/books', icon: BookOpen, page: 'books' as Page },
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
+  { name: 'Declaration Counter', href: '/counter', icon: Target, page: 'counter' as Page },
   { name: 'AI Studio', href: '/createimage', icon: Sparkles, page: 'createimage' as Page },
   // { name: 'Partnership', href: '/partnership', icon: Heart, page: 'partnership' as Page },
   { name: 'Events', href: '#events', icon: Gift },
@@ -393,6 +394,7 @@ export default function Navbar({
           {[
             { icon: Home, label: 'Home', page: 'home' as Page },
             { icon: Tv, label: 'Sermons', page: 'sermons' as Page },
+            { icon: Target, label: 'Counter', page: 'counter' as Page },
             { icon: Library, label: 'Books', page: 'books' as Page },
             { icon: BookOpen, label: 'Blog', page: 'blog' as Page },
           ].map((item, idx) => {
