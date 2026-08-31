@@ -259,11 +259,7 @@ function wrapInEmailTemplate(subject, content) {
   `;
 }
 
-const defaultEvents = [
-  { id: '1', title: 'Kingdom Conference 2026', date: '2026-01-20', time: '09:00 AM', location: 'Jerusalem Convention Center', registrations: 1200, capacity: 2000, status: 'Upcoming', speakers: ['Apostle Joshua Iyemifokhae', 'Apostle David Thompson', 'Pastor Sarah Williams'], description: 'A life-changing global conference.', imageUrl: '' },
-  { id: '2', title: 'Youth Revival Night', date: '2026-01-15', time: '06:00 PM', location: 'JGen Youth Auditorium', registrations: 450, capacity: 500, status: 'Upcoming', speakers: ['Minister Rachel Grace', 'Youth Pastor Mark'], description: 'Revival, praise, and fire for the youth.', imageUrl: '' },
-  { id: '3', title: 'Women of Faith Summit', date: '2026-02-08', time: '10:00 AM', location: 'Grace Cathedral', registrations: 680, capacity: 1000, status: 'Upcoming', speakers: ['Pastor Sarah Williams', 'Minister Rachel Grace'], description: 'Gathering of women of destiny.', imageUrl: '' }
-];
+const defaultEvents = [];
 
 const defaultUsers = [
   { id: 1, name: 'Apostle Joshua Iyemifokhae', email: 'john@joshuagen.org', status: 'active', joined: 'Jan 1, 2020', sermons: 312, donations: 15000, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', role: 'Superadmin' }
@@ -722,17 +718,7 @@ async function initDb() {
         );
       `);
 
-      const eventCheck = await pool.query('SELECT 1 FROM events LIMIT 1');
-      if (eventCheck.rowCount === 0) {
-        for (const ev of defaultEvents) {
-          await pool.query(
-            `INSERT INTO events (id, title, date, time, location, description, image_url, speakers, registrations, capacity, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-            [ev.id, ev.title, ev.date, ev.time, ev.location, ev.description, ev.imageUrl, JSON.stringify(ev.speakers), ev.registrations, ev.capacity, ev.status]
-          );
-        }
-        console.log('Seeded events table.');
-      }
+      // Events table created cleanly without auto-seeding mock data
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -853,19 +839,6 @@ async function initDb() {
         );
       `);
 
-      const testimonyCheck = await pool.query('SELECT 1 FROM testimonies LIMIT 1');
-      if (testimonyCheck.rowCount === 0) {
-        for (const t of defaultTestimonies) {
-          await pool.query(
-            `INSERT INTO testimonies (id, name, content, image_url, type, date)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [t.id, t.name, t.content, t.imageUrl, t.type || 'written', t.date]
-          );
-        }
-        console.log('Seeded testimonies table.');
-      }
-
-      // Seed if empty
       let defaults = { sermons: [], books: [], blogPosts: [], radio: { url: 'https://mixlr.com/users/8375836/embed', active: false } };
       if (fs.existsSync(DEFAULTS_FILE)) {
         try {
@@ -873,42 +846,6 @@ async function initDb() {
         } catch (e) {
           console.error('Failed to parse default_data.json', e);
         }
-      }
-
-      const sermonCheck = await pool.query('SELECT 1 FROM sermons LIMIT 1');
-      if (sermonCheck.rowCount === 0) {
-        for (const s of defaults.sermons) {
-          await pool.query(
-            `INSERT INTO sermons (id, title, speaker, duration, thumbnail, views, downloads, date, description, category, video_url, audio_url)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-            [s.id, s.title, s.speaker, s.duration, s.thumbnail, s.views || 0, s.downloads || 0, s.date, s.description, s.category, s.videoUrl, s.audioUrl]
-          );
-        }
-        console.log('Seeded sermons table.');
-      }
-
-      const bookCheck = await pool.query('SELECT 1 FROM books LIMIT 1');
-      if (bookCheck.rowCount === 0) {
-        for (const b of defaults.books) {
-          await pool.query(
-            `INSERT INTO books (id, title, author, cover_url, description, category, download_url, rating, amazon_url, selar_url, pages, downloads, pdfs)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-            [b.id, b.title, b.author, b.coverUrl || '', b.description || '', b.category || '', b.downloadUrl || '', b.rating || 4.8, b.amazonUrl || '', b.selarUrl || '', b.pages || 150, b.downloads || 0, JSON.stringify(b.pdfs || [])]
-          );
-        }
-        console.log('Seeded books table.');
-      }
-
-      const blogCheck = await pool.query('SELECT 1 FROM blog_posts LIMIT 1');
-      if (blogCheck.rowCount === 0) {
-        for (const p of defaults.blogPosts) {
-          await pool.query(
-            `INSERT INTO blog_posts (id, title, author, date, read_time, excerpt, image_url, category, content, seo_title, seo_description, seo_keywords, slug)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-            [p.id, p.title, p.author, p.date, p.readTime, p.excerpt, p.imageUrl, p.category, p.content, p.seoTitle || p.title, p.seoDescription || p.excerpt, p.seoKeywords || '', p.slug || '']
-          );
-        }
-        console.log('Seeded blog posts table.');
       }
 
       const radioCheck = await pool.query('SELECT 1 FROM radio LIMIT 1');
