@@ -3,6 +3,7 @@ import { Menu, X, Search, Heart, BookOpen, Tv, Home, Library, Gift, Shield, Radi
 import { cn } from '@/utils/cn';
 import type { Page } from '@/App';
 import LovePopup from './LovePopup';
+import SearchModal from './SearchModal';
 
 const navLinks = [
   { name: 'Home', href: '/', icon: Home, page: 'home' as Page },
@@ -26,6 +27,7 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSermonDropdownOpen, setIsSermonDropdownOpen] = useState(false);
   const [isLovePopupOpen, setIsLovePopupOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -212,12 +214,16 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
                 </button>
               )}
             
-              <button className={cn(
-                'p-2.5 rounded-xl transition-all duration-200',
-                isScrolled || currentPage !== 'home'
-                  ? 'text-gray-500 hover:text-royal-blue-600 hover:bg-royal-blue-50'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              )}>
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className={cn(
+                  'p-2.5 rounded-xl transition-all duration-200 cursor-pointer',
+                  isScrolled || currentPage !== 'home'
+                    ? 'text-gray-500 hover:text-royal-blue-600 hover:bg-royal-blue-50'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                )}
+                title="Search Ministry Archive"
+              >
                 <Search className="w-5 h-5" />
               </button>
 
@@ -414,6 +420,12 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
       <LovePopup
         isOpen={isLovePopupOpen}
         onClose={() => setIsLovePopupOpen(false)}
+        onNavigate={onNavigate}
+      />
+
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
         onNavigate={onNavigate}
       />
     </>
