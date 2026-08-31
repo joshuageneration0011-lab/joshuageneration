@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Tv, BookOpen, Library, Calendar, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Search, X, Tv, BookOpen, Library, Calendar, ArrowRight, Loader2, Sparkles, HeartHandshake } from 'lucide-react';
 import { api } from '@/utils/api';
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
@@ -8,6 +8,19 @@ interface SearchModalProps {
   onClose: () => void;
   onNavigate?: (page: string) => void;
 }
+
+const SUGGESTED_KEYWORDS = [
+  'Prayer',
+  'Favour',
+  'Holy Spirit',
+  'Spiritual Attacks',
+  'Bible',
+  'Imagination',
+  'Righteousness',
+  'Authority',
+  'Sermons',
+  'Books'
+];
 
 export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModalProps) {
   const [query, setQuery] = useState('');
@@ -63,23 +76,33 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
 
   const q = query.trim().toLowerCase();
 
+  const isPrayerSearch = q && ('prayer'.includes(q) || 'pray'.includes(q) || 'contact'.includes(q) || 'request'.includes(q) || q.includes('pray'));
+
   const filteredSermons = q
-    ? sermons.filter(s => s.title.toLowerCase().includes(q) || (s.speaker && s.speaker.toLowerCase().includes(q)) || (s.description && s.description.toLowerCase().includes(q)))
+    ? (q === 'sermon' || q === 'sermons')
+      ? sermons
+      : sermons.filter(s => s.title.toLowerCase().includes(q) || (s.speaker && s.speaker.toLowerCase().includes(q)) || (s.description && s.description.toLowerCase().includes(q)) || (s.category && s.category.toLowerCase().includes(q)))
     : [];
 
   const filteredBooks = q
-    ? books.filter(b => b.title.toLowerCase().includes(q) || (b.author && b.author.toLowerCase().includes(q)) || (b.description && b.description.toLowerCase().includes(q)))
+    ? (q === 'book' || q === 'books')
+      ? books
+      : books.filter(b => b.title.toLowerCase().includes(q) || (b.author && b.author.toLowerCase().includes(q)) || (b.description && b.description.toLowerCase().includes(q)))
     : [];
 
   const filteredPosts = q
-    ? posts.filter(p => p.title.toLowerCase().includes(q) || (p.excerpt && p.excerpt.toLowerCase().includes(q)) || (p.category && p.category.toLowerCase().includes(q)))
+    ? (q === 'blog' || q === 'article' || q === 'articles')
+      ? posts
+      : posts.filter(p => p.title.toLowerCase().includes(q) || (p.excerpt && p.excerpt.toLowerCase().includes(q)) || (p.category && p.category.toLowerCase().includes(q)))
     : [];
 
   const filteredEvents = q
-    ? events.filter(e => e.title.toLowerCase().includes(q) || (e.description && e.description.toLowerCase().includes(q)))
+    ? (q === 'event' || q === 'events')
+      ? events
+      : events.filter(e => e.title.toLowerCase().includes(q) || (e.description && e.description.toLowerCase().includes(q)))
     : [];
 
-  const totalResults = filteredSermons.length + filteredBooks.length + filteredPosts.length + filteredEvents.length;
+  const totalResults = (isPrayerSearch ? 1 : 0) + filteredSermons.length + filteredBooks.length + filteredPosts.length + filteredEvents.length;
 
   const handleSelectResult = (page: string) => {
     onClose();
@@ -100,20 +123,20 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search sermons, books, articles, events..."
+            placeholder="Search sermons, books, articles, events, prayer..."
             className="w-full bg-transparent text-gray-900 placeholder:text-gray-400 font-medium text-base sm:text-lg focus:outline-none"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 transition-colors"
+              className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           )}
           <button
             onClick={onClose}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-500 bg-gray-200/70 hover:bg-gray-300/70 transition-colors flex-shrink-0"
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-500 bg-gray-200/70 hover:bg-gray-300/70 transition-colors flex-shrink-0 cursor-pointer"
           >
             ESC
           </button>
@@ -132,11 +155,11 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                 <Sparkles className="w-3.5 h-3.5 text-gold-500" /> Suggested Searches
               </div>
               <div className="flex flex-wrap gap-2">
-                {['Sermons', 'Books', 'South Africa Retreat', 'Apostolic', 'Prophetic', 'Faith', 'Healing'].map((term) => (
+                {SUGGESTED_KEYWORDS.map((term) => (
                   <button
                     key={term}
                     onClick={() => setQuery(term)}
-                    className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-royal-blue-50 hover:text-royal-blue-600 text-gray-700 text-xs font-medium transition-all"
+                    className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-royal-blue-50 hover:text-royal-blue-600 text-gray-700 text-xs font-semibold transition-all cursor-pointer"
                   >
                     {term}
                   </button>
@@ -146,10 +169,31 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
           ) : totalResults === 0 ? (
             <div className="py-12 text-center text-gray-500 space-y-2">
               <p className="text-base font-semibold">No results found for "{query}"</p>
-              <p className="text-xs text-gray-400">Try searching for generic terms like "Sermons", "Books", or "Retreat".</p>
+              <p className="text-xs text-gray-400">Try searching for keywords like "Prayer", "Favour", "Holy Spirit", or "Bible".</p>
             </div>
           ) : (
             <div className="space-y-6">
+
+              {/* Prayer Requests / Contact Result */}
+              {isPrayerSearch && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <span className="flex items-center gap-1.5"><HeartHandshake className="w-4 h-4 text-rose-500" /> Prayer & Contact</span>
+                  </div>
+                  <div className="bg-rose-50/50 rounded-2xl border border-rose-100 overflow-hidden">
+                    <button
+                      onClick={() => handleSelectResult('contact')}
+                      className="w-full text-left p-4 hover:bg-rose-50 transition-colors flex items-center justify-between group cursor-pointer"
+                    >
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-900 group-hover:text-rose-600 transition-colors">Submit a Prayer Request</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">Send your prayer requests and inquiries directly to the ministry team.</p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 group-hover:text-rose-600 transition-all flex-shrink-0" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Sermons */}
               {filteredSermons.length > 0 && (
@@ -158,11 +202,11 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><Tv className="w-4 h-4 text-royal-blue-600" /> Sermons ({filteredSermons.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredSermons.slice(0, 4).map((sermon) => (
+                    {filteredSermons.slice(0, 5).map((sermon) => (
                       <button
                         key={sermon.id}
                         onClick={() => handleSelectResult('sermons')}
-                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group"
+                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group cursor-pointer"
                       >
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900 group-hover:text-royal-blue-600 transition-colors">{sermon.title}</h4>
@@ -182,11 +226,11 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-gold-500" /> Books ({filteredBooks.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredBooks.slice(0, 4).map((book) => (
+                    {filteredBooks.slice(0, 5).map((book) => (
                       <button
                         key={book.id}
                         onClick={() => handleSelectResult('books')}
-                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group"
+                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group cursor-pointer"
                       >
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900 group-hover:text-gold-600 transition-colors">{book.title}</h4>
@@ -206,11 +250,11 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><Library className="w-4 h-4 text-emerald-600" /> Articles ({filteredPosts.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredPosts.slice(0, 4).map((post) => (
+                    {filteredPosts.slice(0, 5).map((post) => (
                       <button
                         key={post.id}
                         onClick={() => handleSelectResult('blog')}
-                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group"
+                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group cursor-pointer"
                       >
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors">{post.title}</h4>
@@ -230,11 +274,11 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-purple-600" /> Events ({filteredEvents.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredEvents.slice(0, 4).map((evt) => (
+                    {filteredEvents.slice(0, 5).map((evt) => (
                       <button
                         key={evt.id}
                         onClick={() => handleSelectResult('home')}
-                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group"
+                        className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group cursor-pointer"
                       >
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{evt.title}</h4>
