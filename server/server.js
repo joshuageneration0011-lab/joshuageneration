@@ -3629,6 +3629,331 @@ Joshua's Generation`;
     return;
   }
 
+  // --- CUSTOM FORMS API ENDPOINTS ---
+
+  // GET /api/forms/export/:id (Download CSV)
+  if (pathname.startsWith('/api/forms/export/') && method === 'GET') {
+    try {
+      const auth = await getAuthenticatedUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+      const formId = pathname.split('/').pop();
+      if (!pool) {
+        sendJson(res, 400, { error: 'Database inactive' });
+        return;
+      }
+
+      const formRes = await pool.query('SELECT * FROM custom_forms WHERE id = $1', [formId]);
+      if (formRes.rowCount === 0) {
+        sendJson(res, 404, { error: 'Form not found' });
+        return;
+      }
+      const form = formRes.rows[0];
+      const fields = typeof form.fields === 'string' ? JSON.parse(form.fields) : (form.fields || []);
+
+      const subRes = await pool.query('SELECT * FROM form_submissions WHERE form_id = $1 ORDER BY created_at DESC', [formId]);
+      const submissions = subRes.rows;
+
+      // Build CSV
+      const headers = ['Submission ID', 'Submitted At', ...fields.map(f => `"${(f.label || f.id).replace(/"/g, '""')}"`)];
+      let csv = headers.join(',') + '\n';
+
+      for (const sub of submissions) {
+        const answers = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : (sub.answers || {});
+        const dateStr = sub.created_at ? new Date(sub.created_at).toISOString() : '';
+        const row = [
+          `"${sub.id}"`,
+          `"${dateStr}"`,
+          ...fields.map(f => {
+            let val = answers[f.id] || answers[f.label] || '';
+            if (Array.isArray(val)) val = val.join('; ');
+            return `"${String(val).replace(/"/g, '""')}"`;
+          })
+        ];
+        csv += row.join(',') + '\n';
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${form.slug}-responses.csv"`
+      });
+      res.end(csv);
+      return;
+    } catch (e) {
+      console.error('Failed to export form submissions:', e);
+      sendJson(res, 500, { error: 'Failed to export CSV' });
+      return;
+    }
+  }
+
+  // DELETE /api/forms/submissions/:submissionId
+  if (pathname.startsWith('/api/forms/submissions/') && method === 'DELETE') {
+    try {
+      const auth = await getAuthenticatedUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+      const subId = pathname.split('/').pop();
+      if (pool) {
+        await pool.query('DELETE FROM form_submissions WHERE id = $1', [subId]);
+        sendJson(res, 200, { success: true });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to delete submission:', e);
+      sendJson(res, 500, { error: 'Failed to delete submission' });
+    }
+    return;
+  }
+
+  // GET /api/forms/:id/submissions
+  if (pathname.match(/^\/api\/forms\/([^\/]+)\/submissions$/) && method === 'GET') {
+    try {
+      const auth = await getAuthenticatedUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+      const formId = pathname.split('/')[3];
+      if (pool) {
+        const { rows } = await pool.query('SELECT * FROM form_submissions WHERE form_id = $1 ORDER BY created_at DESC', [formId]);
+        sendJson(res, 200, { submissions: rows });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to fetch submissions:', e);
+      sendJson(res, 500, { error: 'Failed to fetch submissions' });
+    }
+    return;
+  }
+
+  // POST /api/forms/:id/submit
+  if (pathname.match(/^\/api\/forms\/([^\/]+)\/submit$/) && method === 'POST') {
+    try {
+      const formId = pathname.split('/')[3];
+      const data = await getJsonBody(req);
+      if (!pool) {
+        sendJson(res, 400, { error: 'Database inactive' });
+        return;
+      }
+
+      const formRes = await pool.query('SELECT * FROM custom_forms WHERE id = $1 OR slug = $1', [formId]);
+      if (formRes.rowCount === 0) {
+        sendJson(res, 404, { error: 'Form not found' });
+        return;
+      }
+      const form = formRes.rows[0];
+
+      const subId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+      const userAgent = req.headers['user-agent'] || '';
+
+      await pool.query(
+        `INSERT INTO form_submissions (id, form_id, form_slug, answers, submitter_ip, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [subId, form.id, form.slug, JSON.stringify(data.answers || {}), ip, userAgent]
+      );
+
+      sendJson(res, 200, {
+        success: true,
+        submissionId: subId,
+        enableRedirect: form.enable_redirect,
+        redirectButtonLabel: form.redirect_button_label || 'CLICK HERE TO COMPLETE REGISTRATION',
+        redirectUrl: form.redirect_url || '',
+        successMessage: form.success_message || 'Thank you for filling out this form!'
+      });
+    } catch (e) {
+      console.error('Failed to submit form:', e);
+      sendJson(res, 500, { error: e.message || 'Failed to submit form' });
+    }
+    return;
+  }
+
+  // GET /api/forms (List forms)
+  if (pathname === '/api/forms' && method === 'GET') {
+    try {
+      const auth = await getAuthenticatedUser(req);
+      if (pool) {
+        let query = 'SELECT f.*, (SELECT COUNT(*)::int FROM form_submissions s WHERE s.form_id = f.id) as response_count FROM custom_forms f ORDER BY f.created_at DESC';
+        if (!auth) {
+          query = 'SELECT f.*, (SELECT COUNT(*)::int FROM form_submissions s WHERE s.form_id = f.id) as response_count FROM custom_forms f WHERE f.is_active = true ORDER BY f.created_at DESC';
+        }
+        const { rows } = await pool.query(query);
+        sendJson(res, 200, { forms: rows });
+      } else {
+        sendJson(res, 200, { forms: [] });
+      }
+    } catch (e) {
+      console.error('Failed to fetch forms:', e);
+      sendJson(res, 500, { error: 'Failed to fetch forms' });
+    }
+    return;
+  }
+
+  // GET /api/forms/:slugOrId
+  if (pathname.startsWith('/api/forms/') && method === 'GET' && !pathname.includes('/submissions') && !pathname.includes('/export') && !pathname.includes('/submit')) {
+    try {
+      const slugOrId = pathname.split('/')[3];
+      if (pool && slugOrId) {
+        const { rows } = await pool.query('SELECT * FROM custom_forms WHERE slug = $1 OR id = $1', [slugOrId]);
+        if (rows.length === 0) {
+          sendJson(res, 404, { error: 'Form not found' });
+          return;
+        }
+        sendJson(res, 200, { form: rows[0] });
+      } else {
+        sendJson(res, 404, { error: 'Form not found' });
+      }
+    } catch (e) {
+      console.error('Failed to fetch form:', e);
+      sendJson(res, 500, { error: 'Failed to fetch form' });
+    }
+    return;
+  }
+
+  // POST /api/forms (Create form)
+  if (pathname === '/api/forms' && method === 'POST') {
+    try {
+      const auth = await getAuthenticatedUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+      const data = await getJsonBody(req);
+      if (!data.title) {
+        sendJson(res, 400, { error: 'Form title is required' });
+        return;
+      }
+
+      const formId = `form_${Date.now()}`;
+      let slug = (data.slug || data.title).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (!slug) slug = `form-${Date.now()}`;
+
+      if (pool) {
+        // Ensure slug unique
+        const slugCheck = await pool.query('SELECT 1 FROM custom_forms WHERE slug = $1', [slug]);
+        if (slugCheck.rows.length > 0) {
+          slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+        }
+
+        const resInsert = await pool.query(
+          `INSERT INTO custom_forms (
+            id, slug, title, description, fields, is_active, enable_redirect,
+            redirect_button_label, redirect_url, success_message, banner_image_url
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+          [
+            formId,
+            slug,
+            data.title,
+            data.description || '',
+            JSON.stringify(data.fields || []),
+            data.is_active !== undefined ? data.is_active : true,
+            data.enable_redirect || false,
+            data.redirect_button_label || 'CLICK HERE TO COMPLETE REGISTRATION',
+            data.redirect_url || '',
+            data.success_message || 'Thank you for filling out this form! Your details have been successfully recorded.',
+            data.banner_image_url || ''
+          ]
+        );
+        sendJson(res, 201, { success: true, form: resInsert.rows[0] });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to create form:', e);
+      sendJson(res, 500, { error: e.message || 'Failed to create form' });
+    }
+    return;
+  }
+
+  // PUT /api/forms/:id (Update form)
+  if (pathname.startsWith('/api/forms/') && method === 'PUT') {
+    try {
+      const auth = await getAuthenticatedUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+      const formId = pathname.split('/')[3];
+      const data = await getJsonBody(req);
+
+      if (pool && formId) {
+        let slug = (data.slug || data.title || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        if (slug) {
+          const checkSlug = await pool.query('SELECT 1 FROM custom_forms WHERE slug = $1 AND id != $2', [slug, formId]);
+          if (checkSlug.rows.length > 0) {
+            slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+          }
+        }
+
+        const resUpdate = await pool.query(
+          `UPDATE custom_forms SET
+            title = COALESCE($1, title),
+            slug = COALESCE(NULLIF($2, ''), slug),
+            description = COALESCE($3, description),
+            fields = COALESCE($4, fields),
+            is_active = COALESCE($5, is_active),
+            enable_redirect = COALESCE($6, enable_redirect),
+            redirect_button_label = COALESCE($7, redirect_button_label),
+            redirect_url = COALESCE($8, redirect_url),
+            success_message = COALESCE($9, success_message),
+            banner_image_url = COALESCE($10, banner_image_url),
+            updated_at = NOW()
+          WHERE id = $11
+          RETURNING *`,
+          [
+            data.title,
+            slug,
+            data.description,
+            data.fields ? JSON.stringify(data.fields) : null,
+            data.is_active,
+            data.enable_redirect,
+            data.redirect_button_label,
+            data.redirect_url,
+            data.success_message,
+            data.banner_image_url,
+            formId
+          ]
+        );
+        sendJson(res, 200, { success: true, form: resUpdate.rows[0] });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to update form:', e);
+      sendJson(res, 500, { error: e.message || 'Failed to update form' });
+    }
+    return;
+  }
+
+  // DELETE /api/forms/:id (Delete form and responses)
+  if (pathname.startsWith('/api/forms/') && method === 'DELETE' && !pathname.includes('/submissions')) {
+    try {
+      const auth = await getAuthenticatedUser(req);
+      if (!auth) {
+        sendJson(res, 401, { error: 'Admin access required' });
+        return;
+      }
+      const formId = pathname.split('/')[3];
+      if (pool && formId) {
+        await pool.query('DELETE FROM form_submissions WHERE form_id = $1', [formId]);
+        await pool.query('DELETE FROM custom_forms WHERE id = $1', [formId]);
+        sendJson(res, 200, { success: true });
+      } else {
+        sendJson(res, 400, { error: 'Database inactive' });
+      }
+    } catch (e) {
+      console.error('Failed to delete form:', e);
+      sendJson(res, 500, { error: 'Failed to delete form' });
+    }
+    return;
+  }
+
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
   const user = await getAuthenticatedUser(req);
   if (!user) {
@@ -4755,330 +5080,6 @@ except Exception as e:
     return;
   }
 
-  // --- CUSTOM FORMS API ENDPOINTS ---
-
-  // GET /api/forms/export/:id (Download CSV)
-  if (pathname.startsWith('/api/forms/export/') && method === 'GET') {
-    try {
-      const auth = await getAuthenticatedUser(req);
-      if (!auth) {
-        sendJson(res, 401, { error: 'Admin access required' });
-        return;
-      }
-      const formId = pathname.split('/').pop();
-      if (!pool) {
-        sendJson(res, 400, { error: 'Database inactive' });
-        return;
-      }
-
-      const formRes = await pool.query('SELECT * FROM custom_forms WHERE id = $1', [formId]);
-      if (formRes.rowCount === 0) {
-        sendJson(res, 404, { error: 'Form not found' });
-        return;
-      }
-      const form = formRes.rows[0];
-      const fields = typeof form.fields === 'string' ? JSON.parse(form.fields) : (form.fields || []);
-
-      const subRes = await pool.query('SELECT * FROM form_submissions WHERE form_id = $1 ORDER BY created_at DESC', [formId]);
-      const submissions = subRes.rows;
-
-      // Build CSV
-      const headers = ['Submission ID', 'Submitted At', ...fields.map(f => `"${(f.label || f.id).replace(/"/g, '""')}"`)];
-      let csv = headers.join(',') + '\n';
-
-      for (const sub of submissions) {
-        const answers = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : (sub.answers || {});
-        const dateStr = sub.created_at ? new Date(sub.created_at).toISOString() : '';
-        const row = [
-          `"${sub.id}"`,
-          `"${dateStr}"`,
-          ...fields.map(f => {
-            let val = answers[f.id] || answers[f.label] || '';
-            if (Array.isArray(val)) val = val.join('; ');
-            return `"${String(val).replace(/"/g, '""')}"`;
-          })
-        ];
-        csv += row.join(',') + '\n';
-      }
-
-      res.writeHead(200, {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${form.slug}-responses.csv"`
-      });
-      res.end(csv);
-      return;
-    } catch (e) {
-      console.error('Failed to export form submissions:', e);
-      sendJson(res, 500, { error: 'Failed to export CSV' });
-      return;
-    }
-  }
-
-  // DELETE /api/forms/submissions/:submissionId
-  if (pathname.startsWith('/api/forms/submissions/') && method === 'DELETE') {
-    try {
-      const auth = await getAuthenticatedUser(req);
-      if (!auth) {
-        sendJson(res, 401, { error: 'Admin access required' });
-        return;
-      }
-      const subId = pathname.split('/').pop();
-      if (pool) {
-        await pool.query('DELETE FROM form_submissions WHERE id = $1', [subId]);
-        sendJson(res, 200, { success: true });
-      } else {
-        sendJson(res, 400, { error: 'Database inactive' });
-      }
-    } catch (e) {
-      console.error('Failed to delete submission:', e);
-      sendJson(res, 500, { error: 'Failed to delete submission' });
-    }
-    return;
-  }
-
-  // GET /api/forms/:id/submissions
-  if (pathname.match(/^\/api\/forms\/([^\/]+)\/submissions$/) && method === 'GET') {
-    try {
-      const auth = await getAuthenticatedUser(req);
-      if (!auth) {
-        sendJson(res, 401, { error: 'Admin access required' });
-        return;
-      }
-      const formId = pathname.split('/')[3];
-      if (pool) {
-        const { rows } = await pool.query('SELECT * FROM form_submissions WHERE form_id = $1 ORDER BY created_at DESC', [formId]);
-        sendJson(res, 200, { submissions: rows });
-      } else {
-        sendJson(res, 400, { error: 'Database inactive' });
-      }
-    } catch (e) {
-      console.error('Failed to fetch submissions:', e);
-      sendJson(res, 500, { error: 'Failed to fetch submissions' });
-    }
-    return;
-  }
-
-  // POST /api/forms/:id/submit
-  if (pathname.match(/^\/api\/forms\/([^\/]+)\/submit$/) && method === 'POST') {
-    try {
-      const formId = pathname.split('/')[3];
-      const data = await getJsonBody(req);
-      if (!pool) {
-        sendJson(res, 400, { error: 'Database inactive' });
-        return;
-      }
-
-      const formRes = await pool.query('SELECT * FROM custom_forms WHERE id = $1 OR slug = $1', [formId]);
-      if (formRes.rowCount === 0) {
-        sendJson(res, 404, { error: 'Form not found' });
-        return;
-      }
-      const form = formRes.rows[0];
-
-      const subId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-      const userAgent = req.headers['user-agent'] || '';
-
-      await pool.query(
-        `INSERT INTO form_submissions (id, form_id, form_slug, answers, submitter_ip, user_agent)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [subId, form.id, form.slug, JSON.stringify(data.answers || {}), ip, userAgent]
-      );
-
-      sendJson(res, 200, {
-        success: true,
-        submissionId: subId,
-        enableRedirect: form.enable_redirect,
-        redirectButtonLabel: form.redirect_button_label || 'CLICK HERE TO COMPLETE REGISTRATION',
-        redirectUrl: form.redirect_url || '',
-        successMessage: form.success_message || 'Thank you for filling out this form!'
-      });
-    } catch (e) {
-      console.error('Failed to submit form:', e);
-      sendJson(res, 500, { error: e.message || 'Failed to submit form' });
-    }
-    return;
-  }
-
-  // GET /api/forms (List forms)
-  if (pathname === '/api/forms' && method === 'GET') {
-    try {
-      const auth = await getAuthenticatedUser(req);
-      if (pool) {
-        let query = 'SELECT f.*, (SELECT COUNT(*)::int FROM form_submissions s WHERE s.form_id = f.id) as response_count FROM custom_forms f ORDER BY f.created_at DESC';
-        if (!auth) {
-          query = 'SELECT f.*, (SELECT COUNT(*)::int FROM form_submissions s WHERE s.form_id = f.id) as response_count FROM custom_forms f WHERE f.is_active = true ORDER BY f.created_at DESC';
-        }
-        const { rows } = await pool.query(query);
-        sendJson(res, 200, { forms: rows });
-      } else {
-        sendJson(res, 200, { forms: [] });
-      }
-    } catch (e) {
-      console.error('Failed to fetch forms:', e);
-      sendJson(res, 500, { error: 'Failed to fetch forms' });
-    }
-    return;
-  }
-
-  // GET /api/forms/:slugOrId
-  if (pathname.startsWith('/api/forms/') && method === 'GET' && !pathname.includes('/submissions') && !pathname.includes('/export') && !pathname.includes('/submit')) {
-    try {
-      const slugOrId = pathname.split('/')[3];
-      if (pool && slugOrId) {
-        const { rows } = await pool.query('SELECT * FROM custom_forms WHERE slug = $1 OR id = $1', [slugOrId]);
-        if (rows.length === 0) {
-          sendJson(res, 404, { error: 'Form not found' });
-          return;
-        }
-        sendJson(res, 200, { form: rows[0] });
-      } else {
-        sendJson(res, 404, { error: 'Form not found' });
-      }
-    } catch (e) {
-      console.error('Failed to fetch form:', e);
-      sendJson(res, 500, { error: 'Failed to fetch form' });
-    }
-    return;
-  }
-
-  // POST /api/forms (Create form)
-  if (pathname === '/api/forms' && method === 'POST') {
-    try {
-      const auth = await getAuthenticatedUser(req);
-      if (!auth) {
-        sendJson(res, 401, { error: 'Admin access required' });
-        return;
-      }
-      const data = await getJsonBody(req);
-      if (!data.title) {
-        sendJson(res, 400, { error: 'Form title is required' });
-        return;
-      }
-
-      const formId = `form_${Date.now()}`;
-      let slug = (data.slug || data.title).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-      if (!slug) slug = `form-${Date.now()}`;
-
-      if (pool) {
-        // Ensure slug unique
-        const slugCheck = await pool.query('SELECT 1 FROM custom_forms WHERE slug = $1', [slug]);
-        if (slugCheck.rows.length > 0) {
-          slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
-        }
-
-        const resInsert = await pool.query(
-          `INSERT INTO custom_forms (
-            id, slug, title, description, fields, is_active, enable_redirect,
-            redirect_button_label, redirect_url, success_message, banner_image_url
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-          [
-            formId,
-            slug,
-            data.title,
-            data.description || '',
-            JSON.stringify(data.fields || []),
-            data.is_active !== undefined ? data.is_active : true,
-            data.enable_redirect || false,
-            data.redirect_button_label || 'CLICK HERE TO COMPLETE REGISTRATION',
-            data.redirect_url || '',
-            data.success_message || 'Thank you for filling out this form! Your details have been successfully recorded.',
-            data.banner_image_url || ''
-          ]
-        );
-        sendJson(res, 201, { success: true, form: resInsert.rows[0] });
-      } else {
-        sendJson(res, 400, { error: 'Database inactive' });
-      }
-    } catch (e) {
-      console.error('Failed to create form:', e);
-      sendJson(res, 500, { error: e.message || 'Failed to create form' });
-    }
-    return;
-  }
-
-  // PUT /api/forms/:id (Update form)
-  if (pathname.startsWith('/api/forms/') && method === 'PUT') {
-    try {
-      const auth = await getAuthenticatedUser(req);
-      if (!auth) {
-        sendJson(res, 401, { error: 'Admin access required' });
-        return;
-      }
-      const formId = pathname.split('/')[3];
-      const data = await getJsonBody(req);
-
-      if (pool && formId) {
-        let slug = (data.slug || data.title || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-        if (slug) {
-          const checkSlug = await pool.query('SELECT 1 FROM custom_forms WHERE slug = $1 AND id != $2', [slug, formId]);
-          if (checkSlug.rows.length > 0) {
-            slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
-          }
-        }
-
-        const resUpdate = await pool.query(
-          `UPDATE custom_forms SET
-            title = COALESCE($1, title),
-            slug = COALESCE(NULLIF($2, ''), slug),
-            description = COALESCE($3, description),
-            fields = COALESCE($4, fields),
-            is_active = COALESCE($5, is_active),
-            enable_redirect = COALESCE($6, enable_redirect),
-            redirect_button_label = COALESCE($7, redirect_button_label),
-            redirect_url = COALESCE($8, redirect_url),
-            success_message = COALESCE($9, success_message),
-            banner_image_url = COALESCE($10, banner_image_url),
-            updated_at = NOW()
-          WHERE id = $11
-          RETURNING *`,
-          [
-            data.title,
-            slug,
-            data.description,
-            data.fields ? JSON.stringify(data.fields) : null,
-            data.is_active,
-            data.enable_redirect,
-            data.redirect_button_label,
-            data.redirect_url,
-            data.success_message,
-            data.banner_image_url,
-            formId
-          ]
-        );
-        sendJson(res, 200, { success: true, form: resUpdate.rows[0] });
-      } else {
-        sendJson(res, 400, { error: 'Database inactive' });
-      }
-    } catch (e) {
-      console.error('Failed to update form:', e);
-      sendJson(res, 500, { error: e.message || 'Failed to update form' });
-    }
-    return;
-  }
-
-  // DELETE /api/forms/:id (Delete form and responses)
-  if (pathname.startsWith('/api/forms/') && method === 'DELETE' && !pathname.includes('/submissions')) {
-    try {
-      const auth = await getAuthenticatedUser(req);
-      if (!auth) {
-        sendJson(res, 401, { error: 'Admin access required' });
-        return;
-      }
-      const formId = pathname.split('/')[3];
-      if (pool && formId) {
-        await pool.query('DELETE FROM form_submissions WHERE form_id = $1', [formId]);
-        await pool.query('DELETE FROM custom_forms WHERE id = $1', [formId]);
-        sendJson(res, 200, { success: true });
-      } else {
-        sendJson(res, 400, { error: 'Database inactive' });
-      }
-    } catch (e) {
-      console.error('Failed to delete form:', e);
-      sendJson(res, 500, { error: 'Failed to delete form' });
-    }
-    return;
-  }
 
   // DELETE /api/testimonies/:id
   if (pathname.startsWith('/api/testimonies/') && method === 'DELETE') {
