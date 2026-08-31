@@ -9303,14 +9303,35 @@ function FormBuilderTab() {
 
   const handleFieldChange = (index: number, key: string, value: any) => {
     const updated = [...fields];
-    updated[index] = { ...updated[index], [key]: value };
+    const current = updated[index];
+    if (key === 'type' && ['select', 'radio', 'checkbox'].includes(value) && (!current.options || current.options.length === 0)) {
+      updated[index] = { ...current, [key]: value, options: ['Option 1', 'Option 2'] };
+    } else {
+      updated[index] = { ...current, [key]: value };
+    }
     setFields(updated);
   };
 
-  const handleOptionsChange = (index: number, rawOptionsStr: string) => {
-    const optionsArray = rawOptionsStr.split(',').map(o => o.trim()).filter(Boolean);
+  const handleSingleOptionChange = (fieldIndex: number, optionIndex: number, value: string) => {
     const updated = [...fields];
-    updated[index] = { ...updated[index], options: optionsArray };
+    const opts = [...(updated[fieldIndex].options || [])];
+    opts[optionIndex] = value;
+    updated[fieldIndex] = { ...updated[fieldIndex], options: opts };
+    setFields(updated);
+  };
+
+  const handleAddOption = (fieldIndex: number) => {
+    const updated = [...fields];
+    const opts = [...(updated[fieldIndex].options || [])];
+    opts.push(`Option ${opts.length + 1}`);
+    updated[fieldIndex] = { ...updated[fieldIndex], options: opts };
+    setFields(updated);
+  };
+
+  const handleRemoveOption = (fieldIndex: number, optionIndex: number) => {
+    const updated = [...fields];
+    const opts = [...(updated[fieldIndex].options || [])].filter((_, i) => i !== optionIndex);
+    updated[fieldIndex] = { ...updated[fieldIndex], options: opts };
     setFields(updated);
   };
 
@@ -9706,19 +9727,63 @@ function FormBuilderTab() {
                         </div>
                       </div>
 
-                      {/* Options for Select, Radio, Checkbox */}
+                      {/* Interactive Options list for Select, Radio, Checkbox */}
                       {['select', 'radio', 'checkbox'].includes(field.type) && (
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                            Options (comma-separated):
-                          </label>
-                          <input
-                            type="text"
-                            value={(field.options || []).join(', ')}
-                            onChange={(e) => handleOptionsChange(idx, e.target.value)}
-                            placeholder="e.g. Option 1, Option 2, Option 3"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900"
-                          />
+                        <div className="space-y-2 mt-3 pt-3 border-t border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+                              {field.type === 'checkbox' ? 'Checkbox Options' : field.type === 'radio' ? 'Radio Options' : 'Dropdown Options'}
+                            </label>
+                            <span className="text-[10px] text-gray-400">Add options for users to select</span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {(field.options && field.options.length > 0 ? field.options : ['Option 1']).map((option, optIdx) => (
+                              <div key={optIdx} className="flex items-center gap-2">
+                                <div className="w-5 h-5 flex items-center justify-center text-gray-400 flex-shrink-0">
+                                  {field.type === 'checkbox' ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-gray-400 rounded bg-white" />
+                                  ) : field.type === 'radio' ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-gray-400 rounded-full bg-white" />
+                                  ) : (
+                                    <span className="text-xs text-gray-500 font-bold">{optIdx + 1}.</span>
+                                  )}
+                                </div>
+
+                                <input
+                                  type="text"
+                                  value={option}
+                                  onChange={(e) => handleSingleOptionChange(idx, optIdx, e.target.value)}
+                                  placeholder={`Option ${optIdx + 1}`}
+                                  className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#0b1329] outline-none transition"
+                                />
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveOption(idx, optIdx)}
+                                  disabled={(field.options || []).length <= 1}
+                                  className={cn(
+                                    "p-1.5 rounded-lg transition",
+                                    (field.options || []).length <= 1
+                                      ? "text-gray-200 cursor-not-allowed"
+                                      : "text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                                  )}
+                                  title="Delete Option"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAddOption(idx)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs transition cursor-pointer mt-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Option Box</span>
+                          </button>
                         </div>
                       )}
                     </div>
