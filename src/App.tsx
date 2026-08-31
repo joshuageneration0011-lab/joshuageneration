@@ -642,14 +642,36 @@ export default function App() {
 
 
 
+  const handleSelectSermon = (sermon: Sermon) => {
+    setSelectedSermon(sermon);
+    navigate('sermon-player', sermon.id);
+  };
+
+  const handleSelectBook = (book: Book) => {
+    setSelectedBook(book);
+    navigate('book-details', book.id);
+  };
+
+  const handleSelectPost = (post: BlogPost) => {
+    setSelectedPost(post);
+    navigate('blog-details', post.id);
+  };
+
+  const renderNavbar = (page: Page) => (
+    <Navbar
+      onNavigate={navigate}
+      onAdminClick={handleAdminClick}
+      currentPage={page}
+      onSelectSermon={handleSelectSermon}
+      onSelectBook={handleSelectBook}
+      onSelectPost={handleSelectPost}
+    />
+  );
+
   if (currentPage === 'sermons') {
     return (
       <div className="min-h-screen bg-white">
-        <Navbar
-          onNavigate={navigate}
-          onAdminClick={handleAdminClick}
-          currentPage={currentPage}
-        />
+        {renderNavbar(currentPage)}
         <Suspense fallback={<PageLoader />}>
           <SermonsPage
             sermons={sermons}
@@ -722,11 +744,7 @@ export default function App() {
   if (currentPage === 'sermon-player' && selectedSermon) {
     return (
       <div className="min-h-screen bg-white">
-        <Navbar
-          onNavigate={navigate}
-          onAdminClick={handleAdminClick}
-          currentPage={currentPage}
-        />
+        {renderNavbar(currentPage)}
         <Suspense fallback={<PageLoader />}>
           <SermonPlayer
             sermons={sermons}
@@ -1050,11 +1068,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Navbar
-        onNavigate={navigate}
-        onAdminClick={handleAdminClick}
-        currentPage={currentPage}
-      />
+      {renderNavbar(currentPage)}
       <main>
         <HeroSection 
           onSermonsClick={() => navigate('sermons')}

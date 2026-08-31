@@ -16,13 +16,25 @@ const navLinks = [
   // { name: 'School of the Prophet', href: 'https://sop.joshuasgeneration.com', icon: Shield, external: true },
 ];
 
+import type { Sermon, Book, BlogPost } from '@/types';
+
 interface NavbarProps {
-  onNavigate?: (page: Page) => void;
+  onNavigate?: (page: Page, id?: string) => void;
   onAdminClick?: () => void;
   currentPage?: Page;
+  onSelectSermon?: (sermon: Sermon) => void;
+  onSelectBook?: (book: Book) => void;
+  onSelectPost?: (post: BlogPost) => void;
 }
 
-export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' }: NavbarProps) {
+export default function Navbar({
+  onNavigate,
+  onAdminClick,
+  currentPage = 'home',
+  onSelectSermon,
+  onSelectBook,
+  onSelectPost
+}: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSermonDropdownOpen, setIsSermonDropdownOpen] = useState(false);
@@ -427,6 +439,9 @@ export default function Navbar({ onNavigate, onAdminClick, currentPage = 'home' 
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onNavigate={onNavigate}
+        onSelectSermon={onSelectSermon}
+        onSelectBook={onSelectBook}
+        onSelectPost={onSelectPost}
       />
     </>
   );

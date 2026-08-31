@@ -6,7 +6,10 @@ import type { Sermon, Book, BlogPost, Event } from '@/types';
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (page: string, id?: string) => void;
+  onSelectSermon?: (sermon: Sermon) => void;
+  onSelectBook?: (book: Book) => void;
+  onSelectPost?: (post: BlogPost) => void;
 }
 
 const SUGGESTED_KEYWORDS = [
@@ -22,7 +25,14 @@ const SUGGESTED_KEYWORDS = [
   'Books'
 ];
 
-export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModalProps) {
+export default function SearchModal({
+  isOpen,
+  onClose,
+  onNavigate,
+  onSelectSermon,
+  onSelectBook,
+  onSelectPost
+}: SearchModalProps) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [sermons, setSermons] = useState<Sermon[]>([]);
@@ -202,17 +212,27 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><Tv className="w-4 h-4 text-royal-blue-600" /> Sermons ({filteredSermons.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredSermons.slice(0, 5).map((sermon) => (
+                    {filteredSermons.slice(0, 6).map((sermon) => (
                       <button
                         key={sermon.id}
-                        onClick={() => handleSelectResult('sermons')}
+                        onClick={() => {
+                          onClose();
+                          if (onSelectSermon) {
+                            onSelectSermon(sermon);
+                          } else if (onNavigate) {
+                            onNavigate('sermon-player', sermon.id);
+                          }
+                        }}
                         className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group cursor-pointer"
                       >
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900 group-hover:text-royal-blue-600 transition-colors">{sermon.title}</h4>
-                          <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{sermon.speaker || 'Joshua’s Generation'} • {sermon.topic || 'Sermon'}</p>
+                          <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{sermon.speaker || 'Joshua’s Generation'} • {sermon.duration || 'Audio Sermon'}</p>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 group-hover:text-royal-blue-600 transition-all flex-shrink-0" />
+                        <div className="flex items-center gap-1 text-xs font-semibold text-royal-blue-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <span>Listen</span>
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -226,17 +246,27 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-gold-500" /> Books ({filteredBooks.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredBooks.slice(0, 5).map((book) => (
+                    {filteredBooks.slice(0, 6).map((book) => (
                       <button
                         key={book.id}
-                        onClick={() => handleSelectResult('books')}
+                        onClick={() => {
+                          onClose();
+                          if (onSelectBook) {
+                            onSelectBook(book);
+                          } else if (onNavigate) {
+                            onNavigate('book-details', book.id);
+                          }
+                        }}
                         className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group cursor-pointer"
                       >
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900 group-hover:text-gold-600 transition-colors">{book.title}</h4>
                           <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">By {book.author || 'Joshua’s Generation'}</p>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 group-hover:text-gold-600 transition-all flex-shrink-0" />
+                        <div className="flex items-center gap-1 text-xs font-semibold text-gold-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <span>Read</span>
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -250,17 +280,27 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><Library className="w-4 h-4 text-emerald-600" /> Articles ({filteredPosts.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredPosts.slice(0, 5).map((post) => (
+                    {filteredPosts.slice(0, 6).map((post) => (
                       <button
                         key={post.id}
-                        onClick={() => handleSelectResult('blog')}
+                        onClick={() => {
+                          onClose();
+                          if (onSelectPost) {
+                            onSelectPost(post);
+                          } else if (onNavigate) {
+                            onNavigate('blog-details', post.id);
+                          }
+                        }}
                         className="w-full text-left p-3.5 hover:bg-white transition-colors flex items-center justify-between group cursor-pointer"
                       >
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors">{post.title}</h4>
                           <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{post.excerpt || post.category || 'Article'}</p>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 group-hover:text-emerald-600 transition-all flex-shrink-0" />
+                        <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <span>Read</span>
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -274,7 +314,7 @@ export default function SearchModal({ isOpen, onClose, onNavigate }: SearchModal
                     <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-purple-600" /> Events ({filteredEvents.length})</span>
                   </div>
                   <div className="divide-y divide-gray-100 bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
-                    {filteredEvents.slice(0, 5).map((evt) => (
+                    {filteredEvents.slice(0, 6).map((evt) => (
                       <button
                         key={evt.id}
                         onClick={() => handleSelectResult('home')}
