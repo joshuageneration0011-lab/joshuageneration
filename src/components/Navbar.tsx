@@ -10,7 +10,7 @@ const navLinks = [
   { name: 'Sermons', href: '/sermons', icon: Tv, page: 'sermons' as Page },
   { name: 'Books', href: '/books', icon: BookOpen, page: 'books' as Page },
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
-  { name: 'Declaration Counter', href: '/counter', icon: Target, page: 'counter' as Page },
+  { name: 'Declaration Counter', href: '/counter/index.html', icon: Target, page: 'counter' as Page, directUrl: '/counter/index.html' },
   { name: 'AI Studio', href: '/createimage', icon: Sparkles, page: 'createimage' as Page },
   // { name: 'Partnership', href: '/partnership', icon: Heart, page: 'partnership' as Page },
   { name: 'Events', href: '#events', icon: Gift },
@@ -52,6 +52,12 @@ export default function Navbar({
 
   const handleLinkClick = (link: typeof navLinks[0], e: React.MouseEvent) => {
     console.log('[Navbar] Clicked link:', link.name, 'page:', link.page);
+    if ('directUrl' in link && link.directUrl) {
+      e.preventDefault();
+      setIsOpen(false);
+      window.location.href = link.directUrl;
+      return;
+    }
     if ('external' in link && link.external) {
       e.preventDefault();
       setIsOpen(false);
@@ -405,7 +411,13 @@ export default function Navbar({
             return (
               <button
                 key={idx}
-                onClick={() => onNavigate && onNavigate(item.page)}
+                onClick={() => {
+                  if (item.page === 'counter') {
+                    window.location.href = '/counter/index.html';
+                  } else if (onNavigate) {
+                    onNavigate(item.page);
+                  }
+                }}
                 className={cn(
                   'flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200',
                   active

@@ -76,9 +76,12 @@ const getPageFromPath = (): Page => {
   if (rawPath.startsWith('blog/')) return 'blog-details';
   if (rawPath.startsWith('sermon/')) return 'sermon-player';
   if (rawPath.startsWith('books/')) return 'book-details';
-  if (rawPath.startsWith('form/')) return 'custom-form';
+  if (rawPath === 'counter' || rawPath.startsWith('counter')) {
+    window.location.href = '/counter/index.html';
+    return 'home';
+  }
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form', 'counter'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
