@@ -347,7 +347,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
             </div>
 
             <div className="space-y-3">
-              <h2 className="text-2xl font-extrabold text-gray-900">Registration Successful! 🎉</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 uppercase tracking-tight">CLICK THE BUTTON BELOW TO COMPLETE REGISTRATION</h2>
               <p className="text-sm text-gray-600 leading-relaxed max-w-md mx-auto">
                 {submissionResult.successMessage}
               </p>
