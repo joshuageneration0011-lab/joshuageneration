@@ -9,7 +9,7 @@ const quickLinks = [
   { name: 'Books', href: '/books' },
   { name: 'Blog', href: '/blog' },
   { name: 'Events', href: '#events' },
-  { name: 'Prayer Requests', href: '#prayer' },
+  { name: 'Prayer Requests', href: '/contact' },
   { name: 'Contact', href: '/contact' },
   { name: 'Donate', href: '/donate' },
 ];
@@ -79,6 +79,9 @@ export default function Footer({ onNavigate }: FooterProps) {
       } else if (name === 'Donate') {
         e.preventDefault();
         onNavigate('donate');
+      } else if (name === 'Contact' || name === 'Prayer Requests') {
+        e.preventDefault();
+        onNavigate('contact');
       } else if (href.startsWith('#')) {
         e.preventDefault();
         onNavigate('home');
