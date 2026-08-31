@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, resolveApiUrl } from '../utils/api';
 import type { CustomForm, FormField } from '../types';
-import { CheckCircle2, ArrowRight, AlertCircle, FileText, Send, Sparkles, Home } from 'lucide-react';
+import { CheckCircle2, ArrowRight, AlertCircle, Send, Sparkles, Home } from 'lucide-react';
 
 interface CustomFormPageProps {
   slug: string;
@@ -104,10 +104,10 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070b14] flex items-center justify-center py-20 px-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-20 px-4">
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-full border-4 border-gold-400 border-t-transparent animate-spin mx-auto" />
-          <p className="text-white/60 text-sm font-medium">Loading form...</p>
+          <div className="w-12 h-12 rounded-full border-4 border-[#0b1329] border-t-transparent animate-spin mx-auto" />
+          <p className="text-gray-600 text-sm font-medium">Loading form...</p>
         </div>
       </div>
     );
@@ -115,19 +115,19 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
 
   if (error || !form) {
     return (
-      <div className="min-h-screen bg-[#070b14] flex items-center justify-center py-20 px-4">
-        <div className="max-w-md w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-center space-y-6">
-          <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto text-red-400">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-20 px-4">
+        <div className="max-w-md w-full bg-white border border-gray-200 rounded-3xl p-8 text-center space-y-6 shadow-xl">
+          <div className="w-16 h-16 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-center mx-auto text-red-600">
             <AlertCircle className="w-8 h-8" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Form Not Found</h2>
-            <p className="text-sm text-white/50 mt-2">{error || 'This form does not exist or is no longer active.'}</p>
+            <h2 className="text-xl font-bold text-gray-900">Form Not Found</h2>
+            <p className="text-sm text-gray-500 mt-2">{error || 'This form does not exist or is no longer active.'}</p>
           </div>
           {onNavigateHome && (
             <button
               onClick={onNavigateHome}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-white text-sm font-semibold transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold transition-all cursor-pointer shadow-md"
             >
               <Home className="w-4 h-4" /> Return to Home
             </button>
@@ -138,57 +138,55 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
   }
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-white py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background ambient lighting */}
-      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-gradient-to-b from-blue-600/15 via-gold-500/10 to-transparent rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute inset-0 bg-grid opacity-[0.03] pointer-events-none" />
+    <div className="min-h-screen bg-gray-50 text-gray-900 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Subtle warm ambient background accents */}
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-gradient-to-b from-amber-100/50 via-blue-50/40 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-3xl mx-auto relative z-10 space-y-8">
         {/* Banner image if available */}
         {form.banner_image_url && (
-          <div className="rounded-3xl overflow-hidden border border-white/10 shadow-2xl h-48 sm:h-64 relative">
+          <div className="rounded-3xl overflow-hidden border border-gray-200 shadow-lg h-48 sm:h-64 relative bg-white">
             <img
               src={resolveApiUrl(form.banner_image_url)}
               alt={form.title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#070b14] via-transparent to-transparent" />
           </div>
         )}
 
         {/* Form Header Card */}
-        <div className="bg-[#0b1329] border border-white/[0.08] rounded-3xl p-6 sm:p-10 shadow-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold-400/10 border border-gold-400/20 text-gold-400 text-xs font-semibold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" /> Official Form
+        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-10 shadow-md space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Official Form
           </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">{form.title}</h1>
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">{form.title}</h1>
           {form.description && (
-            <p className="text-white/60 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{form.description}</p>
+            <p className="text-gray-600 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{form.description}</p>
           )}
         </div>
 
         {/* Form Error Banner */}
         {submitError && (
-          <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-3 animate-fade-in">
+          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-sm flex items-center gap-3 animate-fade-in shadow-sm">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span>{submitError}</span>
+            <span className="font-medium">{submitError}</span>
           </div>
         )}
 
         {/* Form Fields Body */}
-        <form onSubmit={handleSubmit} className="bg-[#0b1329] border border-white/[0.08] rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8">
+        <form onSubmit={handleSubmit} className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-10 shadow-md space-y-8">
           {form.fields.map((field: FormField, index: number) => {
             const fieldValue = answers[field.id] || '';
 
             return (
-              <div key={field.id} className="space-y-3 pb-6 border-b border-white/[0.06] last:border-b-0 last:pb-0">
-                <label className="block text-sm font-semibold text-white/90">
+              <div key={field.id} className="space-y-3 pb-6 border-b border-gray-100 last:border-b-0 last:pb-0">
+                <label className="block text-sm font-bold text-gray-900">
                   {index + 1}. {field.label}
-                  {field.required && <span className="text-gold-400 ml-1.5 font-bold">*</span>}
+                  {field.required && <span className="text-amber-600 ml-1.5 font-bold">*</span>}
                 </label>
 
                 {field.helpText && (
-                  <p className="text-xs text-white/40">{field.helpText}</p>
+                  <p className="text-xs text-gray-500">{field.helpText}</p>
                 )}
 
                 {/* Short Text Input */}
@@ -199,7 +197,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     value={fieldValue}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder || 'Your answer'}
-                    className="w-full px-4.5 py-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    className="w-full px-4.5 py-3.5 rounded-xl bg-gray-50 border border-gray-300 text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:bg-white focus:border-[#0b1329] focus:ring-1 focus:ring-[#0b1329] transition-all"
                   />
                 )}
 
@@ -211,7 +209,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     value={fieldValue}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder || 'Your answer'}
-                    className="w-full px-4.5 py-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all resize-y"
+                    className="w-full px-4.5 py-3.5 rounded-xl bg-gray-50 border border-gray-300 text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:bg-white focus:border-[#0b1329] focus:ring-1 focus:ring-[#0b1329] transition-all resize-y"
                   />
                 )}
 
@@ -223,7 +221,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     value={fieldValue}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder || 'name@example.com'}
-                    className="w-full px-4.5 py-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    className="w-full px-4.5 py-3.5 rounded-xl bg-gray-50 border border-gray-300 text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:bg-white focus:border-[#0b1329] focus:ring-1 focus:ring-[#0b1329] transition-all"
                   />
                 )}
 
@@ -235,7 +233,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     value={fieldValue}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder || '+1 234 567 8900'}
-                    className="w-full px-4.5 py-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    className="w-full px-4.5 py-3.5 rounded-xl bg-gray-50 border border-gray-300 text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:bg-white focus:border-[#0b1329] focus:ring-1 focus:ring-[#0b1329] transition-all"
                   />
                 )}
 
@@ -247,7 +245,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     value={fieldValue}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder || '0'}
-                    className="w-full px-4.5 py-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    className="w-full px-4.5 py-3.5 rounded-xl bg-gray-50 border border-gray-300 text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:bg-white focus:border-[#0b1329] focus:ring-1 focus:ring-[#0b1329] transition-all"
                   />
                 )}
 
@@ -258,7 +256,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     required={field.required}
                     value={fieldValue}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
-                    className="w-full px-4.5 py-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    className="w-full px-4.5 py-3.5 rounded-xl bg-gray-50 border border-gray-300 text-gray-900 text-sm focus:outline-none focus:bg-white focus:border-[#0b1329] focus:ring-1 focus:ring-[#0b1329] transition-all"
                   />
                 )}
 
@@ -268,11 +266,11 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     required={field.required}
                     value={fieldValue}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
-                    className="w-full px-4.5 py-3.5 rounded-xl bg-[#0e172e] border border-white/10 text-white text-sm focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30 transition-all"
+                    className="w-full px-4.5 py-3.5 rounded-xl bg-gray-50 border border-gray-300 text-gray-900 text-sm focus:outline-none focus:bg-white focus:border-[#0b1329] focus:ring-1 focus:ring-[#0b1329] transition-all"
                   >
                     <option value="">-- Choose an option --</option>
                     {(field.options || []).map((opt, i) => (
-                      <option key={i} value={opt} className="bg-[#0e172e] text-white">{opt}</option>
+                      <option key={i} value={opt} className="bg-white text-gray-900">{opt}</option>
                     ))}
                   </select>
                 )}
@@ -281,16 +279,16 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                 {field.type === 'radio' && (
                   <div className="space-y-2.5 pt-1">
                     {(field.options || []).map((opt, i) => (
-                      <label key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] cursor-pointer transition-all">
+                      <label key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100/80 cursor-pointer transition-all">
                         <input
                           type="radio"
                           name={`field_${field.id}`}
                           required={field.required && !fieldValue}
                           checked={fieldValue === opt}
                           onChange={() => handleInputChange(field.id, opt)}
-                          className="w-4 h-4 text-gold-500 focus:ring-gold-400 bg-white/10 border-white/20"
+                          className="w-4 h-4 text-[#0b1329] focus:ring-[#0b1329] border-gray-300"
                         />
-                        <span className="text-sm text-white/80">{opt}</span>
+                        <span className="text-sm font-medium text-gray-800">{opt}</span>
                       </label>
                     ))}
                   </div>
@@ -302,14 +300,14 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
                     {(field.options || []).map((opt, i) => {
                       const checked = Array.isArray(fieldValue) && fieldValue.includes(opt);
                       return (
-                        <label key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] cursor-pointer transition-all">
+                        <label key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100/80 cursor-pointer transition-all">
                           <input
                             type="checkbox"
                             checked={checked}
                             onChange={(e) => handleCheckboxChange(field.id, opt, e.target.checked)}
-                            className="w-4 h-4 rounded text-gold-500 focus:ring-gold-400 bg-white/10 border-white/20"
+                            className="w-4 h-4 rounded text-[#0b1329] focus:ring-[#0b1329] border-gray-300"
                           />
-                          <span className="text-sm text-white/80">{opt}</span>
+                          <span className="text-sm font-medium text-gray-800">{opt}</span>
                         </label>
                       );
                     })}
@@ -323,12 +321,11 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-4 rounded-2xl font-bold text-base text-[#070b14] transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-xl shadow-gold-500/10 hover:shadow-gold-500/25 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-              style={{ background: 'linear-gradient(135deg, #d4af37, #b8942f)' }}
+              className="w-full py-4 rounded-2xl font-extrabold text-base text-white bg-[#0b1329] hover:bg-[#152347] transition-all duration-300 hover:scale-[1.005] active:scale-95 shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-5 h-5 rounded-full border-2 border-[#070b14] border-t-transparent animate-spin" />
+                  <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                   Submitting...
                 </>
               ) : (
@@ -343,18 +340,15 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
 
       {/* Completion Pop-up Modal */}
       {showSuccessModal && submissionResult && (
-        <div className="fixed inset-0 bg-[#020617]/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-[#0b1329] border border-white/15 rounded-3xl max-w-lg w-full shadow-2xl p-8 text-center space-y-6 relative overflow-hidden">
-            {/* Ambient gold glow behind modal */}
-            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-48 h-48 bg-gold-400/20 rounded-full blur-[50px] pointer-events-none" />
-
-            <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400 animate-bounce">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white border border-gray-200 rounded-3xl max-w-lg w-full shadow-2xl p-8 text-center space-y-6 relative overflow-hidden">
+            <div className="w-20 h-20 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mx-auto text-emerald-600 animate-bounce">
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
             <div className="space-y-3">
-              <h2 className="text-2xl font-extrabold text-white">Registration Successful! 🎉</h2>
-              <p className="text-sm text-white/70 leading-relaxed max-w-md mx-auto">
+              <h2 className="text-2xl font-extrabold text-gray-900">Registration Successful! 🎉</h2>
+              <p className="text-sm text-gray-600 leading-relaxed max-w-md mx-auto">
                 {submissionResult.successMessage}
               </p>
             </div>
@@ -364,20 +358,19 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
               <div className="pt-2 space-y-4">
                 <button
                   onClick={handleCompletionRedirect}
-                  className="w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-[#070b14] transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-2xl shadow-gold-400/30 flex items-center justify-center gap-3 cursor-pointer group"
-                  style={{ background: 'linear-gradient(135deg, #f59e0b, #d4af37, #b8942f)' }}
+                  className="w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-600 hover:to-amber-800 transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl shadow-amber-500/20 flex items-center justify-center gap-3 cursor-pointer group"
                 >
                   <span>{submissionResult.redirectButtonLabel || 'CLICK HERE TO COMPLETE REGISTRATION'}</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
-                <p className="text-[11px] text-white/40">Click the button above to complete your final step.</p>
+                <p className="text-[11px] text-gray-400">Click the button above to complete your final step.</p>
               </div>
             ) : (
               <div className="pt-4">
                 {onNavigateHome && (
                   <button
                     onClick={onNavigateHome}
-                    className="px-6 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold transition-all cursor-pointer"
+                    className="px-6 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold transition-all cursor-pointer"
                   >
                     Return to Homepage
                   </button>
