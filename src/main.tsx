@@ -1,23 +1,25 @@
-/// <reference types="vite-plugin-pwa/client" />
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
-import { registerSW } from 'virtual:pwa-register';
-
 import ErrorBoundary from "./components/ErrorBoundary";
 
-// Register Service Worker with instant auto-reload on update
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    console.log('[PWA] New deployment detected, refreshing for latest content...');
-    updateSW(true);
-  },
-  onOfflineReady() {
-    console.log('[PWA] App is ready for offline use.');
-  },
-});
+// Clear legacy service worker registrations and browser caches on load
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
+if ('caches' in window) {
+  caches.keys().then((keys) => {
+    for (const key of keys) {
+      caches.delete(key);
+    }
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
