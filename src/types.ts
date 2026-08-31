@@ -143,3 +143,41 @@ export interface Subscriber {
   is_active: boolean;
   created_at: string;
 }
+
+export interface FormField {
+  id: string;
+  label: string;
+  type: 'text' | 'paragraph' | 'email' | 'phone' | 'number' | 'select' | 'radio' | 'checkbox' | 'date';
+  options?: string[];
+  required: boolean;
+  placeholder?: string;
+  helpText?: string;
+}
+
+export interface CustomForm {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string;
+  fields: FormField[];
+  is_active: boolean;
+  enable_redirect: boolean;
+  redirect_button_label?: string;
+  redirect_url?: string;
+  success_message?: string;
+  banner_image_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  response_count?: number;
+}
+
+export interface FormSubmission {
+  id: string;
+  form_id: string;
+  form_slug: string;
+  answers: Record<string, any>;
+  submitter_ip?: string;
+  user_agent?: string;
+  created_at: string;
+}
+

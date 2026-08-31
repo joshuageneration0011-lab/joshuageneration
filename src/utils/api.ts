@@ -1,4 +1,4 @@
-import type { Subscriber, Sermon, Book, BlogPost, Donation, Settings, Event, Testimony } from '../types';
+import type { Subscriber, Sermon, Book, BlogPost, Donation, Settings, Event, Testimony, CustomForm, FormSubmission } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
   ? import.meta.env.VITE_API_BASE_URL
@@ -693,6 +693,89 @@ export const api = {
     });
     await handleResponse(res, 'Failed to delete redirect link');
     return true;
+  },
+
+  // --- CUSTOM FORMS ---
+  async getForms(): Promise<CustomForm[]> {
+    const res = await fetch(`${API_BASE_URL}/api/forms`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch forms');
+    const data = await res.json();
+    return data.forms || [];
+  },
+
+  async getForm(slugOrId: string): Promise<CustomForm> {
+    const res = await fetch(`${API_BASE_URL}/api/forms/${slugOrId}`);
+    if (!res.ok) throw new Error('Form not found');
+    const data = await res.json();
+    return data.form;
+  },
+
+  async saveForm(form: Partial<CustomForm>): Promise<CustomForm> {
+    const isUpdate = !!form.id;
+    const url = isUpdate ? `${API_BASE_URL}/api/forms/${form.id}` : `${API_BASE_URL}/api/forms`;
+    const method = isUpdate ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: getHeaders(),
+      body: JSON.stringify(form),
+    });
+    await handleResponse(res, 'Failed to save form');
+    const data = await res.json();
+    return data.form;
+  },
+
+  async deleteForm(id: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/forms/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    await handleResponse(res, 'Failed to delete form');
+    return true;
+  },
+
+  async submitForm(formId: string, answers: Record<string, any>): Promise<{
+    success: boolean;
+    submissionId: string;
+    enableRedirect: boolean;
+    redirectButtonLabel: string;
+    redirectUrl: string;
+    successMessage: string;
+  }> {
+    const res = await fetch(`${API_BASE_URL}/api/forms/${formId}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to submit form');
+    }
+    return res.json();
+  },
+
+  async getFormSubmissions(formId: string): Promise<FormSubmission[]> {
+    const res = await fetch(`${API_BASE_URL}/api/forms/${formId}/submissions`, {
+      headers: getHeaders(),
+    });
+    await handleResponse(res, 'Failed to fetch form submissions');
+    const data = await res.json();
+    return data.submissions || [];
+  },
+
+  async deleteFormSubmission(subId: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/forms/submissions/${subId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    await handleResponse(res, 'Failed to delete submission');
+    return true;
+  },
+
+  getFormExportUrl(formId: string): string {
+    const token = localStorage.getItem('jg_admin_token');
+    return `${API_BASE_URL}/api/forms/export/${formId}?token=${encodeURIComponent(token || '')}`;
   }
 };
 

@@ -40,6 +40,7 @@ const GetUpdatesPage = lazy(() => import('@/components/GetUpdatesPage'));
 const SouthAfricaUpdatesPage = lazy(() => import('@/components/SouthAfricaUpdatesPage'));
 const SonsDaughtersPage = lazy(() => import('@/components/SonsDaughtersPage'));
 const ImageGeneratorPage = lazy(() => import('@/components/ImageGeneratorPage'));
+const CustomFormPage = lazy(() => import('@/components/CustomFormPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -74,8 +75,9 @@ const getPageFromPath = (): Page => {
   if (rawPath.startsWith('blog/')) return 'blog-details';
   if (rawPath.startsWith('sermon/')) return 'sermon-player';
   if (rawPath.startsWith('books/')) return 'book-details';
+  if (rawPath.startsWith('form/')) return 'custom-form';
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -1023,7 +1025,25 @@ export default function App() {
           </Suspense>
         </main>
         <Footer onNavigate={navigate} />
-        <NewsletterPopup />
+      </div>
+    );
+  }
+
+  if (currentPage === 'custom-form' || window.location.pathname.startsWith('/form/')) {
+    const slug = window.location.pathname.replace(/^\/form\//, '').replace(/\/$/, '');
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar
+          onNavigate={navigate}
+          onAdminClick={handleAdminClick}
+          currentPage={currentPage}
+        />
+        <main className="pt-16">
+          <Suspense fallback={<PageLoader />}>
+            <CustomFormPage slug={slug} onNavigateHome={() => navigate('home')} />
+          </Suspense>
+        </main>
+        <Footer onNavigate={navigate} />
       </div>
     );
   }

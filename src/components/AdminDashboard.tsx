@@ -19,7 +19,7 @@ import { api, resolveApiUrl, type RedirectLink } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/testimonyStore';
 
-type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'sd-subscribers' | 'testimonies' | 'redirect-links';
+type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'sd-subscribers' | 'testimonies' | 'redirect-links' | 'form-builder';
 
 export const getCurrencySymbol = (currency?: string) => {
   const symbols: Record<string, string> = {
@@ -148,6 +148,7 @@ export default function AdminDashboard({
     { id: 'sa-subscribers', label: 'SA Subscribers', icon: Users },
     { id: 'sd-subscribers', label: 'Sons & Daughters', icon: Users },
     { id: 'redirect-links', label: 'Pretty Links', icon: Link2 },
+    { id: 'form-builder', label: 'Form Builder', icon: FileText },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
     { id: 'donations', label: 'Donations', icon: DollarSign },
     { id: 'prayer', label: 'Prayer', icon: Heart },
@@ -224,6 +225,7 @@ export default function AdminDashboard({
       case 'sa-subscribers': return <SASubscribersTab />;
       case 'sd-subscribers': return <SDSubscribersTab />;
       case 'redirect-links': return <RedirectLinksTab />;
+      case 'form-builder': return <FormBuilderTab />;
       case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
       case 'radio': return <RadioTab mixlrUrl={mixlrUrl} isRadioActive={isRadioActive} onUpdateRadio={onUpdateRadio} />;
       case 'donations': 
@@ -9178,6 +9180,740 @@ function RedirectLinksTab() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ====== GOOGLE FORMS-LIKE FORM BUILDER TAB COMPONENT ======
+function FormBuilderTab() {
+  const [forms, setForms] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+
+  // Form Editor Modal State
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingForm, setEditingForm] = useState<any | null>(null);
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [isActive, setIsActive] = useState(true);
+  const [fields, setFields] = useState<any[]>([]);
+
+  // Completion Pop-up Settings
+  const [enableRedirect, setEnableRedirect] = useState(false);
+  const [redirectButtonLabel, setRedirectButtonLabel] = useState('CLICK HERE TO COMPLETE REGISTRATION');
+  const [redirectUrl, setRedirectUrl] = useState('');
+  const [successMessage, setSuccessMessage] = useState('Thank you for filling out this form! Your details have been successfully recorded.');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+
+  // Submissions Modal State
+  const [isSubmissionsOpen, setIsSubmissionsOpen] = useState(false);
+  const [selectedFormForSubmissions, setSelectedFormForSubmissions] = useState<any | null>(null);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  const [submissionSearch, setSubmissionSearch] = useState('');
+
+  const fetchForms = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.getForms();
+      setForms(data);
+    } catch (err: any) {
+      console.error('Failed to fetch custom forms:', err);
+      setError(err.message || 'Failed to load custom forms');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchForms();
+  }, []);
+
+  const openCreateModal = () => {
+    setEditingForm(null);
+    setTitle('');
+    setSlug('');
+    setDescription('');
+    setBannerUrl('');
+    setIsActive(true);
+    setEnableRedirect(false);
+    setRedirectButtonLabel('CLICK HERE TO COMPLETE REGISTRATION');
+    setRedirectUrl('');
+    setSuccessMessage('Thank you for filling out this form! Your details have been successfully recorded.');
+    setFields([
+      { id: 'f_name', label: 'Full Name', type: 'text', required: true, placeholder: 'Enter your full name' },
+      { id: 'f_email', label: 'Email Address', type: 'email', required: true, placeholder: 'name@example.com' }
+    ]);
+    setEditorError(null);
+    setIsEditorOpen(true);
+  };
+
+  const openEditModal = (form: any) => {
+    setEditingForm(form);
+    setTitle(form.title || '');
+    setSlug(form.slug || '');
+    setDescription(form.description || '');
+    setBannerUrl(form.banner_image_url || '');
+    setIsActive(form.is_active !== undefined ? form.is_active : true);
+    setEnableRedirect(form.enable_redirect || false);
+    setRedirectButtonLabel(form.redirect_button_label || 'CLICK HERE TO COMPLETE REGISTRATION');
+    setRedirectUrl(form.redirect_url || '');
+    setSuccessMessage(form.success_message || 'Thank you for filling out this form! Your details have been successfully recorded.');
+    const parsedFields = typeof form.fields === 'string' ? JSON.parse(form.fields) : (form.fields || []);
+    setFields(parsedFields);
+    setEditorError(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleAddField = (type: string) => {
+    const newId = `f_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    let defaultLabel = 'Question Title';
+    let defaultOptions: string[] = [];
+
+    if (type === 'text') defaultLabel = 'Short Answer Question';
+    if (type === 'paragraph') defaultLabel = 'Detailed Answer / Comments';
+    if (type === 'email') defaultLabel = 'Email Address';
+    if (type === 'phone') defaultLabel = 'Phone Number';
+    if (type === 'number') defaultLabel = 'Age or Number';
+    if (type === 'date') defaultLabel = 'Select Date';
+    if (type === 'select' || type === 'radio' || type === 'checkbox') {
+      defaultLabel = 'Choose an option';
+      defaultOptions = ['Option 1', 'Option 2'];
+    }
+
+    setFields([
+      ...fields,
+      { id: newId, label: defaultLabel, type, required: false, options: defaultOptions, placeholder: '' }
+    ]);
+  };
+
+  const handleRemoveField = (index: number) => {
+    setFields(fields.filter((_, i) => i !== index));
+  };
+
+  const handleFieldChange = (index: number, key: string, value: any) => {
+    const updated = [...fields];
+    updated[index] = { ...updated[index], [key]: value };
+    setFields(updated);
+  };
+
+  const handleOptionsChange = (index: number, rawOptionsStr: string) => {
+    const optionsArray = rawOptionsStr.split(',').map(o => o.trim()).filter(Boolean);
+    const updated = [...fields];
+    updated[index] = { ...updated[index], options: optionsArray };
+    setFields(updated);
+  };
+
+  const handleSaveForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setEditorError('Form title is required.');
+      return;
+    }
+    if (fields.length === 0) {
+      setEditorError('Please add at least one question field to the form.');
+      return;
+    }
+    if (enableRedirect && !redirectUrl.trim()) {
+      setEditorError('Please enter a target Redirect URL for the completion button.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setEditorError(null);
+
+    try {
+      const payload = {
+        id: editingForm ? editingForm.id : undefined,
+        title: title.trim(),
+        slug: slug.trim(),
+        description: description.trim(),
+        banner_image_url: bannerUrl.trim(),
+        is_active: isActive,
+        fields,
+        enable_redirect: enableRedirect,
+        redirect_button_label: redirectButtonLabel.trim(),
+        redirect_url: redirectUrl.trim(),
+        success_message: successMessage.trim()
+      };
+
+      await api.saveForm(payload);
+      setIsEditorOpen(false);
+      fetchForms();
+    } catch (err: any) {
+      console.error('Failed to save form:', err);
+      setEditorError(err.message || 'Failed to save form');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteForm = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this form and ALL submitted responses?')) return;
+    try {
+      await api.deleteForm(id);
+      fetchForms();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete form');
+    }
+  };
+
+  const handleCopyLink = (formSlug: string) => {
+    const fullUrl = `${window.location.origin}/form/${formSlug}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedSlug(formSlug);
+    setTimeout(() => setCopiedSlug(null), 2000);
+  };
+
+  // Submissions Management
+  const openSubmissionsModal = async (form: any) => {
+    setSelectedFormForSubmissions(form);
+    setIsSubmissionsOpen(true);
+    setIsLoadingSubmissions(true);
+    try {
+      const data = await api.getFormSubmissions(form.id);
+      setSubmissions(data);
+    } catch (err: any) {
+      console.error('Failed to load submissions:', err);
+    } finally {
+      setIsLoadingSubmissions(false);
+    }
+  };
+
+  const handleDeleteSubmission = async (subId: string) => {
+    if (!window.confirm('Delete this submission entry?')) return;
+    try {
+      await api.deleteFormSubmission(subId);
+      setSubmissions(submissions.filter(s => s.id !== subId));
+      fetchForms();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete submission');
+    }
+  };
+
+  const filteredForms = forms.filter(f =>
+    f.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.slug.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Tab Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-gray-900">Custom Form Builder & Surveys</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gold-100 text-gold-700">
+              Google Forms Engine
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Build custom registration forms, capture details, export to CSV, and add optional completion redirect buttons.
+          </p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0b1329] hover:bg-[#121c3b] text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer"
+        >
+          <Plus className="w-4 h-4" /> Create New Form
+        </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search forms by title or slug..."
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-[#0b1329]"
+        />
+      </div>
+
+      {/* Forms Grid List */}
+      {isLoading ? (
+        <div className="py-20 text-center text-gray-400 text-sm">Loading custom forms...</div>
+      ) : error ? (
+        <div className="p-4 bg-red-50 text-red-600 text-xs rounded-xl border border-red-200">{error}</div>
+      ) : filteredForms.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-3 shadow-sm">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto" />
+          <h3 className="text-sm font-bold text-gray-800">No Forms Created Yet</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+            Create your first custom registration form to start collecting responses and directing participants.
+          </p>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 text-white font-bold text-xs rounded-xl hover:bg-gold-600 transition cursor-pointer mt-2"
+          >
+            <Plus className="w-4 h-4" /> Create Form Now
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredForms.map((form) => {
+            const parsedFields = typeof form.fields === 'string' ? JSON.parse(form.fields) : (form.fields || []);
+            const isCopied = copiedSlug === form.slug;
+
+            return (
+              <div key={form.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn(
+                      "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                      form.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                    )}>
+                      {form.is_active ? "Active Form" : "Disabled"}
+                    </span>
+                    <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 font-bold text-[11px] rounded-md border border-blue-100">
+                      {form.response_count || 0} Submissions
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-gray-900 mt-3 leading-snug line-clamp-1">{form.title}</h3>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{form.description || 'No description provided.'}</p>
+
+                  <div className="mt-3 text-[11px] text-gray-400 space-y-1">
+                    <div className="flex items-center gap-1.5 font-mono text-gray-600">
+                      <Globe className="w-3.5 h-3.5 text-gray-400" />
+                      <span>/form/{form.slug}</span>
+                    </div>
+                    <div>{parsedFields.length} Questions</div>
+                    {form.enable_redirect && (
+                      <div className="text-amber-600 font-semibold flex items-center gap-1">
+                        <span>⚡ Completion Button Enabled</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleCopyLink(form.slug)}
+                      title="Copy Shareable Link"
+                      className="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium text-xs flex items-center gap-1 transition cursor-pointer"
+                    >
+                      {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                      <span className="text-[11px]">{isCopied ? 'Copied' : 'Link'}</span>
+                    </button>
+                    <button
+                      onClick={() => openSubmissionsModal(form)}
+                      title="View Submissions"
+                      className="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">Responses ({form.response_count || 0})</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEditModal(form)}
+                      className="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition cursor-pointer"
+                      title="Edit Form"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteForm(form.id)}
+                      className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition cursor-pointer"
+                      title="Delete Form"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Form Editor Modal */}
+      {isEditorOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {editingForm ? 'Edit Custom Form' : 'Create Custom Form'}
+                </h3>
+                <p className="text-xs text-gray-500">Configure questions, options, and completion redirect pop-up settings.</p>
+              </div>
+              <button
+                onClick={() => setIsEditorOpen(false)}
+                className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editorError && (
+              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{editorError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveForm} className="space-y-6">
+              {/* Form Metadata */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Form Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Kingdom Summit 2026 Registration"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:border-[#0b1329]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">URL Slug</label>
+                    <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden text-xs text-gray-500">
+                      <span className="pl-3 pr-1 text-gray-400 font-mono">/form/</span>
+                      <input
+                        type="text"
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value)}
+                        placeholder="auto-generated"
+                        className="w-full py-2.5 pr-3 bg-transparent text-gray-900 font-mono outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Header Banner Image URL (Optional)</label>
+                    <input
+                      type="text"
+                      value={bannerUrl}
+                      onChange={(e) => setBannerUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Form Description / Instructions</label>
+                  <textarea
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Please fill out your details below to complete your registration..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200">
+                  <span className="text-xs font-semibold text-gray-800">Form Active Status</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsActive(!isActive)}
+                    className={cn(
+                      "w-11 h-6 rounded-full transition-colors relative p-1 cursor-pointer",
+                      isActive ? "bg-emerald-500" : "bg-gray-300"
+                    )}
+                  >
+                    <div className={cn("w-4 h-4 rounded-full bg-white transition-transform", isActive ? "translate-x-5" : "translate-x-0")} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Questions / Fields Builder Section */}
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider">Form Questions ({fields.length})</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" onClick={() => handleAddField('text')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Text</button>
+                    <button type="button" onClick={() => handleAddField('paragraph')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Paragraph</button>
+                    <button type="button" onClick={() => handleAddField('email')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Email</button>
+                    <button type="button" onClick={() => handleAddField('phone')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Phone</button>
+                    <button type="button" onClick={() => handleAddField('select')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Dropdown</button>
+                    <button type="button" onClick={() => handleAddField('radio')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Radio</button>
+                    <button type="button" onClick={() => handleAddField('checkbox')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Checkbox</button>
+                    <button type="button" onClick={() => handleAddField('date')} className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-semibold rounded-lg cursor-pointer">+ Date</button>
+                  </div>
+                </div>
+
+                <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                  {fields.map((field, idx) => (
+                    <div key={field.id || idx} className="p-4 rounded-2xl bg-gray-50 border border-gray-200 space-y-3 relative group">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase">Question #{idx + 1}</span>
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={field.required}
+                              onChange={(e) => handleFieldChange(idx, 'required', e.target.checked)}
+                              className="rounded text-gold-500"
+                            />
+                            Required
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveField(idx)}
+                            className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                            title="Remove Question"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-2">
+                          <input
+                            type="text"
+                            value={field.label}
+                            onChange={(e) => handleFieldChange(idx, 'label', e.target.value)}
+                            placeholder="Question label / title"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-medium"
+                          />
+                        </div>
+                        <div>
+                          <select
+                            value={field.type}
+                            onChange={(e) => handleFieldChange(idx, 'type', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-medium"
+                          >
+                            <option value="text">Short Text</option>
+                            <option value="paragraph">Paragraph</option>
+                            <option value="email">Email Address</option>
+                            <option value="phone">Phone Number</option>
+                            <option value="number">Number</option>
+                            <option value="select">Dropdown Menu</option>
+                            <option value="radio">Radio Options</option>
+                            <option value="checkbox">Checkboxes</option>
+                            <option value="date">Date</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Options for Select, Radio, Checkbox */}
+                      {['select', 'radio', 'checkbox'].includes(field.type) && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                            Options (comma-separated):
+                          </label>
+                          <input
+                            type="text"
+                            value={(field.options || []).join(', ')}
+                            onChange={(e) => handleOptionsChange(idx, e.target.value)}
+                            placeholder="e.g. Option 1, Option 2, Option 3"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Completion Pop-up & Redirect Settings */}
+              <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-4 pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-amber-950 uppercase tracking-wider">Completion Pop-up & Redirect Button</h4>
+                    <p className="text-[11px] text-amber-800">Show a pop-up after submission with a button redirecting to WhatsApp group, Zoom, external URL, etc.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnableRedirect(!enableRedirect)}
+                    className={cn(
+                      "w-11 h-6 rounded-full transition-colors relative p-1 cursor-pointer",
+                      enableRedirect ? "bg-amber-500" : "bg-gray-300"
+                    )}
+                  >
+                    <div className={cn("w-4 h-4 rounded-full bg-white transition-transform", enableRedirect ? "translate-x-5" : "translate-x-0")} />
+                  </button>
+                </div>
+
+                {enableRedirect && (
+                  <div className="space-y-3 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-900 uppercase tracking-wider mb-1">Redirect Button Text</label>
+                      <input
+                        type="text"
+                        value={redirectButtonLabel}
+                        onChange={(e) => setRedirectButtonLabel(e.target.value)}
+                        placeholder="CLICK HERE TO COMPLETE REGISTRATION"
+                        className="w-full px-3.5 py-2.5 bg-white border border-amber-200 rounded-xl text-xs text-gray-900 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-900 uppercase tracking-wider mb-1">Redirect URL Link *</label>
+                      <input
+                        type="url"
+                        required={enableRedirect}
+                        value={redirectUrl}
+                        onChange={(e) => setRedirectUrl(e.target.value)}
+                        placeholder="https://chat.whatsapp.com/..."
+                        className="w-full px-3.5 py-2.5 bg-white border border-amber-200 rounded-xl text-xs text-gray-900 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-900 uppercase tracking-wider mb-1">Success Message Text</label>
+                      <textarea
+                        rows={2}
+                        value={successMessage}
+                        onChange={(e) => setSuccessMessage(e.target.value)}
+                        placeholder="Thank you for registering! Please click the button below to complete your final step."
+                        className="w-full px-3.5 py-2.5 bg-white border border-amber-200 rounded-xl text-xs text-gray-900"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditorOpen(false)}
+                  className="px-4 py-2.5 text-xs font-semibold text-gray-600 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-[#0b1329] hover:bg-[#121c3b] text-white text-xs font-bold rounded-xl shadow-md transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  {editingForm ? "Save Form Changes" : "Create Form"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Submissions / Responses View Modal */}
+      {isSubmissionsOpen && selectedFormForSubmissions && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Form Responses: {selectedFormForSubmissions.title}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Total Submissions: <span className="font-bold text-gray-900">{submissions.length}</span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <a
+                  href={api.getFormExportUrl(selectedFormForSubmissions.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Export CSV Spreadsheet
+                </a>
+                <button
+                  onClick={() => setIsSubmissionsOpen(false)}
+                  className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Responses Search */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                value={submissionSearch}
+                onChange={(e) => setSubmissionSearch(e.target.value)}
+                placeholder="Search response answers..."
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 outline-none"
+              />
+            </div>
+
+            {/* Responses Table */}
+            {isLoadingSubmissions ? (
+              <div className="py-20 text-center text-gray-400 text-sm">Loading responses...</div>
+            ) : submissions.length === 0 ? (
+              <div className="py-16 text-center text-gray-400 text-sm">No submissions recorded for this form yet.</div>
+            ) : (
+              <div className="overflow-x-auto border border-gray-200 rounded-2xl">
+                <table className="w-full text-left text-xs text-gray-700">
+                  <thead className="bg-gray-50 border-b border-gray-200 font-bold uppercase text-[10px] text-gray-500">
+                    <tr>
+                      <th className="p-3">#</th>
+                      <th className="p-3">Submitted Date</th>
+                      {((typeof selectedFormForSubmissions.fields === 'string'
+                        ? JSON.parse(selectedFormForSubmissions.fields)
+                        : selectedFormForSubmissions.fields) || []).map((f: any, i: number) => (
+                        <th key={f.id || i} className="p-3 min-w-[140px]">{f.label}</th>
+                      ))}
+                      <th className="p-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {submissions
+                      .filter(sub => {
+                        const ansStr = JSON.stringify(sub.answers || {}).toLowerCase();
+                        return ansStr.includes(submissionSearch.toLowerCase());
+                      })
+                      .map((sub, idx) => {
+                        const answers = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : (sub.answers || {});
+                        const formFields = typeof selectedFormForSubmissions.fields === 'string'
+                          ? JSON.parse(selectedFormForSubmissions.fields)
+                          : (selectedFormForSubmissions.fields || []);
+
+                        return (
+                          <tr key={sub.id} className="hover:bg-gray-50/80 transition-colors">
+                            <td className="p-3 font-mono text-gray-400">{idx + 1}</td>
+                            <td className="p-3 text-gray-500 text-[11px] whitespace-nowrap">
+                              {sub.created_at ? new Date(sub.created_at).toLocaleString() : 'N/A'}
+                            </td>
+                            {formFields.map((f: any, i: number) => {
+                              const val = answers[f.id] || answers[f.label] || '';
+                              const displayVal = Array.isArray(val) ? val.join(', ') : String(val);
+                              return (
+                                <td key={f.id || i} className="p-3 text-gray-800 font-medium">
+                                  {displayVal || <span className="text-gray-300 italic">-</span>}
+                                </td>
+                              );
+                            })}
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={() => handleDeleteSubmission(sub.id)}
+                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition cursor-pointer"
+                                title="Delete Response"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
