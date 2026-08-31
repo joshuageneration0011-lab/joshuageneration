@@ -41,6 +41,7 @@ const SouthAfricaUpdatesPage = lazy(() => import('@/components/SouthAfricaUpdate
 const SonsDaughtersPage = lazy(() => import('@/components/SonsDaughtersPage'));
 const ImageGeneratorPage = lazy(() => import('@/components/ImageGeneratorPage'));
 const CustomFormPage = lazy(() => import('@/components/CustomFormPage'));
+const CounterPage = lazy(() => import('@/components/CounterPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -77,7 +78,7 @@ const getPageFromPath = (): Page => {
   if (rawPath.startsWith('books/')) return 'book-details';
   if (rawPath.startsWith('form/')) return 'custom-form';
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form', 'counter'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -1061,6 +1062,18 @@ export default function App() {
             <CustomFormPage slug={slug} onNavigateHome={() => navigate('home')} />
           </Suspense>
         </main>
+        <Footer onNavigate={navigate} />
+      </div>
+    );
+  }
+
+  if (currentPage === 'counter') {
+    return (
+      <div className="min-h-screen bg-white">
+        {renderNavbar(currentPage)}
+        <Suspense fallback={<PageLoader />}>
+          <CounterPage onNavigate={navigate} />
+        </Suspense>
         <Footer onNavigate={navigate} />
       </div>
     );
