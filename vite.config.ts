@@ -17,7 +17,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+        // Exclude html from precache so index.html is ALWAYS fetched fresh from server
+        globPatterns: ['**/*.{js,css,ico,png,svg,webp}'],
+        cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
         navigateFallbackDenylist: [
@@ -55,4 +57,3 @@ export default defineConfig({
     },
   },
 });
-
