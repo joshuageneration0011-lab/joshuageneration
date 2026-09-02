@@ -11,7 +11,7 @@ import {
   Upload, ExternalLink, Link2, Copy,
   Check, AlertTriangle, RefreshCw, PenTool,
   Type, TrendingUp, Radio, Headphones,
-  Calendar, MapPin, Quote, Code
+  Calendar, MapPin, Quote, Code, Move
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event, Testimony } from '@/types';
@@ -9400,6 +9400,42 @@ function FormBuilderTab() {
     }, 50);
   };
 
+  // Mouse & Touch Drag-to-Position Handlers
+  const [isDraggingBanner, setIsDraggingBanner] = useState(false);
+  const dragStartYRef = useRef(0);
+  const dragStartPercentRef = useRef(50);
+
+  const getBannerPercent = (pos: string) => {
+    if (!pos) return 50;
+    if (pos === 'center top' || pos === 'top' || pos === '0%') return 0;
+    if (pos === 'center center' || pos === 'center' || pos === '50%') return 50;
+    if (pos === 'center bottom' || pos === 'bottom' || pos === '100%') return 100;
+    const match = pos.match(/(\d+)%/);
+    return match ? parseInt(match[1], 10) : 50;
+  };
+
+  const handleBannerDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDraggingBanner(true);
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    dragStartYRef.current = clientY;
+    dragStartPercentRef.current = getBannerPercent(bannerPosition);
+  };
+
+  const handleBannerDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDraggingBanner) return;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const deltaY = clientY - dragStartYRef.current;
+    const deltaPercent = Math.round(deltaY / 2);
+    let newPercent = dragStartPercentRef.current + deltaPercent;
+    if (newPercent < 0) newPercent = 0;
+    if (newPercent > 100) newPercent = 100;
+    setBannerPosition(`center ${newPercent}%`);
+  };
+
+  const handleBannerDragEnd = () => {
+    setIsDraggingBanner(false);
+  };
+
   // Submissions Modal State
   const [isSubmissionsOpen, setIsSubmissionsOpen] = useState(false);
   const [selectedFormForSubmissions, setSelectedFormForSubmissions] = useState<any | null>(null);
@@ -9838,21 +9874,24 @@ function FormBuilderTab() {
 
                   {bannerUrl && (
                     <div className="space-y-3 pt-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold text-gray-700">Adjust Visible Portion (Vertical Shift):</span>
-                        <div className="flex gap-1.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                          <Move className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Visible Portion Adjustment ({getBannerPercent(bannerPosition)}%):</span>
+                        </span>
+                        <div className="flex items-center gap-1.5">
                           {[
-                            { label: 'Top', val: 'center top' },
-                            { label: 'Center', val: 'center center' },
-                            { label: 'Bottom', val: 'center bottom' }
+                            { label: 'Top (0%)', val: 'center 0%' },
+                            { label: 'Center (50%)', val: 'center 50%' },
+                            { label: 'Bottom (100%)', val: 'center 100%' }
                           ].map(pos => (
                             <button
                               key={pos.val}
                               type="button"
                               onClick={() => setBannerPosition(pos.val)}
                               className={cn(
-                                "px-3 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer",
-                                bannerPosition === pos.val
+                                "px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer",
+                                bannerPosition === pos.val || (pos.val === 'center 0%' && getBannerPercent(bannerPosition) === 0) || (pos.val === 'center 50%' && getBannerPercent(bannerPosition) === 50) || (pos.val === 'center 100%' && getBannerPercent(bannerPosition) === 100)
                                   ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
                               )}
@@ -9863,15 +9902,47 @@ function FormBuilderTab() {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-36 relative bg-gray-900">
+                      {/* Interactive Fine Slider */}
+                      <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Fine Slider:</span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={getBannerPercent(bannerPosition)}
+                          onChange={(e) => setBannerPosition(`center ${e.target.value}%`)}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-mono font-bold text-blue-600 min-w-[45px] text-right">{getBannerPercent(bannerPosition)}%</span>
+                      </div>
+
+                      {/* Interactive Drag-to-Position Live Preview Box */}
+                      <div
+                        onMouseDown={handleBannerDragStart}
+                        onMouseMove={handleBannerDragMove}
+                        onMouseUp={handleBannerDragEnd}
+                        onMouseLeave={handleBannerDragEnd}
+                        onTouchStart={handleBannerDragStart}
+                        onTouchMove={handleBannerDragMove}
+                        onTouchEnd={handleBannerDragEnd}
+                        className={cn(
+                          "rounded-2xl overflow-hidden border shadow-sm h-40 relative bg-gray-900 select-none transition-all",
+                          isDraggingBanner ? "cursor-grabbing border-blue-500 ring-2 ring-blue-400/50 scale-[1.01]" : "cursor-grab hover:border-blue-400 border-gray-200"
+                        )}
+                        title="Click and drag UP/DOWN with mouse to adjust visible flyer portion"
+                      >
                         <img
                           src={resolveApiUrl(bannerUrl)}
                           alt="Banner Preview"
-                          className="w-full h-full object-cover transition-all"
+                          className="w-full h-full object-cover pointer-events-none"
                           style={{ objectPosition: bannerPosition }}
                         />
-                        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
-                          Live Banner Preview ({bannerPosition})
+                        <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-md">
+                          <Move className="w-3 h-3 text-blue-400 animate-pulse" />
+                          <span>Live Banner Preview ({bannerPosition})</span>
+                        </div>
+                        <div className="absolute bottom-2 right-2 bg-blue-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-md shadow-md flex items-center gap-1">
+                          <span>↕ Drag mouse up/down to adjust</span>
                         </div>
                       </div>
                     </div>
