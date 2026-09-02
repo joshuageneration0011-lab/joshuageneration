@@ -4224,27 +4224,14 @@ Joshua's Generation`;
 
       if (pool) {
         if (data.settings && typeof data.settings === 'object') {
-          const s = data.settings;
-          await pool.query(
-            `UPDATE settings SET 
-              "contactEmail" = COALESCE($1, "contactEmail"),
-              "contactPhone" = COALESCE($2, "contactPhone"),
-              "contactAddress" = COALESCE($3, "contactAddress"),
-              "socialFacebook" = COALESCE($4, "socialFacebook"),
-              "socialTwitter" = COALESCE($5, "socialTwitter"),
-              "socialInstagram" = COALESCE($6, "socialInstagram"),
-              "socialYoutube" = COALESCE($7, "socialYoutube"),
-              "homeHeadlinePrefix" = COALESCE($8, "homeHeadlinePrefix"),
-              "homeHeadlineHighlight" = COALESCE($9, "homeHeadlineHighlight"),
-              "homeHeadlineSuffix" = COALESCE($10, "homeHeadlineSuffix"),
-              "homeSubheading" = COALESCE($11, "homeSubheading")
-            WHERE id = 1`,
-            [
-              s.contactEmail || null, s.contactPhone || null, s.contactAddress || null,
-              s.socialFacebook || null, s.socialTwitter || null, s.socialInstagram || null, s.socialYoutube || null,
-              s.homeHeadlinePrefix || null, s.homeHeadlineHighlight || null, s.homeHeadlineSuffix || null, s.homeSubheading || null
-            ]
-          );
+          const s = { ...data.settings };
+          delete s.id;
+          const keys = Object.keys(s).filter(k => typeof s[k] !== 'function');
+          if (keys.length > 0) {
+            const setClause = keys.map((k, i) => `"${k}" = $${i + 1}`).join(', ');
+            const values = keys.map(k => s[k] !== undefined && s[k] !== null ? s[k] : '');
+            await pool.query(`UPDATE settings SET ${setClause} WHERE id = 1`, values);
+          }
         }
 
         if (Array.isArray(data.events)) {
@@ -4371,6 +4358,18 @@ Joshua's Generation`;
             );
           }
           restoredCounts.custom_forms = data.custom_forms.length;
+        }
+
+        if (Array.isArray(data.redirect_links)) {
+          for (const link of data.redirect_links) {
+            await pool.query(
+              `INSERT INTO redirect_links (id, short_code, target_url, clicks, created_at)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (short_code) DO UPDATE SET
+               target_url=EXCLUDED.target_url, clicks=EXCLUDED.clicks`,
+              [link.id || 'link_' + Date.now(), link.short_code || link.shortCode, link.target_url || link.targetUrl, link.clicks || 0, link.created_at || new Date().toISOString()]
+            );
+          }
         }
       }
 
