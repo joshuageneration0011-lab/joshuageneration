@@ -7104,9 +7104,8 @@ function SettingsTab() {
               </div>
             </div>
           </div>
-        )}
-
-      <div className="rounded-2xl bg-white border border-gray-200 p-6 space-y-6 shadow-sm">
+        {activeSetting !== 'backup' && (
+          <div className="rounded-2xl bg-white border border-gray-200 p-6 space-y-6 shadow-sm">
         {activeSetting === 'general' && (
           <>
             <h3 className="text-gray-900 font-bold text-lg">General Settings</h3>
@@ -7646,7 +7645,6 @@ function SettingsTab() {
             </form>
           </div>
         )}
-
       </div>
     </div>
   );
