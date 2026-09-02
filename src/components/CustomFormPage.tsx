@@ -149,19 +149,32 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
             <img
               src={resolveApiUrl(form.banner_image_url)}
               alt={form.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-all"
+              style={{ objectPosition: (form as any).banner_position || 'center center' }}
             />
           </div>
         )}
 
         {/* Form Header Card */}
-        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-10 shadow-md space-y-4">
+        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-10 shadow-md space-y-5">
+          {(form as any).featured_image && (
+            <div className="rounded-2xl overflow-hidden max-h-80 border border-gray-100 shadow-sm mb-4">
+              <img
+                src={resolveApiUrl((form as any).featured_image)}
+                alt={form.title}
+                className="w-full h-full object-cover max-h-80"
+              />
+            </div>
+          )}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Official Form
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">{form.title}</h1>
           {form.description && (
-            <p className="text-gray-600 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{form.description}</p>
+            <div
+              className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap form-description-content"
+              dangerouslySetInnerHTML={{ __html: form.description }}
+            />
           )}
         </div>
 

@@ -9336,8 +9336,14 @@ function FormBuilderTab() {
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
+  const [featuredImageUrl, setFeaturedImageUrl] = useState('');
+  const [bannerPosition, setBannerPosition] = useState('center center');
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [isUploadingFeatured, setIsUploadingFeatured] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [fields, setFields] = useState<any[]>([]);
+
+  const descTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Completion Pop-up Settings
   const [enableRedirect, setEnableRedirect] = useState(false);
@@ -9347,6 +9353,52 @@ function FormBuilderTab() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
+
+  // Upload Handlers
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingBanner(true);
+      const compressed = await compressImage(file, 1600, 0.85);
+      const url = await api.uploadFile(compressed);
+      setBannerUrl(url);
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload banner image');
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleFeaturedUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingFeatured(true);
+      const compressed = await compressImage(file, 1200, 0.85);
+      const url = await api.uploadFile(compressed);
+      setFeaturedImageUrl(url);
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload featured image');
+    } finally {
+      setIsUploadingFeatured(false);
+    }
+  };
+
+  const applyFormatToSelectedDescription = (openTag: string, closeTag: string) => {
+    if (!descTextareaRef.current) return;
+    const input = descTextareaRef.current;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selectedText = description.substring(start, end) || 'text';
+    const replacement = `${openTag}${selectedText}${closeTag}`;
+    const newText = description.substring(0, start) + replacement + description.substring(end);
+    setDescription(newText);
+    setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(start + openTag.length, start + openTag.length + selectedText.length);
+    }, 50);
+  };
 
   // Submissions Modal State
   const [isSubmissionsOpen, setIsSubmissionsOpen] = useState(false);
@@ -9379,6 +9431,8 @@ function FormBuilderTab() {
     setSlug('');
     setDescription('');
     setBannerUrl('');
+    setFeaturedImageUrl('');
+    setBannerPosition('center center');
     setIsActive(true);
     setEnableRedirect(false);
     setRedirectButtonLabel('CLICK HERE TO COMPLETE REGISTRATION');
@@ -9397,7 +9451,9 @@ function FormBuilderTab() {
     setTitle(form.title || '');
     setSlug(form.slug || '');
     setDescription(form.description || '');
-    setBannerUrl(form.banner_image_url || '');
+    setBannerUrl(form.banner_image_url || form.banner_image || '');
+    setFeaturedImageUrl(form.featured_image || form.featured_image_url || '');
+    setBannerPosition(form.banner_position || 'center center');
     setIsActive(form.is_active !== undefined ? form.is_active : true);
     setEnableRedirect(form.enable_redirect || false);
     setRedirectButtonLabel(form.redirect_button_label || 'CLICK HERE TO COMPLETE REGISTRATION');
@@ -9494,6 +9550,8 @@ function FormBuilderTab() {
         slug: slug.trim(),
         description: description.trim(),
         banner_image_url: bannerUrl.trim(),
+        featured_image: featuredImageUrl.trim(),
+        banner_position: bannerPosition,
         is_active: isActive,
         fields,
         enable_redirect: enableRedirect,
@@ -9737,42 +9795,209 @@ function FormBuilderTab() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">URL Slug</label>
-                    <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden text-xs text-gray-500">
-                      <span className="pl-3 pr-1 text-gray-400 font-mono">/form/</span>
-                      <input
-                        type="text"
-                        value={slug}
-                        onChange={(e) => setSlug(e.target.value)}
-                        placeholder="auto-generated"
-                        className="w-full py-2.5 pr-3 bg-transparent text-gray-900 font-mono outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Header Banner Image URL (Optional)</label>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">URL Slug</label>
+                  <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden text-xs text-gray-500">
+                    <span className="pl-3 pr-1 text-gray-400 font-mono">/form/</span>
                     <input
                       type="text"
-                      value={bannerUrl}
-                      onChange={(e) => setBannerUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 outline-none"
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value)}
+                      placeholder="auto-generated"
+                      className="w-full py-2.5 pr-3 bg-transparent text-gray-900 font-mono outline-none"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Form Description / Instructions</label>
-                  <textarea
-                    rows={2}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Please fill out your details below to complete your registration..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 outline-none"
+                {/* 1. Header Banner Upload & Position Adjustment */}
+                <div className="space-y-3 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Header Banner Image & Position Adjustment
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition-all border-none">
+                      {isUploadingBanner ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      <span>{isUploadingBanner ? 'Compressing...' : 'Upload Header Banner'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isUploadingBanner}
+                        onChange={handleBannerUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={bannerUrl}
+                    onChange={(e) => setBannerUrl(e.target.value)}
+                    placeholder="https://... or uploaded image path"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 bg-white outline-none"
                   />
+
+                  {bannerUrl && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-gray-700">Adjust Visible Portion (Vertical Shift):</span>
+                        <div className="flex gap-1.5">
+                          {[
+                            { label: 'Top', val: 'center top' },
+                            { label: 'Center', val: 'center center' },
+                            { label: 'Bottom', val: 'center bottom' }
+                          ].map(pos => (
+                            <button
+                              key={pos.val}
+                              type="button"
+                              onClick={() => setBannerPosition(pos.val)}
+                              className={cn(
+                                "px-3 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer",
+                                bannerPosition === pos.val
+                                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                              )}
+                            >
+                              {pos.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-36 relative bg-gray-900">
+                        <img
+                          src={resolveApiUrl(bannerUrl)}
+                          alt="Banner Preview"
+                          className="w-full h-full object-cover transition-all"
+                          style={{ objectPosition: bannerPosition }}
+                        />
+                        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
+                          Live Banner Preview ({bannerPosition})
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Featured Image Upload */}
+                <div className="space-y-3 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Featured Image (Optional)
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition-all border-none">
+                      {isUploadingFeatured ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      <span>{isUploadingFeatured ? 'Compressing...' : 'Upload Featured Image'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isUploadingFeatured}
+                        onChange={handleFeaturedUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={featuredImageUrl}
+                    onChange={(e) => setFeaturedImageUrl(e.target.value)}
+                    placeholder="https://... or uploaded featured image path"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 bg-white outline-none"
+                  />
+
+                  {featuredImageUrl && (
+                    <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-40 relative bg-gray-900 max-w-sm">
+                      <img
+                        src={resolveApiUrl(featuredImageUrl)}
+                        alt="Featured Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Form Description with Formatting Toolbar */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Form Description / Instructions
+                    </label>
+                    <span className="text-[10px] text-gray-400 font-medium">Supports Bold, Italic & Colors</span>
+                  </div>
+
+                  {/* Formatting Toolbar */}
+                  <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-gray-100/80 border-b border-gray-200">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mr-1">Style:</span>
+                        <button
+                          type="button"
+                          onClick={() => applyFormatToSelectedDescription('<b>', '</b>')}
+                          className="w-7 h-7 rounded-lg bg-white hover:bg-gray-200 text-gray-900 font-bold text-xs shadow-sm border border-gray-200 flex items-center justify-center cursor-pointer"
+                          title="Make selected text Bold"
+                        >
+                          <b>B</b>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyFormatToSelectedDescription('<i>', '</i>')}
+                          className="w-7 h-7 rounded-lg bg-white hover:bg-gray-200 text-gray-900 italic font-bold text-xs shadow-sm border border-gray-200 flex items-center justify-center cursor-pointer"
+                          title="Make selected text Italic"
+                        >
+                          <i>I</i>
+                        </button>
+                        <div className="h-4 w-px bg-gray-300 mx-1.5" />
+                        <span className="text-[11px] font-semibold text-gray-500 mr-1">Color Effect:</span>
+                        {[
+                          { name: 'Amber Gold', color: '#d97706' },
+                          { name: 'Royal Blue', color: '#2563eb' },
+                          { name: 'Crimson Red', color: '#dc2626' },
+                          { name: 'Forest Green', color: '#16a34a' },
+                          { name: 'Purple', color: '#9333ea' },
+                          { name: 'Dark Gray', color: '#374151' }
+                        ].map((c) => (
+                          <button
+                            key={c.color}
+                            type="button"
+                            onClick={() => applyFormatToSelectedDescription(`<span style="color:${c.color}">`, '</span>')}
+                            className="w-5 h-5 rounded-full border border-white shadow-sm transition-transform hover:scale-125 cursor-pointer flex-shrink-0"
+                            style={{ backgroundColor: c.color }}
+                            title={`Color: ${c.name}`}
+                          />
+                        ))}
+                        <label className="flex items-center gap-1 text-[11px] font-medium text-gray-600 cursor-pointer ml-1">
+                          <input
+                            type="color"
+                            defaultValue="#d97706"
+                            onChange={(e) => applyFormatToSelectedDescription(`<span style="color:${e.target.value}">`, '</span>')}
+                            className="w-5 h-5 p-0 border-0 rounded cursor-pointer bg-transparent"
+                            title="Custom Color Picker"
+                          />
+                        </label>
+                      </div>
+                      <span className="text-[10px] text-gray-400 italic">Select text in textarea then click formatting</span>
+                    </div>
+
+                    <textarea
+                      ref={descTextareaRef}
+                      rows={5}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Welcome to the official registration... Highlight any text and click Bold, Italic or Color buttons above!"
+                      className="w-full px-4 py-3 text-xs text-gray-900 outline-none font-sans leading-relaxed border-none resize-y"
+                    />
+                  </div>
+
+                  {/* Live HTML Description Preview */}
+                  {description && (
+                    <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-1 mt-2">
+                      <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">Live Text Formatting Preview:</span>
+                      <div
+                        className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans"
+                        dangerouslySetInnerHTML={{ __html: description }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200">

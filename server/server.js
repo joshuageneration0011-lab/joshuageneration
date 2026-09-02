@@ -741,10 +741,16 @@ async function initDb() {
           redirect_url TEXT DEFAULT '',
           success_message TEXT DEFAULT 'Thank you for filling out this form! Your details have been successfully recorded.',
           banner_image_url TEXT DEFAULT '',
+          featured_image TEXT DEFAULT '',
+          banner_position TEXT DEFAULT 'center center',
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
       `);
+
+      for (const col of ['featured_image', 'banner_position']) {
+        try { await pool.query(`ALTER TABLE custom_forms ADD COLUMN IF NOT EXISTS ${col} TEXT DEFAULT ''`); } catch (e) {}
+      }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS form_submissions (
@@ -3844,8 +3850,9 @@ Joshua's Generation`;
         const resInsert = await pool.query(
           `INSERT INTO custom_forms (
             id, slug, title, description, fields, is_active, enable_redirect,
-            redirect_button_label, redirect_url, success_message, banner_image_url
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            redirect_button_label, redirect_url, success_message, banner_image_url,
+            featured_image, banner_position
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
           [
             formId,
             slug,
@@ -3857,7 +3864,9 @@ Joshua's Generation`;
             data.redirect_button_label || 'CLICK HERE TO COMPLETE REGISTRATION',
             data.redirect_url || '',
             data.success_message || 'Thank you for filling out this form! Your details have been successfully recorded.',
-            data.banner_image_url || ''
+            data.banner_image_url || data.bannerUrl || '',
+            data.featured_image || data.featured_image_url || data.featuredImageUrl || '',
+            data.banner_position || data.bannerPosition || 'center center'
           ]
         );
         sendJson(res, 201, { success: true, form: resInsert.rows[0] });
@@ -3903,8 +3912,10 @@ Joshua's Generation`;
             redirect_url = COALESCE($8, redirect_url),
             success_message = COALESCE($9, success_message),
             banner_image_url = COALESCE($10, banner_image_url),
+            featured_image = COALESCE($11, featured_image),
+            banner_position = COALESCE($12, banner_position),
             updated_at = NOW()
-          WHERE id = $11
+          WHERE id = $13
           RETURNING *`,
           [
             data.title,
@@ -3916,7 +3927,9 @@ Joshua's Generation`;
             data.redirect_button_label,
             data.redirect_url,
             data.success_message,
-            data.banner_image_url,
+            data.banner_image_url || data.bannerUrl,
+            data.featured_image || data.featured_image_url || data.featuredImageUrl,
+            data.banner_position || data.bannerPosition,
             formId
           ]
         );
