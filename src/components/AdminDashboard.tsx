@@ -7027,9 +7027,8 @@ function SettingsTab() {
         })}
       </div>
 
-      <div>
-        {activeSetting === 'backup' ? (
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-6">
+      {activeSetting === 'backup' && (
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Download className="w-5 h-5 text-gold-500" /> Site Backup & Restore Center
@@ -7101,11 +7100,12 @@ function SettingsTab() {
                     />
                   </label>
                 </div>
-              </div>
-            </div>
           </div>
-        ) : (
-          <div className="rounded-2xl bg-white border border-gray-200 p-6 space-y-6 shadow-sm">
+        </div>
+      )}
+
+      {activeSetting !== 'backup' && (
+        <div className="rounded-2xl bg-white border border-gray-200 p-6 space-y-6 shadow-sm">
         {activeSetting === 'general' && (
           <>
             <h3 className="text-gray-900 font-bold text-lg">General Settings</h3>
