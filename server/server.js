@@ -1119,7 +1119,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- SEO DYNAMIC OPENGRAPH HANDLER ---
-  if (pathname === '/createimage' || pathname === '/createimage/' || pathname === '/image-generator' || pathname === '/getupdates' || pathname === '/getupdates/' || pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' || pathname === '/sondaughter' || pathname === '/sondaughter/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/')) {
+  if (pathname === '/createimage' || pathname === '/createimage/' || pathname === '/image-generator' || pathname === '/getupdates' || pathname === '/getupdates/' || pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' || pathname === '/sondaughter' || pathname === '/sondaughter/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/') || pathname.startsWith('/form/')) {
     const targetPath = pathname;
     try {
       const indexPath = path.join(__dirname, '../dist/index.html');
