@@ -7103,8 +7103,7 @@ function SettingsTab() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {activeSetting !== 'backup' && (
         <div className="rounded-2xl bg-white border border-gray-200 p-6 space-y-6 shadow-sm">
