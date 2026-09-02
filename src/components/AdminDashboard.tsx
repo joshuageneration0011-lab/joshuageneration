@@ -6987,7 +6987,7 @@ function SettingsTab() {
     }
   };
 
-  const settings = [
+  const settings: { id: 'general' | 'home' | 'contact' | 'notifications' | 'appearance' | 'security' | 'adsense' | 'legal' | 'backup'; label: string; icon: any }[] = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'home', label: 'Homepage Edit', icon: Home },
     { id: 'contact', label: 'Contact Info', icon: Mail },
@@ -6997,7 +6997,7 @@ function SettingsTab() {
     { id: 'adsense', label: 'Google AdSense', icon: DollarSign },
     { id: 'legal', label: 'Legal Pages', icon: FileText },
     { id: 'backup', label: 'Backup & Restore', icon: Download },
-  ] as const;
+  ];
 
   return (
     <div className="space-y-6">
@@ -7012,7 +7012,7 @@ function SettingsTab() {
           return (
             <button
               key={s.id}
-              onClick={() => setActiveSetting(s.id as any)}
+              onClick={() => setActiveSetting(s.id)}
               className={cn(
                 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm',
                 activeSetting === s.id
