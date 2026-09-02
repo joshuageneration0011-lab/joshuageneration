@@ -7100,6 +7100,8 @@ function SettingsTab() {
                     />
                   </label>
                 </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
