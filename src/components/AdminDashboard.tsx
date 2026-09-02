@@ -9851,24 +9851,36 @@ function FormBuilderTab() {
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Header Banner Image & Position Adjustment
                     </label>
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition-all border-none">
-                      {isUploadingBanner ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      <span>{isUploadingBanner ? 'Compressing...' : 'Upload Header Banner'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={isUploadingBanner}
-                        onChange={handleBannerUpload}
-                        className="hidden"
-                      />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      {bannerUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setBannerUrl('')}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-xl transition-all border-none cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Remove Banner</span>
+                        </button>
+                      )}
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition-all border-none">
+                        {isUploadingBanner ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        <span>{isUploadingBanner ? 'Compressing...' : 'Upload Header Banner'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingBanner}
+                          onChange={handleBannerUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <input
                     type="text"
                     value={bannerUrl}
                     onChange={(e) => setBannerUrl(e.target.value)}
-                    placeholder="https://... or uploaded image path"
+                    placeholder="https://... or uploaded image path (Leave blank if you do not want a banner)"
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 bg-white outline-none"
                   />
 
@@ -9955,17 +9967,29 @@ function FormBuilderTab() {
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Featured Image (Optional)
                     </label>
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition-all border-none">
-                      {isUploadingFeatured ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      <span>{isUploadingFeatured ? 'Compressing...' : 'Upload Featured Image'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={isUploadingFeatured}
-                        onChange={handleFeaturedUpload}
-                        className="hidden"
-                      />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      {featuredImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setFeaturedImageUrl('')}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-xl transition-all border-none cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Remove Featured</span>
+                        </button>
+                      )}
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition-all border-none">
+                        {isUploadingFeatured ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        <span>{isUploadingFeatured ? 'Compressing...' : 'Upload Featured Image'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingFeatured}
+                          onChange={handleFeaturedUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <input

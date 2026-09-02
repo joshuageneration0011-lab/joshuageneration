@@ -3933,8 +3933,8 @@ Joshua's Generation`;
             redirect_button_label = COALESCE($7, redirect_button_label),
             redirect_url = COALESCE($8, redirect_url),
             success_message = COALESCE($9, success_message),
-            banner_image_url = COALESCE($10, banner_image_url),
-            featured_image = COALESCE($11, featured_image),
+            banner_image_url = $10,
+            featured_image = $11,
             banner_position = COALESCE($12, banner_position),
             updated_at = NOW()
           WHERE id = $13
@@ -3949,8 +3949,8 @@ Joshua's Generation`;
             data.redirect_button_label,
             data.redirect_url,
             data.success_message,
-            data.banner_image_url || data.bannerUrl,
-            data.featured_image || data.featured_image_url || data.featuredImageUrl,
+            data.banner_image_url !== undefined ? data.banner_image_url : (data.bannerUrl !== undefined ? data.bannerUrl : ''),
+            data.featured_image !== undefined ? data.featured_image : (data.featured_image_url !== undefined ? data.featured_image_url : (data.featuredImageUrl !== undefined ? data.featuredImageUrl : '')),
             data.banner_position || data.bannerPosition,
             formId
           ]
