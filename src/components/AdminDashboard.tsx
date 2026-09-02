@@ -7646,8 +7646,9 @@ function SettingsTab() {
           </div>
         )}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }
 
 
