@@ -4142,6 +4142,249 @@ Joshua's Generation`;
     return;
   }
 
+  // Backup Export Endpoint
+  if (pathname === '/api/admin/backup/export' && method === 'GET') {
+    try {
+      const backupData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        site: 'Joshua Generation Ministry',
+        data: {}
+      };
+
+      if (pool) {
+        const [s, serm, b, p, ev, test, sub, saSub, sdSub, forms, links] = await Promise.all([
+          pool.query('SELECT * FROM settings WHERE id = 1'),
+          pool.query('SELECT * FROM sermons'),
+          pool.query('SELECT * FROM books'),
+          pool.query('SELECT * FROM blog_posts'),
+          pool.query('SELECT * FROM events'),
+          pool.query('SELECT * FROM testimonies'),
+          pool.query('SELECT * FROM subscribers'),
+          pool.query('SELECT * FROM sa_subscribers'),
+          pool.query('SELECT * FROM sd_subscribers'),
+          pool.query('SELECT * FROM custom_forms'),
+          pool.query('SELECT * FROM redirect_links')
+        ]);
+
+        backupData.data.settings = s.rows[0] || {};
+        backupData.data.sermons = serm.rows || [];
+        backupData.data.books = b.rows || [];
+        backupData.data.blog_posts = p.rows || [];
+        backupData.data.events = ev.rows || [];
+        backupData.data.testimonies = test.rows || [];
+        backupData.data.subscribers = sub.rows || [];
+        backupData.data.sa_subscribers = saSub.rows || [];
+        backupData.data.sd_subscribers = sdSub.rows || [];
+        backupData.data.custom_forms = forms.rows || [];
+        backupData.data.redirect_links = links.rows || [];
+      } else {
+        backupData.data.settings = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8')) : {};
+        backupData.data.sermons = fs.existsSync(SERMONS_FILE) ? JSON.parse(fs.readFileSync(SERMONS_FILE, 'utf-8')) : [];
+        backupData.data.books = fs.existsSync(BOOKS_FILE) ? JSON.parse(fs.readFileSync(BOOKS_FILE, 'utf-8')) : [];
+        backupData.data.blog_posts = fs.existsSync(BLOG_FILE) ? JSON.parse(fs.readFileSync(BLOG_FILE, 'utf-8')) : [];
+        backupData.data.events = fs.existsSync(EVENTS_FILE) ? JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8')) : [];
+        backupData.data.testimonies = fs.existsSync(TESTIMONIES_FILE) ? JSON.parse(fs.readFileSync(TESTIMONIES_FILE, 'utf-8')) : [];
+        backupData.data.subscribers = fs.existsSync(SUBSCRIBERS_FILE) ? JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8')) : [];
+        backupData.data.sa_subscribers = fs.existsSync(SA_SUBSCRIBERS_FILE) ? JSON.parse(fs.readFileSync(SA_SUBSCRIBERS_FILE, 'utf-8')) : [];
+        backupData.data.sd_subscribers = fs.existsSync(SD_SUBSCRIBERS_FILE) ? JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8')) : [];
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="jg_site_backup_${new Date().toISOString().slice(0, 10)}.json"`
+      });
+      res.end(JSON.stringify(backupData, null, 2));
+      return;
+    } catch (err) {
+      console.error('Backup export error:', err);
+      return sendJson(res, 500, { error: 'Failed to generate site backup' });
+    }
+  }
+
+  // Backup Restore Endpoint
+  if (pathname === '/api/admin/backup/restore' && method === 'POST') {
+    try {
+      const payload = await getJsonBody(req);
+      if (!payload || (!payload.data && !payload.sermons)) {
+        return sendJson(res, 400, { error: 'Invalid backup format. Missing data object.' });
+      }
+
+      const data = payload.data || payload;
+      const restoredCounts = {
+        events: 0,
+        books: 0,
+        sermons: 0,
+        blog_posts: 0,
+        subscribers: 0,
+        sa_subscribers: 0,
+        sd_subscribers: 0,
+        custom_forms: 0
+      };
+
+      if (pool) {
+        if (data.settings && typeof data.settings === 'object') {
+          const s = data.settings;
+          await pool.query(
+            `UPDATE settings SET 
+              "contactEmail" = COALESCE($1, "contactEmail"),
+              "contactPhone" = COALESCE($2, "contactPhone"),
+              "contactAddress" = COALESCE($3, "contactAddress"),
+              "socialFacebook" = COALESCE($4, "socialFacebook"),
+              "socialTwitter" = COALESCE($5, "socialTwitter"),
+              "socialInstagram" = COALESCE($6, "socialInstagram"),
+              "socialYoutube" = COALESCE($7, "socialYoutube"),
+              "homeHeadlinePrefix" = COALESCE($8, "homeHeadlinePrefix"),
+              "homeHeadlineHighlight" = COALESCE($9, "homeHeadlineHighlight"),
+              "homeHeadlineSuffix" = COALESCE($10, "homeHeadlineSuffix"),
+              "homeSubheading" = COALESCE($11, "homeSubheading")
+            WHERE id = 1`,
+            [
+              s.contactEmail || null, s.contactPhone || null, s.contactAddress || null,
+              s.socialFacebook || null, s.socialTwitter || null, s.socialInstagram || null, s.socialYoutube || null,
+              s.homeHeadlinePrefix || null, s.homeHeadlineHighlight || null, s.homeHeadlineSuffix || null, s.homeSubheading || null
+            ]
+          );
+        }
+
+        if (Array.isArray(data.events)) {
+          for (const ev of data.events) {
+            await pool.query(
+              `INSERT INTO events (id, title, date, time, location, description, image_url, registration_url, registrations)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               ON CONFLICT (id) DO UPDATE SET
+               title=EXCLUDED.title, date=EXCLUDED.date, time=EXCLUDED.time, location=EXCLUDED.location,
+               description=EXCLUDED.description, image_url=EXCLUDED.image_url, registration_url=EXCLUDED.registration_url, registrations=EXCLUDED.registrations`,
+              [ev.id, ev.title, ev.date, ev.time || '', ev.location || '', ev.description || '', ev.image_url || ev.imageUrl || '', ev.registration_url || ev.registrationUrl || '', ev.registrations || 0]
+            );
+          }
+          restoredCounts.events = data.events.length;
+        }
+
+        if (Array.isArray(data.books)) {
+          for (const b of data.books) {
+            await pool.query(
+              `INSERT INTO books (id, title, author, cover_url, description, category, download_url, pdfs, chapters, views, rating, amazon_url, selar_url)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+               ON CONFLICT (id) DO UPDATE SET
+               title=EXCLUDED.title, author=EXCLUDED.author, cover_url=EXCLUDED.cover_url, description=EXCLUDED.description,
+               category=EXCLUDED.category, download_url=EXCLUDED.download_url, pdfs=EXCLUDED.pdfs, chapters=EXCLUDED.chapters,
+               views=EXCLUDED.views, rating=EXCLUDED.rating, amazon_url=EXCLUDED.amazon_url, selar_url=EXCLUDED.selar_url`,
+              [
+                b.id, b.title, b.author, b.cover_url || b.coverUrl || '', b.description, b.category,
+                b.download_url || b.downloadUrl || '', JSON.stringify(b.pdfs || []), JSON.stringify(b.chapters || []),
+                b.views || 0, b.rating || 4.8, b.amazon_url || b.amazonUrl || '', b.selar_url || b.selarUrl || ''
+              ]
+            );
+          }
+          restoredCounts.books = data.books.length;
+        }
+
+        if (Array.isArray(data.sermons)) {
+          for (const s of data.sermons) {
+            await pool.query(
+              `INSERT INTO sermons (id, title, speaker, date, duration, description, category, thumbnail, audio_url, video_url, views, audience, series_audios)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+               ON CONFLICT (id) DO UPDATE SET
+               title=EXCLUDED.title, speaker=EXCLUDED.speaker, date=EXCLUDED.date, duration=EXCLUDED.duration,
+               description=EXCLUDED.description, category=EXCLUDED.category, thumbnail=EXCLUDED.thumbnail,
+               audio_url=EXCLUDED.audio_url, video_url=EXCLUDED.video_url, views=EXCLUDED.views, audience=EXCLUDED.audience, series_audios=EXCLUDED.series_audios`,
+              [
+                s.id, s.title, s.speaker, s.date, s.duration, s.description, s.category,
+                s.thumbnail, s.audio_url || s.audioUrl || '', s.video_url || s.videoUrl || '',
+                s.views || 0, s.audience || 'public', JSON.stringify(s.series_audios || s.seriesAudios || [])
+              ]
+            );
+          }
+          restoredCounts.sermons = data.sermons.length;
+        }
+
+        if (Array.isArray(data.blog_posts)) {
+          for (const p of data.blog_posts) {
+            await pool.query(
+              `INSERT INTO blog_posts (id, title, author, date, read_time, category, excerpt, content, image_url, views, audio_url, featured)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+               ON CONFLICT (id) DO UPDATE SET
+               title=EXCLUDED.title, author=EXCLUDED.author, date=EXCLUDED.date, read_time=EXCLUDED.read_time,
+               category=EXCLUDED.category, excerpt=EXCLUDED.excerpt, content=EXCLUDED.content, image_url=EXCLUDED.image_url,
+               views=EXCLUDED.views, audio_url=EXCLUDED.audio_url, featured=EXCLUDED.featured`,
+              [
+                p.id, p.title, p.author, p.date, p.read_time || p.readTime || '5 min', p.category,
+                p.excerpt, p.content, p.image_url || p.imageUrl || '', p.views || 0, p.audio_url || p.audioUrl || '', p.featured ? true : false
+              ]
+            );
+          }
+          restoredCounts.blog_posts = data.blog_posts.length;
+        }
+
+        if (Array.isArray(data.subscribers)) {
+          for (const sub of data.subscribers) {
+            await pool.query(
+              `INSERT INTO subscribers (id, email, name, created_at, is_active)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (email) DO UPDATE SET
+               name=EXCLUDED.name, is_active=EXCLUDED.is_active`,
+              [sub.id || 'sub_' + Date.now(), sub.email, sub.name || '', sub.created_at || sub.createdAt || new Date().toISOString(), sub.is_active !== false]
+            );
+          }
+          restoredCounts.subscribers = data.subscribers.length;
+        }
+
+        if (Array.isArray(data.sa_subscribers)) {
+          for (const sub of data.sa_subscribers) {
+            await pool.query(
+              `INSERT INTO sa_subscribers (id, email, name, created_at, is_active)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (email) DO UPDATE SET
+               name=EXCLUDED.name, is_active=EXCLUDED.is_active`,
+              [sub.id || 'sa_' + Date.now(), sub.email, sub.name || '', sub.created_at || sub.createdAt || new Date().toISOString(), sub.is_active !== false]
+            );
+          }
+          restoredCounts.sa_subscribers = data.sa_subscribers.length;
+        }
+
+        if (Array.isArray(data.sd_subscribers)) {
+          for (const sub of data.sd_subscribers) {
+            await pool.query(
+              `INSERT INTO sd_subscribers (id, email, name, created_at, is_active)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (email) DO UPDATE SET
+               name=EXCLUDED.name, is_active=EXCLUDED.is_active`,
+              [sub.id || 'sd_' + Date.now(), sub.email, sub.name || '', sub.created_at || sub.createdAt || new Date().toISOString(), sub.is_active !== false]
+            );
+          }
+          restoredCounts.sd_subscribers = data.sd_subscribers.length;
+        }
+
+        if (Array.isArray(data.custom_forms)) {
+          for (const f of data.custom_forms) {
+            await pool.query(
+              `INSERT INTO custom_forms (id, title, slug, description, banner_image, featured_image, fields, is_active, responses_count, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               ON CONFLICT (id) DO UPDATE SET
+               title=EXCLUDED.title, slug=EXCLUDED.slug, description=EXCLUDED.description, banner_image=EXCLUDED.banner_image,
+               featured_image=EXCLUDED.featured_image, fields=EXCLUDED.fields, is_active=EXCLUDED.is_active`,
+              [
+                f.id, f.title, f.slug, f.description, f.banner_image || f.bannerImage || '', f.featured_image || f.featuredImage || '',
+                JSON.stringify(f.fields || []), f.is_active !== false, f.responses_count || f.responsesCount || 0, f.created_at || new Date().toISOString()
+              ]
+            );
+          }
+          restoredCounts.custom_forms = data.custom_forms.length;
+        }
+      }
+
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Site backup restored successfully!',
+        restored: restoredCounts
+      });
+    } catch (err) {
+      console.error('Backup restore error:', err);
+      return sendJson(res, 500, { error: 'Failed to restore site backup: ' + err.message });
+    }
+  }
+
   // GET Users (Superadmin only)
   if (pathname === '/api/users' && method === 'GET') {
     if (user.role !== 'superadmin') {

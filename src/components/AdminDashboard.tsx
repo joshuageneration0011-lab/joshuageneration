@@ -6782,8 +6782,62 @@ function ModerationTab() {
 
 // ====== SETTINGS TAB ======
 function SettingsTab() {
-  const [activeSetting, setActiveSetting] = useState<'general' | 'home' | 'contact' | 'notifications' | 'appearance' | 'security' | 'integrations' | 'adsense'>('general');
+  const [activeSetting, setActiveSetting] = useState<'general' | 'home' | 'contact' | 'notifications' | 'appearance' | 'security' | 'integrations' | 'adsense' | 'legal' | 'backup'>('general');
   
+  // Site Backup & Restore State
+  const [isDownloadingBackup, setIsDownloadingBackup] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+
+  const handleDownloadBackup = async () => {
+    try {
+      setIsDownloadingBackup(true);
+      await api.admin.downloadSiteBackup();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Failed to download site backup');
+    } finally {
+      setIsDownloadingBackup(false);
+    }
+  };
+
+  const handleRestoreBackupFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+
+      if (!json || (!json.data && !json.sermons && !json.events)) {
+        alert('Invalid backup file format. Please select a valid site backup JSON file.');
+        return;
+      }
+
+      const counts = json.data || json;
+      const confirmMsg = `⚠️ RESTORE CONFIRMATION:\n\nAre you sure you want to restore this site backup?\n\nFile: ${file.name}\nTimestamp: ${json.timestamp || 'Unknown'}\nEvents: ${counts.events?.length || 0}\nBooks: ${counts.books?.length || 0}\nSermons: ${counts.sermons?.length || 0}\nSubscribers: ${counts.subscribers?.length || 0}\n\nThis will update your site database with the contents of the backup.`;
+      
+      if (!window.confirm(confirmMsg)) {
+        e.target.value = '';
+        return;
+      }
+
+      setIsRestoringBackup(true);
+      const res = await api.admin.restoreSiteBackup(json);
+      if (res.success) {
+        alert(`✅ RESTORE SUCCESSFUL!\n\n${res.message}`);
+        window.location.reload();
+      } else {
+        alert('❌ Failed to restore backup: ' + (res.message || 'Unknown error'));
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('❌ Error reading backup file: ' + (err.message || 'Invalid JSON file'));
+    } finally {
+      setIsRestoringBackup(false);
+      e.target.value = '';
+    }
+  };
+
   // Flutterwave V4 Settings State
   const [propheticClientId, setPropheticClientId] = useState('');
   const [propheticClientSecret, setPropheticClientSecret] = useState('');
@@ -6942,6 +6996,7 @@ function SettingsTab() {
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'adsense', label: 'Google AdSense', icon: DollarSign },
     { id: 'legal', label: 'Legal Pages', icon: FileText },
+    { id: 'backup', label: 'Backup & Restore', icon: Download },
   ] as const;
 
   return (
@@ -6957,7 +7012,7 @@ function SettingsTab() {
           return (
             <button
               key={s.id}
-              onClick={() => setActiveSetting(s.id)}
+              onClick={() => setActiveSetting(s.id as any)}
               className={cn(
                 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm',
                 activeSetting === s.id
@@ -6971,6 +7026,85 @@ function SettingsTab() {
           );
         })}
       </div>
+
+      <div>
+        {activeSetting === 'backup' && (
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-6">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Download className="w-5 h-5 text-gold-500" /> Site Backup & Restore Center
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Download a complete snapshot of your site data (sermons, books, blogs, events, custom forms, settings, subscribers).
+                You can restore this backup anytime to instantly bring back your site exactly as it was.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              {/* 1. Download Backup Box */}
+              <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center mb-3 shadow-md">
+                    <Download className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900">Create & Download Backup</h4>
+                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                    Generates a formatted JSON file containing all your latest events, books, sermons, subscriber lists, custom forms, and settings.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadBackup}
+                  disabled={isDownloadingBackup}
+                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border-none"
+                >
+                  {isDownloadingBackup ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Generating Backup...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" /> Download Site Backup (.json)
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 2. Restore Backup Box */}
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/50 p-6 rounded-2xl border border-amber-200/60 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="w-12 h-12 bg-amber-500 text-white rounded-xl flex items-center justify-center mb-3 shadow-md">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900">Upload & Restore Backup</h4>
+                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                    Upload a previously downloaded JSON backup file to instantly restore all your database records, settings, and forms.
+                  </p>
+                </div>
+                <div>
+                  <label className="w-full py-3 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border-none text-center">
+                    {isRestoringBackup ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Restoring Backup...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" /> Select Backup File & Restore
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept=".json"
+                      disabled={isRestoringBackup}
+                      onChange={handleRestoreBackupFile}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       <div className="rounded-2xl bg-white border border-gray-200 p-6 space-y-6 shadow-sm">
         {activeSetting === 'general' && (

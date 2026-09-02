@@ -621,6 +621,27 @@ export const api = {
         headers: getHeaders(),
       });
       return (await handleResponse(res, 'Failed to delete SD subscriber')).json();
+    },
+    async downloadSiteBackup(): Promise<void> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/backup/export`, { headers: getHeaders() });
+      if (!res.ok) throw new Error('Failed to download site backup');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jg_site_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    },
+    async restoreSiteBackup(jsonData: any): Promise<{ success: boolean; message: string; restored?: any }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/backup/restore`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(jsonData),
+      });
+      return (await handleResponse(res, 'Failed to restore backup')).json();
     }
   },
   async generateImage(params: { prompt: string; size?: string; n?: number; model?: string; aspect_ratio?: string; image?: string; engine?: string }): Promise<{
