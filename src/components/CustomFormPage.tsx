@@ -33,6 +33,9 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
         setError(null);
         const data = await api.getForm(slug);
         setForm(data);
+        if (data?.title) {
+          document.title = `${data.title} - Joshua's Generation`;
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load form.');
       } finally {

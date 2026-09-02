@@ -1189,6 +1189,28 @@ const server = http.createServer(async (req, res) => {
             imageUrl = makeAbsolute(result.rows[0].image_url) || imageUrl;
           }
         }
+      } else if (targetPath.startsWith('/form/')) {
+        const slugOrId = targetPath.split('/form/')[1]?.split('/')[0]?.split('?')[0];
+        if (slugOrId && pool) {
+          const result = await pool.query(
+            'SELECT title, description, featured_image, banner_image_url FROM custom_forms WHERE slug = $1 OR id::text = $1',
+            [slugOrId]
+          );
+          if (result.rows.length > 0) {
+            const form = result.rows[0];
+            title = `${form.title} - Joshua's Generation`;
+            if (form.description) {
+              const plainDesc = form.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+              if (plainDesc) {
+                description = plainDesc.length > 200 ? plainDesc.substring(0, 197) + '...' : plainDesc;
+              }
+            }
+            const formImg = form.featured_image || form.banner_image_url;
+            if (formImg) {
+              imageUrl = makeAbsolute(formImg);
+            }
+          }
+        }
       }
 
       // Strip existing Open Graph, Twitter, and description meta tags to prevent crawlers using the default homepage values
