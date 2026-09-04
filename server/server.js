@@ -1119,7 +1119,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- SEO DYNAMIC OPENGRAPH HANDLER ---
-  if (pathname === '/createimage' || pathname === '/createimage/' || pathname === '/image-generator' || pathname === '/getupdates' || pathname === '/getupdates/' || pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' || pathname === '/sondaughter' || pathname === '/sondaughter/' || pathname.startsWith('/sermon/') || pathname.startsWith('/blog/') || pathname.startsWith('/books/') || pathname.startsWith('/form/')) {
+  const isSeoRoute = 
+    pathname === '/createimage' || pathname === '/createimage/' || pathname === '/image-generator' ||
+    pathname === '/getupdates' || pathname === '/getupdates/' ||
+    pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' ||
+    pathname === '/sondaughter' || pathname === '/sondaughter/' ||
+    pathname === '/sermons' || pathname === '/sermons/' || pathname === '/sermon' || pathname === '/sermon/' || pathname.startsWith('/sermon/') ||
+    pathname === '/blog' || pathname === '/blog/' || pathname.startsWith('/blog/') ||
+    pathname === '/books' || pathname === '/books/' || pathname.startsWith('/books/') ||
+    pathname === '/events' || pathname === '/events/' ||
+    pathname === '/donate' || pathname === '/donate/' ||
+    pathname.startsWith('/form/');
+
+  if (isSeoRoute) {
     const targetPath = pathname;
     try {
       const indexPath = path.join(__dirname, '../dist/index.html');
@@ -4107,10 +4119,12 @@ Joshua's Generation`;
   }
 
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
-    sendJson(res, 401, { error: 'Unauthorized admin access' });
-    return;
+  if (pathname.startsWith('/api/')) {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: 'Unauthorized admin access' });
+      return;
+    }
   }
 
   // GET All Sermons for Admin (includes private ones)

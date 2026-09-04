@@ -41,6 +41,12 @@ def main():
         out = stdout.read().decode('utf-8', errors='replace')
         print(f"Build Output:\n{out}")
 
+        # Restart PM2 Backend process
+        print("Restarting PM2 backend...")
+        stdin, stdout, stderr = ssh.exec_command("pm2 restart joshuagen-backend")
+        pm2_out = stdout.read().decode('utf-8', errors='replace')
+        print(f"PM2 Output:\n{pm2_out}")
+
         # Update Nginx config and reload Nginx
         print("Updating Nginx config on Contabo server...")
         stdin, stdout, stderr = ssh.exec_command("cp /var/www/joshuageneration/nginx.conf /etc/nginx/sites-enabled/joshuageneration && nginx -t && systemctl reload nginx")
