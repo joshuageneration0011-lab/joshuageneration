@@ -4165,8 +4165,9 @@ Joshua's Generation`;
   }
 
   if (pathname === '/api/admin/settings' && method === 'GET') {
-    if (user.role !== 'superadmin') {
-      sendJson(res, 403, { error: 'Superadmin access required' });
+    const userRole = (user.role || '').toLowerCase();
+    if (userRole !== 'superadmin' && userRole !== 'admin') {
+      sendJson(res, 403, { error: 'Admin access required' });
       return;
     }
     try {
@@ -4196,8 +4197,9 @@ Joshua's Generation`;
   }
 
   if (pathname === '/api/admin/settings' && method === 'POST') {
-    if (user.role !== 'superadmin') {
-      sendJson(res, 403, { error: 'Superadmin access required' });
+    const userRole = (user.role || '').toLowerCase();
+    if (userRole !== 'superadmin' && userRole !== 'admin') {
+      sendJson(res, 403, { error: 'Admin access required' });
       return;
     }
     try {
@@ -4552,7 +4554,8 @@ Joshua's Generation`;
 
   // GET Users (Superadmin only)
   if (pathname === '/api/users' && method === 'GET') {
-    if (user.role !== 'superadmin') {
+    const userRole = (user.role || '').toLowerCase();
+    if (userRole !== 'superadmin' && userRole !== 'admin') {
       sendJson(res, 403, { error: 'Superadmin access required' });
       return;
     }
@@ -4584,7 +4587,8 @@ Joshua's Generation`;
 
   // POST Users (Superadmin only)
   if (pathname === '/api/users' && method === 'POST') {
-    if (user.role !== 'superadmin') {
+    const userRole = (user.role || '').toLowerCase();
+    if (userRole !== 'superadmin' && userRole !== 'admin') {
       sendJson(res, 403, { error: 'Superadmin access required' });
       return;
     }
@@ -4670,7 +4674,8 @@ Joshua's Generation`;
 
   // GET Donations (Superadmin only)
   if (pathname === '/api/donations' && method === 'GET') {
-    if (user.role !== 'superadmin') {
+    const userRole = (user.role || '').toLowerCase();
+    if (userRole !== 'superadmin' && userRole !== 'admin') {
       sendJson(res, 403, { error: 'Superadmin access required' });
       return;
     }
@@ -5141,7 +5146,8 @@ except Exception as e:
 
   // POST Settings (Superadmin only)
   if (pathname === '/api/settings' && method === 'POST') {
-    if (user.role !== 'superadmin') {
+    const userRole = (user.role || '').toLowerCase();
+    if (userRole !== 'superadmin' && userRole !== 'admin') {
       sendJson(res, 403, { error: 'Superadmin access required' });
       return;
     }
