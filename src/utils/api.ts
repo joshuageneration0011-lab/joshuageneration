@@ -677,6 +677,15 @@ export const api = {
   },
 
   // --- SHORT REDIRECT LINKS (PRETTY LINKS) ---
+  async resolveRedirectLink(slug: string): Promise<{ success: boolean; target_url?: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/redirect-link/resolve?slug=${encodeURIComponent(slug)}`);
+      return await res.json();
+    } catch (e) {
+      return { success: false };
+    }
+  },
+
   async getRedirectLinks(): Promise<RedirectLink[]> {
     const res = await fetch(`${API_BASE_URL}/api/redirect-links`, {
       headers: getHeaders(),

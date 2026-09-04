@@ -138,6 +138,29 @@ export default function App() {
     };
   }, []);
 
+  // Check if current URL path is a Pretty Short Link (Redirect Link)
+  useEffect(() => {
+    const rawPath = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').trim();
+    if (!rawPath) return;
+
+    const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form', 'counter'];
+    
+    const isStandardPage = validPages.includes(rawPath.toLowerCase()) || 
+      rawPath.startsWith('blog/') || 
+      rawPath.startsWith('sermon/') || 
+      rawPath.startsWith('books/') || 
+      rawPath.startsWith('form/') ||
+      rawPath.startsWith('counter');
+
+    if (!isStandardPage) {
+      api.resolveRedirectLink(rawPath).then(res => {
+        if (res.success && res.target_url) {
+          window.location.replace(res.target_url);
+        }
+      }).catch(err => console.error('Pretty link resolution error:', err));
+    }
+  }, []);
+
   // Load Google AdSense Auto Ads
   useEffect(() => {
     const loadAdSenseAuto = async () => {
