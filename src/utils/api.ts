@@ -118,7 +118,12 @@ export const api = {
   },
 
   getRole(): 'superadmin' | 'admin' | null {
-    return localStorage.getItem('jg_admin_role') as any;
+    const r = localStorage.getItem('jg_admin_role');
+    if (!r) return null;
+    const lower = r.toLowerCase().trim();
+    if (lower === 'superadmin') return 'superadmin';
+    if (lower === 'admin') return 'admin';
+    return lower as any;
   },
 
   // Sermons

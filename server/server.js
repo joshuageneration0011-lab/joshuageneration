@@ -4119,8 +4119,9 @@ Joshua's Generation`;
   }
 
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
-  if (pathname.startsWith('/api/')) {
-    const user = await getAuthenticatedUser(req);
+  let user = null;
+  if (pathname.startsWith('/api/admin/') || pathname === '/api/users' || pathname === '/api/donations') {
+    user = await getAuthenticatedUser(req);
     if (!user) {
       sendJson(res, 401, { error: 'Unauthorized admin access' });
       return;
