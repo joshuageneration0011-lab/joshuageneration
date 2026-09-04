@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Tv, BookOpen, FileText,
   DollarSign, BarChart3, Shield,
   Settings, LogOut, Bell, Search, Menu, X,
-  MoreHorizontal, Download, ChevronRight, UserPlus, Eye, Clock,
+  MoreHorizontal, Download, ChevronRight, UserPlus, Eye, EyeOff, Clock,
   Heart, Gift, ArrowUp, ArrowDown, Plus, Edit3, Trash2,
   Filter, Star, CheckCircle, AlertCircle, Globe,
   Monitor, Moon, Sun, Mail, Phone,
@@ -6843,6 +6843,8 @@ function SettingsTab() {
   const [propheticClientSecret, setPropheticClientSecret] = useState('');
   const [missionClientId, setMissionClientId] = useState('');
   const [missionClientSecret, setMissionClientSecret] = useState('');
+  const [showPropheticSecret, setShowPropheticSecret] = useState(false);
+  const [showMissionSecret, setShowMissionSecret] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -7142,7 +7144,11 @@ function SettingsTab() {
                 </div>
               </div>
 
-              <form onSubmit={handleSaveSettings} className="space-y-5 pt-2">
+              <form onSubmit={handleSaveSettings} className="space-y-5 pt-2" autoComplete="off">
+                {/* Hidden dummy inputs to trap browser autofill heuristics */}
+                <input type="text" name="prevent_autofill_username" id="prevent_autofill_username" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+                <input type="password" name="prevent_autofill_password" id="prevent_autofill_password" style={{ display: 'none' }} tabIndex={-1} autoComplete="new-password" />
+
                 {/* Prophetic Offering */}
                 <div className="space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-royal-blue-600 flex items-center gap-1.5">
@@ -7153,6 +7159,9 @@ function SettingsTab() {
                       <label className="text-gray-700 text-xs font-semibold">Public Key</label>
                       <input
                         type="text"
+                        name="flw_prophetic_public_key"
+                        id="flw_prophetic_public_key"
+                        autoComplete="new-password"
                         value={propheticClientId}
                         onChange={(e) => setPropheticClientId(e.target.value)}
                         placeholder="e.g. FLWPUBK-xxxxxxxxxxxx-X"
@@ -7161,13 +7170,25 @@ function SettingsTab() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-gray-700 text-xs font-semibold">Secret Key</label>
-                      <input
-                        type="password"
-                        value={propheticClientSecret}
-                        onChange={(e) => setPropheticClientSecret(e.target.value)}
-                        placeholder="e.g. FLWSECK-xxxxxxxxxxxx-X"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPropheticSecret ? 'text' : 'password'}
+                          name="flw_prophetic_secret_key"
+                          id="flw_prophetic_secret_key"
+                          autoComplete="new-password"
+                          value={propheticClientSecret}
+                          onChange={(e) => setPropheticClientSecret(e.target.value)}
+                          placeholder="e.g. FLWSECK-xxxxxxxxxxxx-X"
+                          className="w-full px-4 py-2.5 pr-10 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPropheticSecret(!showPropheticSecret)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showPropheticSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -7182,6 +7203,9 @@ function SettingsTab() {
                       <label className="text-gray-700 text-xs font-semibold">Public Key</label>
                       <input
                         type="text"
+                        name="flw_mission_public_key"
+                        id="flw_mission_public_key"
+                        autoComplete="new-password"
                         value={missionClientId}
                         onChange={(e) => setMissionClientId(e.target.value)}
                         placeholder="e.g. FLWPUBK-xxxxxxxxxxxx-X"
@@ -7190,13 +7214,25 @@ function SettingsTab() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-gray-700 text-xs font-semibold">Secret Key</label>
-                      <input
-                        type="password"
-                        value={missionClientSecret}
-                        onChange={(e) => setMissionClientSecret(e.target.value)}
-                        placeholder="e.g. FLWSECK-xxxxxxxxxxxx-X"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showMissionSecret ? 'text' : 'password'}
+                          name="flw_mission_secret_key"
+                          id="flw_mission_secret_key"
+                          autoComplete="new-password"
+                          value={missionClientSecret}
+                          onChange={(e) => setMissionClientSecret(e.target.value)}
+                          placeholder="e.g. FLWSECK-xxxxxxxxxxxx-X"
+                          className="w-full px-4 py-2.5 pr-10 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-royal-blue-500/20 focus:border-royal-blue-500 transition-all font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowMissionSecret(!showMissionSecret)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showMissionSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
