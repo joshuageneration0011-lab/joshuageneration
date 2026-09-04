@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Mail, User, ArrowLeft, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import { api } from '@/utils/api';
+import CaptchaChallenge, { CaptchaChallengeRef } from './CaptchaChallenge';
 
 interface GetUpdatesPageProps {
   onBack: () => void;
@@ -11,14 +12,24 @@ export default function GetUpdatesPage({ onBack }: GetUpdatesPageProps) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
+  const captchaRef = useRef<CaptchaChallengeRef>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
+    if (captchaRef.current && !captchaRef.current.isValid()) {
+      setStatus('error');
+      setErrorMessage('Please solve the verification math challenge correctly.');
+      return;
+    }
+
+    const payload = captchaRef.current?.getPayload();
+
     setStatus('submitting');
     try {
-      const res = await api.subscribeNewsletter(email.trim(), name.trim() || undefined);
+      const res = await api.subscribeNewsletter(email.trim(), name.trim() || undefined, payload);
       if (res.success) {
         setStatus('success');
         setName('');
@@ -26,11 +37,13 @@ export default function GetUpdatesPage({ onBack }: GetUpdatesPageProps) {
       } else {
         setStatus('error');
         setErrorMessage(res.message || res.error || 'Failed to subscribe. Please try again.');
+        captchaRef.current?.reset();
       }
     } catch (err: any) {
       console.error(err);
       setStatus('error');
       setErrorMessage(err.message || 'An error occurred. Please try again.');
+      captchaRef.current?.reset();
     }
   };
 
@@ -139,10 +152,12 @@ export default function GetUpdatesPage({ onBack }: GetUpdatesPageProps) {
                   </div>
                 </div>
 
+                <CaptchaChallenge ref={captchaRef} onVerify={setIsCaptchaValid} theme="dark" />
+
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={status === 'submitting' || !email}
+                    disabled={status === 'submitting' || !email || !isCaptchaValid}
                     className="w-full py-3 px-4 bg-gradient-to-r from-royal-blue-600 to-royal-blue-700 hover:from-royal-blue-500 hover:to-royal-blue-600 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-royal-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {status === 'submitting' ? (

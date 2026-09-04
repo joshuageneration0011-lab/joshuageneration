@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Mail, User, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '@/utils/api';
+import CaptchaChallenge, { CaptchaChallengeRef } from './CaptchaChallenge';
 
 interface SouthAfricaUpdatesPageProps {
   onBack: () => void;
@@ -11,14 +12,24 @@ export default function SouthAfricaUpdatesPage({ onBack }: SouthAfricaUpdatesPag
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
+  const captchaRef = useRef<CaptchaChallengeRef>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
+    if (captchaRef.current && !captchaRef.current.isValid()) {
+      setStatus('error');
+      setErrorMessage('Please solve the verification math challenge correctly.');
+      return;
+    }
+
+    const payload = captchaRef.current?.getPayload();
+
     setStatus('submitting');
     try {
-      const res = await api.subscribeSANewsletter(email.trim(), name.trim() || undefined);
+      const res = await api.subscribeSANewsletter(email.trim(), name.trim() || undefined, payload);
       if (res.success) {
         setStatus('success');
         setName('');
@@ -26,11 +37,13 @@ export default function SouthAfricaUpdatesPage({ onBack }: SouthAfricaUpdatesPag
       } else {
         setStatus('error');
         setErrorMessage(res.message || res.error || 'Failed to subscribe. Please try again.');
+        captchaRef.current?.reset();
       }
     } catch (err: any) {
       console.error(err);
       setStatus('error');
       setErrorMessage(err.message || 'An error occurred. Please try again.');
+      captchaRef.current?.reset();
     }
   };
 
@@ -142,10 +155,12 @@ export default function SouthAfricaUpdatesPage({ onBack }: SouthAfricaUpdatesPag
                   </div>
                 </div>
 
+                <CaptchaChallenge ref={captchaRef} onVerify={setIsCaptchaValid} theme="light" />
+
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={status === 'submitting'}
+                    disabled={status === 'submitting' || !email || !isCaptchaValid}
                     className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800/50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-emerald-950/20 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border-none"
                   >
                     {status === 'submitting' ? (

@@ -527,36 +527,36 @@ export const api = {
   },
 
   // Newsletter
-  async subscribeNewsletter(email: string, name?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async subscribeNewsletter(email: string, name?: string, captchaPayload?: { captchaAnswer?: string; captchaToken?: string; hpValue?: string }): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, ...captchaPayload }),
       });
       return await res.json();
     } catch (e) {
       return { success: false, error: 'Cannot connect to server' };
     }
   },
-  async subscribeSANewsletter(email: string, name?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async subscribeSANewsletter(email: string, name?: string, captchaPayload?: { captchaAnswer?: string; captchaToken?: string; hpValue?: string }): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/sa/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, ...captchaPayload }),
       });
       return await res.json();
     } catch (e) {
       return { success: false, error: 'Cannot connect to server' };
     }
   },
-  async subscribeSDNewsletter(email: string, name?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async subscribeSDNewsletter(email: string, name?: string, captchaPayload?: { captchaAnswer?: string; captchaToken?: string; hpValue?: string }): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/sd/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, ...captchaPayload }),
       });
       return await res.json();
     } catch (e) {

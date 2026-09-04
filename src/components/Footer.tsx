@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Heart, Mail, MapPin, Phone, Send } from 'lucide-react';
 import { api } from '@/utils/api';
-import { useState, useEffect } from 'react';
 import type { Settings } from '@/types';
+import CaptchaChallenge, { CaptchaChallengeRef } from './CaptchaChallenge';
 
 const quickLinks = [
   { name: 'Sermons', href: '/sermons' },
@@ -23,12 +23,23 @@ export default function Footer({ onNavigate }: FooterProps) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
+  const captchaRef = useRef<CaptchaChallengeRef>(null);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+
+    if (captchaRef.current && !captchaRef.current.isValid()) {
+      setStatus('error');
+      setMessage('Please solve the math verification.');
+      return;
+    }
+
+    const payload = captchaRef.current?.getPayload();
+
     setStatus('loading');
-    const res = await api.subscribeNewsletter(email, name);
+    const res = await api.subscribeNewsletter(email, name, payload);
     if (res.success) {
       setStatus('success');
       setMessage(res.message || 'Subscribed!');
@@ -38,6 +49,7 @@ export default function Footer({ onNavigate }: FooterProps) {
     } else {
       setStatus('error');
       setMessage(res.error || 'Failed to subscribe');
+      captchaRef.current?.reset();
     }
   };
   const [settings, setSettings] = useState<Partial<Settings>>({
@@ -123,25 +135,26 @@ export default function Footer({ onNavigate }: FooterProps) {
                 disabled={status === 'loading' || status === 'success'}
                 className="w-full px-5 py-3.5 rounded-xl bg-royal-blue-950/50 border border-royal-blue-400/30 text-white placeholder-royal-blue-200/50 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner disabled:opacity-50"
               />
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  disabled={status === 'loading' || status === 'success'}
-                  className="flex-1 px-5 py-3.5 rounded-xl bg-royal-blue-950/50 border border-royal-blue-400/30 text-white placeholder-royal-blue-200/50 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner disabled:opacity-50"
-                />
-                <button 
-                  type="submit"
-                  disabled={status === 'loading' || status === 'success'}
-                  className="px-6 py-3.5 bg-gradient-to-r from-gold-500 to-gold-600 text-royal-blue-950 rounded-xl font-bold text-sm shadow-lg shadow-gold-500/20 hover:shadow-gold-500/40 hover:scale-105 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 disabled:hover:scale-100"
-                >
-                  {status === 'loading' ? 'Sending...' : status === 'success' ? 'Subscribed!' : 'Subscribe'}
-                  {status !== 'loading' && status !== 'success' && <Send className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
-                </button>
-              </div>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                disabled={status === 'loading' || status === 'success'}
+                className="w-full px-5 py-3.5 rounded-xl bg-royal-blue-950/50 border border-royal-blue-400/30 text-white placeholder-royal-blue-200/50 focus:outline-none focus:ring-2 focus:ring-gold-500/50 transition-all text-sm shadow-inner disabled:opacity-50"
+              />
+
+              <CaptchaChallenge ref={captchaRef} onVerify={setIsCaptchaValid} theme="dark" />
+
+              <button 
+                type="submit"
+                disabled={status === 'loading' || status === 'success' || !isCaptchaValid}
+                className="w-full py-3.5 bg-gradient-to-r from-gold-500 to-gold-600 text-royal-blue-950 rounded-xl font-bold text-sm shadow-lg shadow-gold-500/20 hover:shadow-gold-500/40 hover:scale-105 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 disabled:hover:scale-100"
+              >
+                {status === 'loading' ? 'Sending...' : status === 'success' ? 'Subscribed!' : 'Subscribe'}
+                {status !== 'loading' && status !== 'success' && <Send className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
+              </button>
             </div>
             {message && (
               <p className={`mt-2 text-xs font-medium ${status === 'error' ? 'text-red-400' : 'text-emerald-400'}`}>

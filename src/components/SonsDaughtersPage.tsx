@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Mail, User, ArrowLeft, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import { api } from '@/utils/api';
+import CaptchaChallenge, { CaptchaChallengeRef } from './CaptchaChallenge';
 
 interface SonsDaughtersPageProps {
   onBack: () => void;
@@ -11,14 +12,24 @@ export default function SonsDaughtersPage({ onBack }: SonsDaughtersPageProps) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
+  const captchaRef = useRef<CaptchaChallengeRef>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
+    if (captchaRef.current && !captchaRef.current.isValid()) {
+      setStatus('error');
+      setErrorMessage('Please solve the verification math challenge correctly.');
+      return;
+    }
+
+    const payload = captchaRef.current?.getPayload();
+
     setStatus('submitting');
     try {
-      const res = await api.subscribeSDNewsletter(email.trim(), name.trim() || undefined);
+      const res = await api.subscribeSDNewsletter(email.trim(), name.trim() || undefined, payload);
       if (res.success) {
         setStatus('success');
         setName('');
@@ -26,11 +37,13 @@ export default function SonsDaughtersPage({ onBack }: SonsDaughtersPageProps) {
       } else {
         setStatus('error');
         setErrorMessage(res.message || res.error || 'Failed to subscribe. Please try again.');
+        captchaRef.current?.reset();
       }
     } catch (err: any) {
       console.error(err);
       setStatus('error');
       setErrorMessage(err.message || 'An error occurred. Please try again.');
+      captchaRef.current?.reset();
     }
   };
 
@@ -144,10 +157,12 @@ export default function SonsDaughtersPage({ onBack }: SonsDaughtersPageProps) {
                   </div>
                 </div>
 
+                <CaptchaChallenge ref={captchaRef} onVerify={setIsCaptchaValid} theme="light" />
+
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={status === 'submitting'}
+                    disabled={status === 'submitting' || !email || !isCaptchaValid}
                     className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-indigo-950/10 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border-none"
                   >
                     {status === 'submitting' ? (

@@ -1304,6 +1304,48 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // --- Anti-Bot & Spam Verification Helper ---
+  const isBotSubmission = (data) => {
+    // 1. Honeypot check: if hpValue or website or b_hp_website is filled -> bot!
+    if (data.hpValue || data.website || data.b_hp_website) {
+      return { isBot: true, isHoneypot: true, reason: 'Honeypot trap triggered' };
+    }
+
+    // 2. CAPTCHA verification (if token & answer sent)
+    if (data.captchaToken && data.captchaAnswer !== undefined) {
+      try {
+        const decoded = Buffer.from(data.captchaToken, 'base64').toString('utf-8');
+        const expectedMatch = decoded.match(/=(\d+)$/);
+        if (expectedMatch) {
+          const expected = parseInt(expectedMatch[1], 10);
+          const actual = parseInt(String(data.captchaAnswer).trim(), 10);
+          if (actual !== expected) {
+            return { isBot: true, isHoneypot: false, reason: 'Incorrect CAPTCHA answer' };
+          }
+        }
+      } catch (e) {
+        return { isBot: true, isHoneypot: false, reason: 'Invalid CAPTCHA token' };
+      }
+    }
+
+    // 3. Gibberish name filter
+    if (data.name) {
+      const nameStr = data.name.trim();
+      const words = nameStr.split(/\s+/);
+      for (const w of words) {
+        if (w.length > 5 && !/[aeiouyAEIOUY]/.test(w)) {
+          return { isBot: true, isHoneypot: false, reason: 'Gibberish name detected' };
+        }
+        const vowelCount = (w.match(/[aeiouyAEIOUY]/g) || []).length;
+        if (w.length >= 7 && vowelCount <= 1 && /^[a-zA-Z]+$/.test(w)) {
+          return { isBot: true, isHoneypot: false, reason: 'Unnatural name structure detected' };
+        }
+      }
+    }
+
+    return { isBot: false };
+  };
+
   // --- Newsletter Subscriptions ---
   if (pathname === '/api/subscribe' && method === 'POST') {
     let body = '';
@@ -1314,6 +1356,16 @@ const server = http.createServer(async (req, res) => {
         const email = data.email?.trim().toLowerCase();
         const name = data.name?.trim() || '';
         
+        const botCheck = isBotSubmission(data);
+        if (botCheck.isBot) {
+          console.warn(`[Anti-Bot] Blocked submission from email=${email}, name=${name}. Reason: ${botCheck.reason}`);
+          if (botCheck.isHoneypot) {
+            // Silently fool honeypot bots
+            return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
+          }
+          return sendJson(res, 400, { success: false, error: 'Verification failed. Please solve the math challenge correctly.' });
+        }
+
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           return sendJson(res, 400, { success: false, error: 'Invalid email address' });
         }
@@ -1400,6 +1452,15 @@ Joshua's Generation`;
         const email = data.email?.trim().toLowerCase();
         const name = data.name?.trim() || '';
         
+        const botCheck = isBotSubmission(data);
+        if (botCheck.isBot) {
+          console.warn(`[Anti-Bot SA] Blocked submission from email=${email}, name=${name}. Reason: ${botCheck.reason}`);
+          if (botCheck.isHoneypot) {
+            return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
+          }
+          return sendJson(res, 400, { success: false, error: 'Verification failed. Please solve the math challenge correctly.' });
+        }
+
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           return sendJson(res, 400, { success: false, error: 'Invalid email address' });
         }
@@ -1480,6 +1541,15 @@ Joshua's Generation`;
         const email = data.email?.trim().toLowerCase();
         const name = data.name?.trim() || '';
         
+        const botCheck = isBotSubmission(data);
+        if (botCheck.isBot) {
+          console.warn(`[Anti-Bot SD] Blocked submission from email=${email}, name=${name}. Reason: ${botCheck.reason}`);
+          if (botCheck.isHoneypot) {
+            return sendJson(res, 200, { success: true, message: 'Subscribed successfully!' });
+          }
+          return sendJson(res, 400, { success: false, error: 'Verification failed. Please solve the math challenge correctly.' });
+        }
+
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           return sendJson(res, 400, { success: false, error: 'Invalid email address' });
         }

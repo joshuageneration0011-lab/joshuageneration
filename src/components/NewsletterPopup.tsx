@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Mail } from 'lucide-react';
 import { api } from '@/utils/api';
 import { cn } from '@/utils/cn';
+import CaptchaChallenge, { CaptchaChallengeRef } from './CaptchaChallenge';
 
 export default function NewsletterPopup() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,6 +10,8 @@ export default function NewsletterPopup() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
+  const captchaRef = useRef<CaptchaChallengeRef>(null);
 
   useEffect(() => {
     // Check if the user has already seen or dismissed the popup
@@ -33,9 +36,17 @@ export default function NewsletterPopup() {
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+
+    if (captchaRef.current && !captchaRef.current.isValid()) {
+      setStatus('error');
+      setMessage('Please solve the verification math challenge.');
+      return;
+    }
+
+    const payload = captchaRef.current?.getPayload();
     
     setStatus('loading');
-    const res = await api.subscribeNewsletter(email, name);
+    const res = await api.subscribeNewsletter(email, name, payload);
     
     if (res.success) {
       setStatus('success');
@@ -49,6 +60,7 @@ export default function NewsletterPopup() {
     } else {
       setStatus('error');
       setMessage(res.error || 'Failed to subscribe. Please try again.');
+      captchaRef.current?.reset();
     }
   };
 
@@ -113,9 +125,11 @@ export default function NewsletterPopup() {
               />
             </div>
 
+            <CaptchaChallenge ref={captchaRef} onVerify={setIsCaptchaValid} theme="dark" />
+
             <button 
               type="submit"
-              disabled={status === 'loading' || status === 'success'}
+              disabled={status === 'loading' || status === 'success' || !isCaptchaValid}
               className="mt-2 w-full px-6 py-4 bg-gradient-to-r from-gold-500 to-gold-600 text-royal-blue-950 rounded-xl font-bold text-base shadow-lg shadow-gold-500/20 hover:shadow-gold-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-70 disabled:hover:scale-100"
             >
               {status === 'loading' ? 'Sending...' : status === 'success' ? 'Subscribed!' : 'Subscribe Now'}
