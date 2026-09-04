@@ -41,13 +41,13 @@ def main():
         out = stdout.read().decode('utf-8', errors='replace')
         print(f"Build Output:\n{out}")
 
-        # Restart PM2 Backend
-        print("Executing: pm2 restart joshuagen-backend...")
-        stdin, stdout, stderr = ssh.exec_command("pm2 restart joshuagen-backend")
-        pm2_out = stdout.read().decode('utf-8', errors='replace')
-        print(f"PM2 Output:\n{pm2_out}")
+        # Update Nginx config and reload Nginx
+        print("Updating Nginx config on Contabo server...")
+        stdin, stdout, stderr = ssh.exec_command("cp /var/www/joshuageneration/nginx.conf /etc/nginx/sites-enabled/joshuageneration && nginx -t && systemctl reload nginx")
+        nginx_out = stdout.read().decode('utf-8', errors='replace') + stderr.read().decode('utf-8', errors='replace')
+        print(f"Nginx Output:\n{nginx_out}")
 
-        print("\nSUCCESS! Pretty Links fix deployed to Contabo VPS successfully!")
+        print("\nSUCCESS! Direct 302 Pretty Links fix deployed to Contabo VPS successfully!")
         
     except Exception as e:
         print(f"Deployment error: {e}")

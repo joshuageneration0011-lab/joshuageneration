@@ -4092,6 +4092,20 @@ Joshua's Generation`;
     }
   }
 
+  // SPA Fallback for non-API GET/HEAD requests
+  if ((method === 'GET' || method === 'HEAD') && !pathname.startsWith('/api/')) {
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    if (fs.existsSync(indexPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      if (method === 'HEAD') {
+        res.end();
+      } else {
+        fs.createReadStream(indexPath).pipe(res);
+      }
+      return;
+    }
+  }
+
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
   const user = await getAuthenticatedUser(req);
   if (!user) {
@@ -5684,20 +5698,6 @@ except Exception as e:
       sendJson(res, 500, { error: 'Failed to delete comment' });
     }
     return;
-  }
-
-  // SPA Fallback for non-API GET/HEAD requests
-  if ((method === 'GET' || method === 'HEAD') && !pathname.startsWith('/api/')) {
-    const indexPath = path.join(__dirname, '../dist/index.html');
-    if (fs.existsSync(indexPath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      if (method === 'HEAD') {
-        res.end();
-      } else {
-        fs.createReadStream(indexPath).pipe(res);
-      }
-      return;
-    }
   }
 
   // If no match found
