@@ -4059,6 +4059,39 @@ Joshua's Generation`;
     return;
   }
 
+  // GET /api/redirect-link/resolve?slug=xxx (Public endpoint for Pretty Links resolution)
+  if (pathname === '/api/redirect-link/resolve' && method === 'GET') {
+    try {
+      const slug = (parsedUrl.query.slug || parsedUrl.query.path || '').trim().toLowerCase();
+      if (!slug) {
+        return sendJson(res, 400, { success: false, error: 'Slug is required' });
+      }
+
+      if (pool) {
+        const result = await pool.query(
+          'SELECT * FROM redirect_links WHERE LOWER(slug) = LOWER($1) AND is_active = TRUE LIMIT 1',
+          [slug]
+        );
+        if (result.rows.length > 0) {
+          const link = result.rows[0];
+          pool.query('UPDATE redirect_links SET click_count = click_count + 1, updated_at = NOW() WHERE id = $1', [link.id])
+            .catch(err => console.error('Error incrementing link click count:', err));
+
+          let targetUrl = link.target_url.trim();
+          if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+            targetUrl = `https://${targetUrl}`;
+          }
+
+          return sendJson(res, 200, { success: true, target_url: targetUrl, link });
+        }
+      }
+      return sendJson(res, 404, { success: false, error: 'Link not found' });
+    } catch (e) {
+      console.error('Failed to resolve redirect link:', e);
+      return sendJson(res, 500, { success: false, error: 'Internal Server Error' });
+    }
+  }
+
   // --- SECURE ADMIN ROUTES (Requires authorization header) ---
   const user = await getAuthenticatedUser(req);
   if (!user) {
@@ -5268,38 +5301,6 @@ except Exception as e:
   }
 
   // --- PRETTY REDIRECT LINKS ENDPOINTS ---
-  // GET /api/redirect-link/resolve?slug=xxx
-  if (pathname === '/api/redirect-link/resolve' && method === 'GET') {
-    try {
-      const slug = (parsedUrl.query.slug || parsedUrl.query.path || '').trim().toLowerCase();
-      if (!slug) {
-        return sendJson(res, 400, { success: false, error: 'Slug is required' });
-      }
-
-      if (pool) {
-        const result = await pool.query(
-          'SELECT * FROM redirect_links WHERE LOWER(slug) = LOWER($1) AND is_active = TRUE LIMIT 1',
-          [slug]
-        );
-        if (result.rows.length > 0) {
-          const link = result.rows[0];
-          pool.query('UPDATE redirect_links SET click_count = click_count + 1, updated_at = NOW() WHERE id = $1', [link.id])
-            .catch(err => console.error('Error incrementing link click count:', err));
-
-          let targetUrl = link.target_url.trim();
-          if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-            targetUrl = `https://${targetUrl}`;
-          }
-
-          return sendJson(res, 200, { success: true, target_url: targetUrl, link });
-        }
-      }
-      return sendJson(res, 404, { success: false, error: 'Link not found' });
-    } catch (e) {
-      console.error('Failed to resolve redirect link:', e);
-      return sendJson(res, 500, { success: false, error: 'Internal Server Error' });
-    }
-  }
 
   // GET /api/redirect-links
   if (pathname === '/api/redirect-links' && method === 'GET') {
