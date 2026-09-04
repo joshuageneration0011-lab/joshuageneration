@@ -4062,7 +4062,7 @@ Joshua's Generation`;
   // GET /api/redirect-link/resolve?slug=xxx (Public endpoint for Pretty Links resolution)
   if (pathname === '/api/redirect-link/resolve' && method === 'GET') {
     try {
-      const slug = (parsedUrl.query.slug || parsedUrl.query.path || '').trim().toLowerCase();
+      const slug = (parsedUrl.searchParams.get('slug') || parsedUrl.searchParams.get('path') || '').trim().toLowerCase();
       if (!slug) {
         return sendJson(res, 400, { success: false, error: 'Slug is required' });
       }
