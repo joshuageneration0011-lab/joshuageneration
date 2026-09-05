@@ -528,10 +528,18 @@ async function initDb() {
           id VARCHAR PRIMARY KEY,
           email VARCHAR UNIQUE NOT NULL,
           name VARCHAR,
+          first_name VARCHAR,
+          last_name VARCHAR,
           is_active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
+      try {
+        await pool.query("ALTER TABLE old_subscribers ADD COLUMN IF NOT EXISTS first_name VARCHAR");
+        await pool.query("ALTER TABLE old_subscribers ADD COLUMN IF NOT EXISTS last_name VARCHAR");
+      } catch (err) {
+        console.warn("Failed to check/add first_name/last_name column to old_subscribers table:", err.message);
+      }
       try {
 
       try {

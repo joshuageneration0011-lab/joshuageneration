@@ -2119,8 +2119,8 @@ function OldSubscribersTab() {
 
   const handleDownloadCSV = () => {
     if (subscribers.length === 0) return;
-    const header = "Name,Email,Imported At,Status\n";
-    const csvContent = subscribers.map(s => `"${(s.name || '').replace(/"/g, '""')}","${s.email}","${new Date(s.created_at).toISOString()}","${s.is_active ? 'Active' : 'Inactive'}"`).join('\n');
+    const header = "First Name,Last Name,Email,Imported At,Status\n";
+    const csvContent = subscribers.map(s => `"${(s.first_name || '').replace(/"/g, '""')}","${(s.last_name || '').replace(/"/g, '""')}","${s.email}","${new Date(s.created_at).toISOString()}","${s.is_active ? 'Active' : 'Inactive'}"`).join('\n');
     const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -2193,6 +2193,8 @@ function OldSubscribersTab() {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return subscribers;
     return subscribers.filter(s => 
+      (s.first_name && s.first_name.toLowerCase().includes(q)) || 
+      (s.last_name && s.last_name.toLowerCase().includes(q)) || 
       (s.name && s.name.toLowerCase().includes(q)) || 
       (s.email && s.email.toLowerCase().includes(q))
     );
@@ -2311,7 +2313,8 @@ function OldSubscribersTab() {
                 <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
                   <tr>
                     <th className="px-6 py-4">#</th>
-                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">First Name</th>
+                    <th className="px-6 py-4">Last Name</th>
                     <th className="px-6 py-4">Email</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4 text-right">Imported At</th>
@@ -2324,7 +2327,8 @@ function OldSubscribersTab() {
                       <td className="px-6 py-4 text-xs text-gray-400 font-mono">
                         {(currentPage - 1) * pageSize + index + 1}
                       </td>
-                      <td className="px-6 py-4 font-medium text-gray-900">{sub.name || '-'}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-900">{sub.first_name || sub.name?.split(' ')[0] || '-'}</td>
+                      <td className="px-6 py-4 font-medium text-gray-700">{sub.last_name || (sub.name && sub.name.includes(' ') ? sub.name.split(' ').slice(1).join(' ') : '') || '-'}</td>
                       <td className="px-6 py-4 text-gray-600 font-mono text-xs">{sub.email}</td>
                       <td className="px-6 py-4">
                         {sub.is_active ? (
@@ -2362,7 +2366,9 @@ function OldSubscribersTab() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">#{(currentPage - 1) * pageSize + index + 1}</span>
-                      <p className="font-semibold text-gray-900 text-sm truncate">{sub.name || 'Unnamed'}</p>
+                      <p className="font-semibold text-gray-900 text-sm truncate">
+                        {[sub.first_name, sub.last_name].filter(Boolean).join(' ') || sub.name || 'Unnamed'}
+                      </p>
                     </div>
                     <p className="text-xs text-gray-500 font-mono truncate">{sub.email}</p>
                     <div className="flex items-center gap-2 mt-1">

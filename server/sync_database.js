@@ -191,10 +191,17 @@ async function syncData() {
           id VARCHAR PRIMARY KEY,
           email VARCHAR UNIQUE NOT NULL,
           name VARCHAR,
+          first_name VARCHAR,
+          last_name VARCHAR,
           is_active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        ALTER TABLE old_subscribers ADD COLUMN IF NOT EXISTS first_name VARCHAR;
+        ALTER TABLE old_subscribers ADD COLUMN IF NOT EXISTS last_name VARCHAR;
       `);
+
+      // Clear existing old_subscribers to apply clean deduplicated dataset with updated names
+      await pool.query('DELETE FROM old_subscribers');
 
       const oldSubs = JSON.parse(fs.readFileSync(oldSubsFile, 'utf-8'));
       console.log(`Syncing ${oldSubs.length} old subscribers in batches...`);
@@ -205,12 +212,20 @@ async function syncData() {
         const values = [];
         let paramIdx = 1;
         for (const s of batch) {
-          valueStrings.push(`($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4})`);
-          values.push(s.id, s.email, s.name || '', s.is_active !== false, s.created_at || new Date().toISOString());
-          paramIdx += 5;
+          valueStrings.push(`($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4}, $${paramIdx + 5}, $${paramIdx + 6})`);
+          values.push(
+            s.id,
+            s.email,
+            s.name || '',
+            s.first_name || '',
+            s.last_name || '',
+            s.is_active !== false,
+            s.created_at || new Date().toISOString()
+          );
+          paramIdx += 7;
         }
         await pool.query(
-          `INSERT INTO old_subscribers (id, email, name, is_active, created_at)
+          `INSERT INTO old_subscribers (id, email, name, first_name, last_name, is_active, created_at)
            VALUES ${valueStrings.join(', ')}
            ON CONFLICT (email) DO NOTHING`,
           values
