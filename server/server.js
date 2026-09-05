@@ -71,6 +71,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SUBSCRIBERS_FILE = path.join(DATA_DIR, 'subscribers.json');
 const SA_SUBSCRIBERS_FILE = path.join(DATA_DIR, 'sa_subscribers.json');
 const SD_SUBSCRIBERS_FILE = path.join(DATA_DIR, 'sd_subscribers.json');
+const OLD_SUBSCRIBERS_FILE = path.join(DATA_DIR, 'old_subscribers.json');
 const TESTIMONIES_FILE = path.join(DATA_DIR, 'testimonies.json');
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
 const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
@@ -462,6 +463,10 @@ function initLocalData() {
     fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify([], null, 2), 'utf-8');
     console.log('Initialized local Sons and Daughters subscribers database.');
   }
+  if (!fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
+    fs.writeFileSync(OLD_SUBSCRIBERS_FILE, JSON.stringify([], null, 2), 'utf-8');
+    console.log('Initialized local Old Website subscribers database.');
+  }
 }
 
 // --- Combined DB Initializer ---
@@ -511,6 +516,15 @@ async function initDb() {
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sd_subscribers (
+          id VARCHAR PRIMARY KEY,
+          email VARCHAR UNIQUE NOT NULL,
+          name VARCHAR,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS old_subscribers (
           id VARCHAR PRIMARY KEY,
           email VARCHAR UNIQUE NOT NULL,
           name VARCHAR,
@@ -2019,6 +2033,134 @@ Joshua's Generation`;
     }
   }
 
+  // --- GET Old Subscribers ---
+  if (pathname === '/api/admin/old-subscribers' && method === 'GET') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+    try {
+      if (pool) {
+        const result = await pool.query('SELECT * FROM old_subscribers ORDER BY created_at DESC');
+        return sendJson(res, 200, result.rows);
+      } else {
+        let subscribers = [];
+        if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
+          subscribers = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
+        }
+        return sendJson(res, 200, subscribers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      }
+    } catch (err) {
+      console.error('Fetch old subscribers error:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+    return;
+  }
+
+  // --- DELETE Old Subscriber ---
+  if (pathname.startsWith('/api/admin/old-subscribers/') && method === 'DELETE') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+    const id = pathname.split('/').pop();
+    try {
+      if (pool) {
+        await pool.query('DELETE FROM old_subscribers WHERE id = $1', [id]);
+      } else {
+        if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.id !== id);
+          fs.writeFileSync(OLD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+        }
+      }
+      return sendJson(res, 200, { success: true, message: 'Subscriber deleted successfully' });
+    } catch (err) {
+      console.error('Delete old subscriber error:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+  }
+
+  // --- Send Bulk Email to Old Subscribers ---
+  if (pathname === '/api/admin/old-subscribers/email' && method === 'POST') {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'Unauthorized' });
+    }
+
+    let body;
+    try {
+      body = await getJsonBody(req);
+    } catch (e) {
+      return sendJson(res, 400, { error: 'Invalid JSON body' });
+    }
+
+    const { subject, htmlBody, testEmail } = body;
+    if (!subject || !htmlBody) {
+      return sendJson(res, 400, { error: 'Subject and email body are required' });
+    }
+
+    try {
+      let subscribers = [];
+      if (testEmail) {
+        subscribers = [{ name: 'Test Old Website Recipient', email: testEmail }];
+      } else {
+        if (pool) {
+          const result = await pool.query('SELECT name, email FROM old_subscribers WHERE is_active = true');
+          subscribers = result.rows;
+        } else {
+          if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
+            const allSubs = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
+            subscribers = allSubs.filter(s => s.is_active !== false);
+          }
+        }
+      }
+
+      if (subscribers.length === 0) {
+        return sendJson(res, 200, { success: true, count: 0, message: 'No active old website subscribers found.' });
+      }
+
+      (async () => {
+        let successCount = 0;
+        let failCount = 0;
+        for (const sub of subscribers) {
+          const email = sub.email;
+          const fullName = sub.name || email.split('@')[0];
+          const nameParts = (sub.name || '').trim().split(/\s+/);
+          const firstName = nameParts[0] || email.split('@')[0];
+          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+          const personalizedSubject = subject
+            .replace(/\{\{name\}\}/gi, fullName)
+            .replace(/\{\{firstName\}\}/gi, firstName)
+            .replace(/\{\{lastName\}\}/gi, lastName);
+
+          const personalizedBodyText = htmlBody
+            .replace(/\{\{name\}\}/gi, fullName)
+            .replace(/\{\{firstName\}\}/gi, firstName)
+            .replace(/\{\{lastName\}\}/gi, lastName);
+
+          const emailTemplateHtml = wrapInEmailTemplate(personalizedSubject, personalizedBodyText);
+          const personalizedHtml = emailTemplateHtml.replace('{{RECIPIENT_EMAIL}}', encodeURIComponent(email) + '&segment=old');
+
+          const sent = await sendZeptoEmail(email, fullName, personalizedSubject, personalizedHtml);
+          if (sent && sent.success) successCount++;
+          else failCount++;
+          
+          await new Promise(r => setTimeout(r, 200));
+        }
+        console.log(`[Old Subscribers Bulk Email] Broadcaster complete. Sent to: ${subscribers.length}. Success: ${successCount}, Failed: ${failCount}`);
+      })().catch(err => {
+        console.error('[Old Subscribers Bulk Email] Background broadcaster encountered an error:', err);
+      });
+
+      return sendJson(res, 202, { success: true, count: subscribers.length, message: `Broadcasting email to ${subscribers.length} old website subscribers in the background.` });
+    } catch (err) {
+      console.error('Old subscribers bulk email sending setup failed:', err);
+      return sendJson(res, 500, { error: 'Internal Server Error' });
+    }
+  }
+
   // --- Unsubscribe ---
   if (pathname === '/api/unsubscribe' && method === 'GET') {
     const email = parsedUrl.searchParams.get('email');
@@ -2051,6 +2193,19 @@ Joshua's Generation`;
             if (idx !== -1) {
               subs[idx].is_active = false;
               fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+            }
+          }
+        }
+      } else if (segment === 'old') {
+        if (pool) {
+          await pool.query('UPDATE old_subscribers SET is_active = false WHERE email = $1', [email]);
+        } else {
+          if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
+            const subs = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
+            const idx = subs.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
+            if (idx !== -1) {
+              subs[idx].is_active = false;
+              fs.writeFileSync(OLD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
             }
           }
         }
@@ -4332,6 +4487,7 @@ Joshua's Generation`;
           pool.query('SELECT * FROM subscribers'),
           pool.query('SELECT * FROM sa_subscribers'),
           pool.query('SELECT * FROM sd_subscribers'),
+          pool.query('SELECT * FROM old_subscribers'),
           pool.query('SELECT * FROM custom_forms'),
           pool.query('SELECT * FROM redirect_links')
         ]);
@@ -4345,6 +4501,7 @@ Joshua's Generation`;
         backupData.data.subscribers = sub.rows || [];
         backupData.data.sa_subscribers = saSub.rows || [];
         backupData.data.sd_subscribers = sdSub.rows || [];
+        backupData.data.old_subscribers = (await pool.query('SELECT * FROM old_subscribers')).rows || [];
         backupData.data.custom_forms = forms.rows || [];
         backupData.data.redirect_links = links.rows || [];
       } else {
@@ -4357,6 +4514,7 @@ Joshua's Generation`;
         backupData.data.subscribers = fs.existsSync(SUBSCRIBERS_FILE) ? JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8')) : [];
         backupData.data.sa_subscribers = fs.existsSync(SA_SUBSCRIBERS_FILE) ? JSON.parse(fs.readFileSync(SA_SUBSCRIBERS_FILE, 'utf-8')) : [];
         backupData.data.sd_subscribers = fs.existsSync(SD_SUBSCRIBERS_FILE) ? JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8')) : [];
+        backupData.data.old_subscribers = fs.existsSync(OLD_SUBSCRIBERS_FILE) ? JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8')) : [];
       }
 
       res.writeHead(200, {
@@ -4388,6 +4546,7 @@ Joshua's Generation`;
         subscribers: 0,
         sa_subscribers: 0,
         sd_subscribers: 0,
+        old_subscribers: 0,
         custom_forms: 0
       };
 
@@ -4510,6 +4669,19 @@ Joshua's Generation`;
             );
           }
           restoredCounts.sd_subscribers = data.sd_subscribers.length;
+        }
+
+        if (Array.isArray(data.old_subscribers)) {
+          for (const sub of data.old_subscribers) {
+            await pool.query(
+              `INSERT INTO old_subscribers (id, email, name, created_at, is_active)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (email) DO UPDATE SET
+               name=EXCLUDED.name, is_active=EXCLUDED.is_active`,
+              [sub.id || 'old_' + Date.now(), sub.email, sub.name || '', sub.created_at || sub.createdAt || new Date().toISOString(), sub.is_active !== false]
+            );
+          }
+          restoredCounts.old_subscribers = data.old_subscribers.length;
         }
 
         if (Array.isArray(data.custom_forms)) {

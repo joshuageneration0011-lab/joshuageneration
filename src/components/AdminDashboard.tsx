@@ -11,7 +11,7 @@ import {
   Upload, ExternalLink, Link2, Copy,
   Check, AlertTriangle, RefreshCw, PenTool,
   Type, TrendingUp, Radio, Headphones,
-  Calendar, MapPin, Quote, Code, Move
+  Calendar, MapPin, Quote, Code, Move, Archive
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event, Testimony } from '@/types';
@@ -19,7 +19,7 @@ import { api, resolveApiUrl, type RedirectLink } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/testimonyStore';
 
-type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'sd-subscribers' | 'testimonies' | 'redirect-links' | 'form-builder';
+type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'sd-subscribers' | 'old-subscribers' | 'testimonies' | 'redirect-links' | 'form-builder';
 
 export const getCurrencySymbol = (currency?: string) => {
   const symbols: Record<string, string> = {
@@ -147,6 +147,7 @@ export default function AdminDashboard({
     { id: 'subscribers', label: 'Subscribers', icon: UserPlus },
     { id: 'sa-subscribers', label: 'SA Subscribers', icon: Users },
     { id: 'sd-subscribers', label: 'Sons & Daughters', icon: Users },
+    { id: 'old-subscribers', label: 'Old Website Mail List', icon: Archive },
     { id: 'redirect-links', label: 'Pretty Links', icon: Link2 },
     { id: 'form-builder', label: 'Form Builder', icon: FileText },
     { id: 'radio', label: 'Radio', icon: Radio, badge: 'Mixlr' },
@@ -224,6 +225,7 @@ export default function AdminDashboard({
       case 'subscribers': return <SubscribersTab />;
       case 'sa-subscribers': return <SASubscribersTab />;
       case 'sd-subscribers': return <SDSubscribersTab />;
+      case 'old-subscribers': return <OldSubscribersTab />;
       case 'redirect-links': return <RedirectLinksTab />;
       case 'form-builder': return <FormBuilderTab />;
       case 'messages': return <MessagesTab onCountChange={setUnreadMsgCount} />;
@@ -2052,6 +2054,558 @@ function SDSubscribersTab() {
                     </p>
                     <p className="text-[9px] text-gray-400 mt-1">
                       <span className="text-royal-blue-600 underline">Unsubscribe from this list</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OldSubscribersTab() {
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Bulk Email Composer State
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendMode, setSendMode] = useState<'broadcast' | 'test'>('test');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  const insertPlaceholder = (tag: string) => {
+    const textarea = document.getElementById('newsletter-body-textarea-old') as HTMLTextAreaElement;
+    if (!textarea) {
+      setEmailBody(prev => prev + tag);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+    setEmailBody(before + tag + after);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    }, 0);
+  };
+
+  useEffect(() => {
+    fetchSubscribers();
+  }, []);
+
+  const fetchSubscribers = async () => {
+    try {
+      setLoading(true);
+      const data = await api.admin.getOldSubscribers();
+      setSubscribers(data);
+    } catch (err) {
+      console.error('Failed to fetch old subscribers:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadCSV = () => {
+    if (subscribers.length === 0) return;
+    const header = "Name,Email,Imported At,Status\n";
+    const csvContent = subscribers.map(s => `"${(s.name || '').replace(/"/g, '""')}","${s.email}","${new Date(s.created_at).toISOString()}","${s.is_active ? 'Active' : 'Inactive'}"`).join('\n');
+    const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `old_website_subscribers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      alert('Please fill in both the Subject and Email Body.');
+      return;
+    }
+
+    if (sendMode === 'test' && !testEmailAddress.trim()) {
+      alert('Please enter a test email address.');
+      return;
+    }
+
+    const activeCount = subscribers.filter(s => s.is_active).length;
+    if (sendMode === 'broadcast' && activeCount === 0) {
+      alert('There are no active old website subscribers to send this email to.');
+      return;
+    }
+
+    if (sendMode === 'broadcast') {
+      const confirmSend = window.confirm(`Are you sure you want to broadcast this email to all ${activeCount} active old website subscribers? This action cannot be undone.`);
+      if (!confirmSend) return;
+    }
+
+    setIsSending(true);
+    try {
+      const payloadSubject = emailSubject.trim();
+      const payloadBody = emailBody.trim();
+
+      await api.admin.sendOldBulkEmail(payloadSubject, payloadBody, sendMode === 'test' ? testEmailAddress.trim() : undefined);
+
+      alert(sendMode === 'test' ? `Test email sent successfully to ${testEmailAddress.trim()}!` : `Broadcast initiated! Sending email to all ${activeCount} old website subscribers in the background.`);
+      if (sendMode === 'broadcast') {
+        setIsComposerOpen(false);
+        setEmailSubject('');
+        setEmailBody('');
+      }
+    } catch (err: any) {
+      console.error('Failed to send old subscribers bulk email:', err);
+      alert(err.message || 'Failed to send bulk email. Please check server logs.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDeleteSubscriber = async (id: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${email} from the old website mail list? This action will permanently remove them.`)) {
+      return;
+    }
+
+    try {
+      await api.admin.deleteOldSubscriber(id);
+      setSubscribers(prev => prev.filter(s => s.id !== id));
+    } catch (err: any) {
+      console.error('Failed to delete old subscriber:', err);
+      alert(err.message || 'Failed to delete subscriber.');
+    }
+  };
+
+  const filteredSubscribers = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return subscribers;
+    return subscribers.filter(s => 
+      (s.name && s.name.toLowerCase().includes(q)) || 
+      (s.email && s.email.toLowerCase().includes(q))
+    );
+  }, [subscribers, searchQuery]);
+
+  const totalPages = Math.ceil(filteredSubscribers.length / pageSize);
+  const paginatedSubscribers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredSubscribers.slice(start, start + pageSize);
+  }, [filteredSubscribers, currentPage, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredSubscribers.length / pageSize));
+    if (currentPage > maxPage) {
+      setCurrentPage(1);
+    }
+  }, [filteredSubscribers, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, pageSize]);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      if (start > 2) {
+        pages.push('ellipsis-start');
+      }
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (end < totalPages - 1) {
+        pages.push('ellipsis-end');
+      }
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            Old Website Mail List
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-sm font-bold">
+              {subscribers.length.toLocaleString()}
+            </span>
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">Imported email list from your former website, completely separate from active subscribers</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setIsComposerOpen(true)}
+            className="w-full sm:w-auto px-4 py-2.5 border border-gray-250 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-colors text-sm flex items-center justify-center gap-2 shadow-sm bg-white cursor-pointer"
+          >
+            <Mail className="w-4 h-4 text-gray-500" /> Compose Email
+          </button>
+          <button
+            onClick={handleDownloadCSV}
+            disabled={subscribers.length === 0}
+            className="w-full sm:w-auto px-4 py-2.5 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            <Download className="w-4 h-4" /> Download CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Controls Bar: Search and Page Size */}
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="relative flex-1 w-full">
+          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </span>
+          <input
+            type="text"
+            placeholder="Search old subscribers by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-gray-900 shadow-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2 self-end sm:self-auto text-xs text-gray-600 bg-white px-3 py-2 border border-gray-200 rounded-xl">
+          <span>Rows per page:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            className="bg-transparent font-semibold text-gray-800 outline-none cursor-pointer"
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={200}>200</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center"><RefreshCw className="w-6 h-6 text-amber-500 animate-spin mx-auto" /></div>
+        ) : subscribers.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No old website subscribers found.</div>
+        ) : filteredSubscribers.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No matching contacts found.</div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600">
+                <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase font-semibold border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4">#</th>
+                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">Email</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Imported At</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedSubscribers.map((sub, index) => (
+                    <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 text-xs text-gray-400 font-mono">
+                        {(currentPage - 1) * pageSize + index + 1}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-900">{sub.name || '-'}</td>
+                      <td className="px-6 py-4 text-gray-600 font-mono text-xs">{sub.email}</td>
+                      <td className="px-6 py-4">
+                        {sub.is_active ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                            <CheckCircle className="w-3.5 h-3.5" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-semibold">
+                            Unsubscribed
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap text-gray-500 text-xs">
+                        {new Date(sub.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border-none bg-transparent"
+                          title="Delete Contact"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="block md:hidden divide-y divide-gray-100">
+              {paginatedSubscribers.map((sub, index) => (
+                <div key={sub.id} className="p-4 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">#{(currentPage - 1) * pageSize + index + 1}</span>
+                      <p className="font-semibold text-gray-900 text-sm truncate">{sub.name || 'Unnamed'}</p>
+                    </div>
+                    <p className="text-xs text-gray-500 font-mono truncate">{sub.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {sub.is_active ? (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-semibold">
+                          Unsubscribed
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(sub.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border-none bg-transparent"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination Widget */}
+            {filteredSubscribers.length > pageSize && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span className="text-xs text-gray-500 text-center sm:text-left">
+                  Showing <span className="font-semibold text-gray-700">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-semibold text-gray-700">{Math.min(currentPage * pageSize, filteredSubscribers.length)}</span> of <span className="font-semibold text-gray-700">{filteredSubscribers.length.toLocaleString()}</span> contacts
+                </span>
+                <div className="flex gap-1.5 flex-wrap justify-center">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="px-2.5 py-1.5 border border-gray-200 text-xs font-semibold rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white text-gray-700 cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  {getPageNumbers().map((p, idx) => {
+                    if (typeof p === 'string') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs font-semibold text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        onClick={() => setCurrentPage(p as number)}
+                        className={cn(
+                          "w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg cursor-pointer transition-all border",
+                          currentPage === p
+                            ? "bg-amber-600 border-amber-600 text-white shadow-sm"
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                        )}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    className="px-2.5 py-1.5 border border-gray-200 text-xs font-semibold rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white text-gray-700 cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Broadcast Email Composer Modal */}
+      {isComposerOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Broadcast to Old Website Mail List</h3>
+                <p className="text-xs text-gray-500">Design and send bulk email to contacts imported from your former website</p>
+              </div>
+              <button
+                onClick={() => setIsComposerOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Form Input Section */}
+              <form onSubmit={handleSendEmail} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter email subject line..."
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-gray-700">Email Body (Plain Text or HTML)</label>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{name}}')}
+                        className="px-1.5 py-0.5 text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-mono"
+                        title="Insert Full Name"
+                      >
+                        + name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertPlaceholder('{{firstName}}')}
+                        className="px-1.5 py-0.5 text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-mono"
+                        title="Insert First Name"
+                      >
+                        + firstName
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    id="newsletter-body-textarea-old"
+                    required
+                    rows={12}
+                    placeholder="Write your email message here...&#10;&#10;Dear {{firstName}},&#10;&#10;We are writing to welcome you back..."
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"
+                  />
+                </div>
+
+                <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl space-y-2">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-1.5 text-xs text-gray-700 font-medium cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sendModeOld"
+                        value="test"
+                        checked={sendMode === 'test'}
+                        onChange={() => setSendMode('test')}
+                        className="text-amber-600 focus:ring-amber-500"
+                      />
+                      Send Test Email
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-700 font-medium cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sendModeOld"
+                        value="broadcast"
+                        checked={sendMode === 'broadcast'}
+                        onChange={() => setSendMode('broadcast')}
+                        className="text-amber-600 focus:ring-amber-500"
+                      />
+                      Broadcast to Entire List
+                    </label>
+                  </div>
+
+                  {sendMode === 'test' ? (
+                    <div>
+                      <input
+                        type="email"
+                        placeholder="recipient@example.com"
+                        value={testEmailAddress}
+                        onChange={(e) => setTestEmailAddress(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs"
+                      />
+                      <span className="text-[10px] text-gray-400 mt-0.5 block">Send a single test message before broadcasting</span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-amber-800 flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      Email will be sent to all {subscribers.filter(s => s.is_active).length.toLocaleString()} active old website contacts.
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsComposerOpen(false)}
+                    className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSending}
+                    className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSending ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-3.5 h-3.5" /> {sendMode === 'test' ? 'Send Test' : 'Broadcast Now'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Preview Window */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden flex flex-col bg-gray-50">
+                <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+                  <span>Live Preview</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Personalized format</span>
+                </div>
+                <div className="p-4 flex-1 overflow-y-auto bg-white m-3 rounded-lg border border-gray-100 shadow-sm text-sm">
+                  <div className="border-b border-gray-100 pb-3 mb-4">
+                    <p className="text-xs text-gray-400 font-medium">Subject:</p>
+                    <p className="font-bold text-gray-800 mt-0.5">{emailSubject || '(No subject provided)'}</p>
+                  </div>
+                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {emailBody ? (
+                      emailBody
+                        .replace(/\{\{name\}\}/gi, 'John Doe')
+                        .replace(/\{\{firstName\}\}/gi, 'John')
+                        .replace(/\{\{lastName\}\}/gi, 'Doe')
+                    ) : (
+                      <span className="text-gray-400 italic">Email content preview will appear here...</span>
+                    )}
+                  </div>
+                  <div className="mt-8 pt-4 border-t border-gray-100 text-center">
+                    <p className="text-[9px] text-gray-400 margin-0">
+                      You are receiving this email because you subscribed on our former website.
+                    </p>
+                    <p className="text-[9px] text-gray-400 mt-1">
+                      <span className="text-amber-600 underline">Unsubscribe from this list</span>
                     </p>
                   </div>
                 </div>

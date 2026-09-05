@@ -18,6 +18,7 @@ dist-ssr/
 
 # Server local JSON database data
 server/data/
+!server/data/old_subscribers.json
 
 # Editor and system files
 .vscode/

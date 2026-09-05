@@ -627,6 +627,25 @@ export const api = {
       });
       return (await handleResponse(res, 'Failed to delete SD subscriber')).json();
     },
+    async getOldSubscribers(): Promise<Subscriber[]> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/old-subscribers`, { headers: getHeaders() });
+      return (await handleResponse(res, 'Failed to fetch old subscribers')).json();
+    },
+    async sendOldBulkEmail(subject: string, htmlBody: string, testEmail?: string): Promise<{ success: boolean; count: number; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/old-subscribers/email`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ subject, htmlBody, testEmail }),
+      });
+      return (await handleResponse(res, 'Failed to send old subscribers bulk email')).json();
+    },
+    async deleteOldSubscriber(id: string): Promise<{ success: boolean; message: string }> {
+      const res = await fetch(`${API_BASE_URL}/api/admin/old-subscribers/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      return (await handleResponse(res, 'Failed to delete old subscriber')).json();
+    },
     async downloadSiteBackup(): Promise<void> {
       const res = await fetch(`${API_BASE_URL}/api/admin/backup/export`, { headers: getHeaders() });
       if (!res.ok) throw new Error('Failed to download site backup');

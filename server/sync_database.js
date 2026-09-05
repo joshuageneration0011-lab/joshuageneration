@@ -182,6 +182,46 @@ async function syncData() {
     }
   }
 
+  // 5. Sync Old Subscribers
+  const oldSubsFile = path.join(__dirname, 'data', 'old_subscribers.json');
+  if (fs.existsSync(oldSubsFile)) {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS old_subscribers (
+          id VARCHAR PRIMARY KEY,
+          email VARCHAR UNIQUE NOT NULL,
+          name VARCHAR,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      const oldSubs = JSON.parse(fs.readFileSync(oldSubsFile, 'utf-8'));
+      console.log(`Syncing ${oldSubs.length} old subscribers in batches...`);
+      const batchSize = 500;
+      for (let i = 0; i < oldSubs.length; i += batchSize) {
+        const batch = oldSubs.slice(i, i + batchSize);
+        const valueStrings = [];
+        const values = [];
+        let paramIdx = 1;
+        for (const s of batch) {
+          valueStrings.push(`($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4})`);
+          values.push(s.id, s.email, s.name || '', s.is_active !== false, s.created_at || new Date().toISOString());
+          paramIdx += 5;
+        }
+        await pool.query(
+          `INSERT INTO old_subscribers (id, email, name, is_active, created_at)
+           VALUES ${valueStrings.join(', ')}
+           ON CONFLICT (email) DO NOTHING`,
+          values
+        );
+      }
+      console.log('Old subscribers synchronized.');
+    } catch (e) {
+      console.error('Failed to sync old subscribers:', e);
+    }
+  }
+
   console.log('Data synchronization complete.');
   process.exit(0);
 }
