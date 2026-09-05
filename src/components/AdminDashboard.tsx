@@ -2585,34 +2585,33 @@ function OldSubscribersTab() {
                 </div>
               </form>
 
-              {/* Preview Window */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden flex flex-col bg-gray-50">
-                <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>Live Preview</span>
-                  <span className="text-[10px] text-gray-400 font-normal">Personalized format</span>
-                </div>
-                <div className="p-4 flex-1 overflow-y-auto bg-white m-3 rounded-lg border border-gray-100 shadow-sm text-sm">
-                  <div className="border-b border-gray-100 pb-3 mb-4">
-                    <p className="text-xs text-gray-400 font-medium">Subject:</p>
-                    <p className="font-bold text-gray-800 mt-0.5">{emailSubject || '(No subject provided)'}</p>
+              {/* Template Preview Section */}
+              <div className="flex flex-col h-full space-y-1.5 min-h-[300px]">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Live Template Preview</label>
+                <div className="flex-1 bg-white border border-gray-200 rounded-2xl overflow-y-auto p-4 flex flex-col font-sans select-none pointer-events-none scale-[0.9] origin-top shadow-sm max-h-[460px]">
+                  {/* Email Logo Header */}
+                  <div className="bg-slate-900 p-4 text-center rounded-t-xl">
+                    <img src="https://joshuasgeneration.com/favicon.png" alt="Logo" className="w-6 h-6 mx-auto mb-1 opacity-90 inline-block rounded-full" />
+                    <div className="text-white text-sm font-extrabold tracking-wider leading-none">
+                      Joshuas<span className="text-amber-500">Generation</span>
+                    </div>
                   </div>
-                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {emailBody ? (
-                      emailBody
-                        .replace(/\{\{name\}\}/gi, 'John Doe')
-                        .replace(/\{\{firstName\}\}/gi, 'John')
-                        .replace(/\{\{lastName\}\}/gi, 'Doe')
-                    ) : (
-                      <span className="text-gray-400 italic">Email content preview will appear here...</span>
-                    )}
+
+                  {/* Email Body Content */}
+                  <div className="p-5 border-x border-gray-100 flex-1">
+                    <h2 className="text-md font-bold text-gray-900 mt-0 mb-3 border-b border-gray-50 pb-2">
+                      {emailSubject.trim() || 'Email Subject Header'}
+                    </h2>
+                    <div className="text-xs text-gray-600 space-y-2 leading-relaxed whitespace-pre-line font-sans break-words">
+                      {emailBody.trim() || 'Your message content will be formatted and displayed here inside the JGen template layout...'}
+                    </div>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-gray-100 text-center">
-                    <p className="text-[9px] text-gray-400 margin-0">
-                      You are receiving this email because you subscribed on our former website.
-                    </p>
-                    <p className="text-[9px] text-gray-400 mt-1">
-                      <span className="text-amber-600 underline">Unsubscribe from this list</span>
-                    </p>
+
+                  {/* Email Footer */}
+                  <div className="bg-gray-50 p-4 text-center rounded-b-xl border-t border-gray-100 text-[10px] text-gray-400 space-y-1">
+                    <p className="margin-0 font-medium text-gray-600">Joshua's Generation International Ministry</p>
+                    <p className="margin-0 text-gray-400">You are receiving this email because you subscribed on our former website.</p>
+                    <p className="margin-0 text-amber-600 underline">Unsubscribe from this list</p>
                   </div>
                 </div>
               </div>
