@@ -169,6 +169,20 @@ export const prayerRoomStore = {
     }
   },
 
+  async getLiveKitToken(identity: string, name: string, room = 'jg-247-prayer'): Promise<{ token: string; url: string; room: string } | null> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/livekit-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity, name, room })
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  },
+
   // --- MESSAGES & CHAT MODERATION ---
 
   async getMessages(): Promise<PrayerMessage[]> {

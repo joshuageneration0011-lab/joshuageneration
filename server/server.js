@@ -4218,6 +4218,51 @@ Joshua's Generation`;
     return;
   }
 
+  // 14. POST /api/prayer-room/livekit-token (Generate LiveKit Cloud voice token)
+  if (pathname === '/api/prayer-room/livekit-token' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { identity, name, room = 'jg-247-prayer' } = body;
+      
+      const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://project-247-prayers-jg-22ebdx44.livekit.cloud';
+      const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APlpReTdJGd3Jac';
+      const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || 'eXCAoqsqLn1az1PV0NXxfFiID7hYbKUDaVjm7leS0jqA';
+
+      const header = { alg: 'HS256', typ: 'JWT' };
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        exp: now + 24 * 3600,
+        iss: LIVEKIT_API_KEY,
+        sub: identity || `user_${Date.now()}`,
+        name: name || 'Intercessor',
+        nbf: now - 5,
+        video: {
+          room: room,
+          roomJoin: true,
+          canPublish: true,
+          canSubscribe: true,
+          canPublishData: true
+        }
+      };
+
+      const b64Header = Buffer.from(JSON.stringify(header)).toString('base64url');
+      const b64Payload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+      const signature = crypto.createHmac('sha256', LIVEKIT_API_SECRET).update(b64Header + '.' + b64Payload).digest('base64url');
+      const token = b64Header + '.' + b64Payload + '.' + signature;
+
+      sendJson(res, 200, {
+        success: true,
+        token,
+        url: LIVEKIT_URL,
+        room
+      });
+    } catch (e) {
+      console.error('[LiveKit Token Error]:', e);
+      sendJson(res, 500, { error: 'Failed to generate voice token' });
+    }
+    return;
+  }
+
   // --- REPLICATE IMAGE GENERATOR ---
   if (pathname === '/api/generate-image' && method === 'POST') {
     try {

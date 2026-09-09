@@ -4,6 +4,7 @@ import {
   MessageSquare, MoreVertical, Crown, UserX, PhoneCall, PhoneOff, 
   X, Sparkles, Trash2, Key, Smile, Volume2
 } from 'lucide-react';
+import { Room, RoomEvent, Track } from 'livekit-client';
 import { prayerRoomStore, type PrayerMessage, type PrayerRoomState, type CallParticipant, type ReactionEvent } from '@/data/prayerRoomStore';
 import { api } from '@/utils/api';
 
@@ -33,17 +34,6 @@ const STICKERS = [
   { id: 'cross', emoji: '✝️', label: 'VICTORY IN CHRIST', color: 'from-royal-blue-600 to-indigo-700 text-white' },
   { id: 'trumpet', emoji: '🎺', label: 'SHOUT OF PRAISE', color: 'from-amber-500 to-orange-600 text-white' }
 ];
-
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
-  ],
-  iceCandidatePoolSize: 10
-};
 
 export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   // Current User Identity
@@ -92,17 +82,9 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     active_speakers: []
   });
 
-  // Audio & WebRTC Refs & States
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  // Audio & LiveKit Cloud Refs
+  const roomRef = useRef<Room | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
-  const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
-  const remoteAudioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
-  const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
-  const initiatedPeersRef = useRef<Set<string>>(new Set());
-  const [remoteAudioStreams, setRemoteAudioStreams] = useState<Array<{ id: string; stream: MediaStream }>>([]);
 
   const isChatOpenRef = useRef(isChatOpen);
   useEffect(() => {
@@ -111,31 +93,8 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
   // Mobile Audio Hardware & Autoplay Unlocker
   const unlockAllAudio = () => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-          audioContextRef.current = new AudioCtx();
-        }
-        if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(() => {});
-        }
-        // Play a silent buffer to unlock iOS Safari / WebKit audio session
-        try {
-          const buffer = audioContextRef.current.createBuffer(1, 1, 22050);
-          const source = audioContextRef.current.createBufferSource();
-          source.buffer = buffer;
-          source.connect(audioContextRef.current.destination);
-          source.start(0);
-        } catch (e) {}
-      }
-    } catch (e) {}
-
-    // Resume all remote audio elements
     document.querySelectorAll('audio').forEach(el => {
-      if (el.srcObject) {
-        el.play().catch(() => {});
-      }
+      el.play().catch(() => {});
     });
   };
 
@@ -149,163 +108,72 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
   const canModerate = userRole === 'host' || userRole === 'admin';
 
-  // --- WebRTC Multi-Peer Mesh Logic for Two-Way Audio ---
+  // --- LiveKit Cloud Voice Room Connection ---
+  useEffect(() => {
+    if (!userName || !isInCall) return;
 
-  const getOrCreatePeerConnection = (targetUserId: string): RTCPeerConnection => {
-    let pc = peerConnectionsRef.current.get(targetUserId);
-    if (pc && pc.signalingState !== 'closed') {
-      return pc;
-    }
-
-    pc = new RTCPeerConnection(RTC_CONFIG);
-    peerConnectionsRef.current.set(targetUserId, pc);
-
-    // ALWAYS pre-add bidirectional audio transceiver.
-    // This pre-negotiates m=audio in the SDP so replaceTrack immediately streams audio without renegotiation!
-    try {
-      const transceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
-      if (mediaStreamRef.current) {
-        const liveTrack = mediaStreamRef.current.getAudioTracks()[0];
-        if (liveTrack && liveTrack.readyState === 'live') {
-          transceiver.sender.replaceTrack(liveTrack).catch(err => {
-            console.warn('[WebRTC] Initial replaceTrack error:', err);
-          });
-        }
+    let isSubscribed = true;
+    const room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
       }
-    } catch (err) {
-      console.warn('[WebRTC] addTransceiver fallback:', err);
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => {
-          pc?.addTrack(track, mediaStreamRef.current!);
-        });
-      }
-    }
+    });
+    roomRef.current = room;
 
-    // ICE Candidate exchange
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        prayerRoomStore.sendSignal('ice', userId, targetUserId, event.candidate);
-      }
-    };
-
-    // Incoming Remote Audio Track
-    pc.ontrack = (event) => {
-      console.log(`[WebRTC] Incoming track from peer ${targetUserId}:`, event.track.kind);
-      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
-
-      // Render via React DOM audio elements
-      setRemoteAudioStreams(prev => {
-        const filtered = prev.filter(item => item.id !== targetUserId);
-        return [...filtered, { id: targetUserId, stream }];
-      });
-
-      // Also maintain standalone HTMLAudioElement as secondary guaranteed output
-      let audioEl = remoteAudioElsRef.current.get(targetUserId);
-      if (!audioEl) {
-        audioEl = document.createElement('audio');
-        audioEl.id = `remote-audio-${targetUserId}`;
-        audioEl.autoplay = true;
-        audioEl.volume = 1.0;
+    // When remote participant starts speaking/audio arrives
+    room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      if (track.kind === Track.Kind.Audio) {
+        console.log('[LiveKit] Subscribed to remote audio from:', participant.identity);
+        const audioEl = track.attach();
+        audioEl.id = `livekit-audio-${participant.identity}`;
         audioEl.setAttribute('playsinline', 'true');
         audioEl.setAttribute('webkit-playsinline', 'true');
         (audioEl as any).playsInline = true;
         document.body.appendChild(audioEl);
-        remoteAudioElsRef.current.set(targetUserId, audioEl);
+        audioEl.play().catch(e => {
+          console.warn('[LiveKit] Remote audio waiting for user gesture:', e);
+        });
       }
-      audioEl.srcObject = stream;
-      audioEl.play().catch(e => {
-        console.warn(`[WebRTC] Autoplay pending user gesture for ${targetUserId}:`, e);
-      });
+    });
+
+    room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      track.detach().forEach(el => el.remove());
+    });
+
+    // Active speaker detection (highlights who is talking with glowing halo)
+    room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+      const speakerIds = new Set(speakers.map(s => s.identity));
+      setParticipants(prev => prev.map(p => ({
+        ...p,
+        isSpeaking: speakerIds.has(p.id)
+      })));
+      setIsSpeaking(speakerIds.has(userId));
+    });
+
+    // Connect to LiveKit Cloud
+    prayerRoomStore.getLiveKitToken(userId, userName).then(async (data) => {
+      if (!isSubscribed) return;
+      if (data && data.token) {
+        try {
+          await room.connect(data.url, data.token);
+          console.log('[LiveKit] Connected successfully to Cloud room:', data.room);
+        } catch (err) {
+          console.error('[LiveKit] Connection error:', err);
+        }
+      }
+    });
+
+    return () => {
+      isSubscribed = false;
+      room.disconnect();
+      roomRef.current = null;
+      document.querySelectorAll('[id^="livekit-audio-"]').forEach(el => el.remove());
     };
-
-    pc.onconnectionstatechange = () => {
-      console.log(`[WebRTC] Peer ${targetUserId} state: ${pc?.connectionState}`);
-      if (pc?.connectionState === 'disconnected' || pc?.connectionState === 'failed' || pc?.connectionState === 'closed') {
-        const audioEl = remoteAudioElsRef.current.get(targetUserId);
-        if (audioEl) {
-          audioEl.pause();
-          audioEl.srcObject = null;
-          audioEl.remove();
-          remoteAudioElsRef.current.delete(targetUserId);
-        }
-        setRemoteAudioStreams(prev => prev.filter(item => item.id !== targetUserId));
-        peerConnectionsRef.current.delete(targetUserId);
-        initiatedPeersRef.current.delete(targetUserId);
-        pendingCandidatesRef.current.delete(targetUserId);
-      }
-    };
-
-    return pc;
-  };
-
-  const initiateCallToPeer = async (targetUserId: string) => {
-    try {
-      const pc = getOrCreatePeerConnection(targetUserId);
-      if (initiatedPeersRef.current.has(targetUserId) && (pc.connectionState === 'connected' || pc.connectionState === 'connecting')) {
-        return;
-      }
-      if (pc.signalingState !== 'stable') {
-        return;
-      }
-      initiatedPeersRef.current.add(targetUserId);
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: false
-      });
-      await pc.setLocalDescription(offer);
-      prayerRoomStore.sendSignal('offer', userId, targetUserId, offer);
-    } catch (err) {
-      console.warn('Error creating WebRTC offer:', err);
-    }
-  };
-
-  const handleRemoteSignal = async (signal: { type: string; fromId: string; toId: string; payload: any }) => {
-    if (signal.toId !== userId) return;
-    const { fromId, type, payload } = signal;
-
-    try {
-      const pc = getOrCreatePeerConnection(fromId);
-
-      if (type === 'offer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(payload));
-        
-        // Drain pending ICE candidates for this peer
-        const pending = pendingCandidatesRef.current.get(fromId) || [];
-        for (const cand of pending) {
-          await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-        }
-        pendingCandidatesRef.current.delete(fromId);
-
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        prayerRoomStore.sendSignal('answer', userId, fromId, answer);
-      } else if (type === 'answer') {
-        if (pc.signalingState === 'have-local-offer') {
-          await pc.setRemoteDescription(new RTCSessionDescription(payload));
-          
-          // Drain pending ICE candidates for this peer
-          const pending = pendingCandidatesRef.current.get(fromId) || [];
-          for (const cand of pending) {
-            await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-          }
-          pendingCandidatesRef.current.delete(fromId);
-        }
-      } else if (type === 'ice') {
-        if (payload) {
-          if (pc.remoteDescription && pc.remoteDescription.type) {
-            await pc.addIceCandidate(new RTCIceCandidate(payload)).catch(() => {});
-          } else {
-            if (!pendingCandidatesRef.current.has(fromId)) {
-              pendingCandidatesRef.current.set(fromId, []);
-            }
-            pendingCandidatesRef.current.get(fromId)!.push(payload);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Error handling remote WebRTC signal:', err);
-    }
-  };
+  }, [userName, isInCall, userId]);
 
   // Connect & Sync (Stable across chat drawer opening/closing)
   useEffect(() => {
@@ -349,16 +217,6 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         if (me && me.role && userRole !== 'host') {
           setUserRole(me.role);
         }
-
-        // Establish WebRTC peer connection to other participants
-        roster.forEach(p => {
-          if (p.id !== userId) {
-            // Lexicographically smaller ID initiates offer
-            if (userId < p.id) {
-              initiateCallToPeer(p.id);
-            }
-          }
-        });
       },
       onUserState: (data) => {
         setParticipants(prev => prev.map(p => {
@@ -389,9 +247,6 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           stopMic();
           alert('You have been removed from the prayer call.');
         }
-      },
-      onSignal: (signal) => {
-        handleRemoteSignal(signal);
       }
     });
 
@@ -399,18 +254,6 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       unsubscribe();
       stopMic();
       prayerRoomStore.leaveCall(userId);
-      // Clean up remote audio elements
-      remoteAudioElsRef.current.forEach(el => {
-        el.pause();
-        el.srcObject = null;
-        el.remove();
-      });
-      remoteAudioElsRef.current.clear();
-      setRemoteAudioStreams([]);
-      peerConnectionsRef.current.forEach(pc => pc.close());
-      peerConnectionsRef.current.clear();
-      initiatedPeersRef.current.clear();
-      pendingCandidatesRef.current.clear();
     };
   }, [userId]);
 
@@ -434,9 +277,9 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   }, [messages, isChatOpen]);
 
-  const handleForceMuted = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+  const handleForceMuted = async () => {
+    if (roomRef.current && roomRef.current.localParticipant) {
+      await roomRef.current.localParticipant.setMicrophoneEnabled(false);
     }
     setIsMuted(true);
     setIsSpeaking(false);
@@ -444,152 +287,65 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     alert('A moderator has muted your microphone.');
   };
 
-  const handleForceUnmuted = () => {
-    if (mediaStreamRef.current) {
-      const track = mediaStreamRef.current.getAudioTracks()[0];
-      if (track && track.readyState === 'live') {
-        track.enabled = true;
-        peerConnectionsRef.current.forEach(pc => {
-          const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio' || s.track === null);
-          if (audioSender) {
-            audioSender.replaceTrack(track).catch(() => {});
-          }
-        });
+  const handleForceUnmuted = async () => {
+    if (roomRef.current && roomRef.current.localParticipant) {
+      try {
+        await roomRef.current.localParticipant.setMicrophoneEnabled(true);
         setIsMuted(false);
         prayerRoomStore.updateMicState(userId, false, false);
         alert('A moderator has unmuted your microphone.');
         return;
-      }
+      } catch (e) {}
     }
     toggleMic();
   };
 
-  // Toggle Mic (Phone & Desktop WebRTC Audio)
+  // Toggle Mic (LiveKit Cloud Voice Audio)
   const toggleMic = async () => {
     if (!isInCall) {
       alert('Please reconnect to the call first.');
       return;
     }
 
-    // Unlock phone audio output on user tap
     unlockAllAudio();
 
+    const room = roomRef.current;
+
     if (!isMuted) {
-      // Muting: Keep connection active, mute audio track
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+      // Muting
+      if (room && room.localParticipant) {
+        await room.localParticipant.setMicrophoneEnabled(false);
       }
       setIsMuted(true);
       setIsSpeaking(false);
       prayerRoomStore.updateMicState(userId, true, false);
     } else {
-      // Unmuting: Acquire mic if needed and route to all active peer transceivers
+      // Unmuting
       try {
-        let stream = mediaStreamRef.current;
-        const hasLiveTrack = stream && stream.getAudioTracks().length > 0 && stream.getAudioTracks()[0].readyState === 'live';
-
-        if (!hasLiveTrack) {
-          stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
-          });
-          mediaStreamRef.current = stream;
+        if (room && room.localParticipant) {
+          await room.localParticipant.setMicrophoneEnabled(true);
         }
-
-        const micTrack = stream.getAudioTracks()[0];
-        if (micTrack) {
-          micTrack.enabled = true;
-
-          // Connect / swap mic track into every peer connection's audio sender
-          peerConnectionsRef.current.forEach(pc => {
-            const senders = pc.getSenders();
-            const audioSender = senders.find(s => s.track?.kind === 'audio' || s.track === null);
-            if (audioSender) {
-              audioSender.replaceTrack(micTrack).catch(err => {
-                console.warn('[WebRTC] replaceTrack warning on unmute:', err);
-              });
-            } else {
-              pc.addTrack(micTrack, stream!);
-            }
-          });
-        }
-
-        // Setup Web Audio Analyser for volume detection
-        const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-          audioContextRef.current = new AudioCtxClass();
-        }
-        if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(() => {});
-        }
-
-        if (!analyserRef.current) {
-          const source = audioContextRef.current.createMediaStreamSource(stream);
-          const analyser = audioContextRef.current.createAnalyser();
-          analyser.fftSize = 256;
-          source.connect(analyser);
-          analyserRef.current = analyser;
-        }
-
         setIsMuted(false);
         prayerRoomStore.updateMicState(userId, false, false);
-
-        // Continuous volume check loop
-        const dataArray = new Uint8Array(analyserRef.current?.frequencyBinCount || 128);
-        let lastSpeakingState = false;
-
-        const checkVolume = () => {
-          if (!analyserRef.current || isMuted) return;
-          analyserRef.current.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          const average = sum / dataArray.length;
-          const isNowSpeaking = average > 14;
-
-          if (isNowSpeaking !== lastSpeakingState) {
-            lastSpeakingState = isNowSpeaking;
-            setIsSpeaking(isNowSpeaking);
-            prayerRoomStore.updateMicState(userId, false, isNowSpeaking);
-          }
-
-          animationFrameRef.current = requestAnimationFrame(checkVolume);
-        };
-
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-        animationFrameRef.current = requestAnimationFrame(checkVolume);
       } catch (err) {
-        console.error('Mic access error:', err);
+        console.error('[LiveKit] Mic access error:', err);
         alert('Could not access microphone. Please check your phone or browser microphone permissions.');
       }
     }
   };
 
   const stopMic = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
+    if (roomRef.current && roomRef.current.localParticipant) {
+      roomRef.current.localParticipant.setMicrophoneEnabled(false).catch(() => {});
     }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-    analyserRef.current = null;
   };
 
   const toggleCallMembership = () => {
     if (isInCall) {
       stopMic();
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+      }
       setIsMuted(true);
       setIsSpeaking(false);
       setIsInCall(false);
@@ -717,25 +473,6 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       onClickCapture={unlockAllAudio}
       onTouchStartCapture={unlockAllAudio}
     >
-      {/* Hidden Audio Elements for Remote Participants */}
-      <div className="hidden" aria-hidden="true">
-        {remoteAudioStreams.map(item => (
-          <audio
-            key={item.id}
-            id={`remote-audio-elem-${item.id}`}
-            autoPlay
-            playsInline
-            ref={el => {
-              if (el) {
-                if (el.srcObject !== item.stream) {
-                  el.srcObject = item.stream;
-                }
-                el.play().catch(() => {});
-              }
-            }}
-          />
-        ))}
-      </div>
       {/* Floating Reactions */}
       <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
         {reactions.map(r => (
