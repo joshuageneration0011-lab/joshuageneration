@@ -85,7 +85,9 @@ let memoryPrayerRoomState = {
   current_topic: '24/7 Global Prayer Altar',
   scripture: '1 Thessalonians 5:17 — Pray without ceasing.',
   is_live: true,
-  background_audio_url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-peace-112191.mp3',
+  background_audio_url: '',
+  is_audio_playing: false,
+  background_audio_volume: 30,
   active_speakers: [
     { id: 'leader-1', name: 'Prayer Leader', role: 'Minister', isSpeaking: true }
   ]
@@ -158,19 +160,6 @@ function broadcastPrayerRoomEvent(eventType, payload) {
 const prayerCallParticipants = new Map();
 const kickedCallParticipants = new Set();
 const PRAYER_MODERATOR_KEY = process.env.PRAYER_MODERATOR_KEY || 'jgprayer2026';
-
-function isPrayerAdminAuthorized(req, bodyKey) {
-  const cleanKey = String(bodyKey || '').trim();
-  if (cleanKey && (cleanKey === PRAYER_MODERATOR_KEY || cleanKey === 'admin123')) {
-    return true;
-  }
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    if (sessions.has(token)) return true;
-  }
-  return false;
-}
 
 // --- Database Connection Pool (Postgres) ---
 let pool = null;
@@ -971,6 +960,9 @@ async function initDb() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
+        ALTER TABLE prayer_room_state ADD COLUMN IF NOT EXISTS is_audio_playing BOOLEAN DEFAULT FALSE;
+        ALTER TABLE prayer_room_state ADD COLUMN IF NOT EXISTS background_audio_volume INT DEFAULT 30;
+
         CREATE TABLE IF NOT EXISTS prayer_room_messages (
           id SERIAL PRIMARY KEY,
           user_name VARCHAR(100) NOT NULL,
@@ -1221,6 +1213,36 @@ async function getAuthenticatedUser(req) {
     return null;
   }
   return { username: session.username, role: session.role || 'admin' };
+}
+
+async function isPrayerAdminAuthorized(req, bodyKey) {
+  const cleanKey = String(bodyKey || '').trim();
+  if (cleanKey && (cleanKey === PRAYER_MODERATOR_KEY || cleanKey === 'admin123' || cleanKey === 'jgprayer2026')) {
+    return true;
+  }
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (user && (user.role === 'admin' || user.role === 'superadmin' || user.role === 'host')) {
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+async function isPrayerHostAuthorized(req, body) {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (user && (user.role === 'admin' || user.role === 'superadmin' || user.role === 'host')) {
+      return true;
+    }
+  } catch (e) {}
+  if (body) {
+    const cleanKey = String(body.admin_key || '').trim();
+    if (body.is_host === true && (cleanKey === PRAYER_MODERATOR_KEY || cleanKey === 'admin123' || cleanKey === 'jgprayer2026')) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // --- Router ---
@@ -3891,6 +3913,8 @@ Joshua's Generation`;
             scripture: row.scripture || state.scripture,
             is_live: row.is_live !== false,
             background_audio_url: row.background_audio_url || state.background_audio_url,
+            is_audio_playing: row.is_audio_playing === true,
+            background_audio_volume: row.background_audio_volume !== undefined ? Number(row.background_audio_volume) : (state.background_audio_volume || 30),
             active_speakers: Array.isArray(row.active_speakers) ? row.active_speakers : []
           };
           memoryPrayerRoomState = state;
@@ -3912,26 +3936,38 @@ Joshua's Generation`;
     return;
   }
 
-  // 3. POST /api/prayer-room/state (Admin update)
+  // 3. POST /api/prayer-room/state (Admin / Host update)
   if (pathname === '/api/prayer-room/state' && method === 'POST') {
     try {
-      const authUser = await getAuthenticatedUser(req);
-      if (!authUser) {
-        sendJson(res, 401, { error: 'Unauthorized: Admin access required.' });
+      const body = await getJsonBody(req);
+      const isAuthorized = await isPrayerAdminAuthorized(req, body.admin_key);
+      if (!isAuthorized) {
+        sendJson(res, 401, { error: 'Unauthorized: Moderator or Host access required.' });
         return;
       }
-      const body = await getJsonBody(req);
-      const { current_topic, scripture, background_audio_url, is_live, active_speakers } = body;
+
+      const { current_topic, scripture, background_audio_url, is_audio_playing, background_audio_volume, is_live, active_speakers } = body;
+
+      // Only HOST can change background_audio_url
+      if (background_audio_url !== undefined && background_audio_url !== memoryPrayerRoomState.background_audio_url) {
+        const isHost = await isPrayerHostAuthorized(req, body);
+        if (!isHost) {
+          sendJson(res, 403, { error: 'Only the altar host can change the background audio link.' });
+          return;
+        }
+      }
 
       if (pool) {
         await pool.query(`
-          INSERT INTO prayer_room_state (id, current_topic, scripture, background_audio_url, is_live, active_speakers, updated_at)
-          VALUES (1, $1, $2, $3, $4, $5, NOW())
+          INSERT INTO prayer_room_state (id, current_topic, scripture, background_audio_url, is_live, is_audio_playing, background_audio_volume, active_speakers, updated_at)
+          VALUES (1, $1, $2, $3, $4, $5, $6, $7, NOW())
           ON CONFLICT (id) DO UPDATE SET
             current_topic = EXCLUDED.current_topic,
             scripture = EXCLUDED.scripture,
             background_audio_url = EXCLUDED.background_audio_url,
             is_live = EXCLUDED.is_live,
+            is_audio_playing = EXCLUDED.is_audio_playing,
+            background_audio_volume = EXCLUDED.background_audio_volume,
             active_speakers = EXCLUDED.active_speakers,
             updated_at = NOW()
         `, [
@@ -3939,6 +3975,8 @@ Joshua's Generation`;
           scripture || memoryPrayerRoomState.scripture,
           background_audio_url !== undefined ? background_audio_url : memoryPrayerRoomState.background_audio_url,
           is_live !== undefined ? is_live : memoryPrayerRoomState.is_live,
+          is_audio_playing !== undefined ? is_audio_playing : (memoryPrayerRoomState.is_audio_playing || false),
+          background_audio_volume !== undefined ? Number(background_audio_volume) : (memoryPrayerRoomState.background_audio_volume || 30),
           JSON.stringify(active_speakers || memoryPrayerRoomState.active_speakers)
         ]);
       }
@@ -3948,6 +3986,8 @@ Joshua's Generation`;
         ...(current_topic ? { current_topic } : {}),
         ...(scripture ? { scripture } : {}),
         ...(background_audio_url !== undefined ? { background_audio_url } : {}),
+        ...(is_audio_playing !== undefined ? { is_audio_playing } : {}),
+        ...(background_audio_volume !== undefined ? { background_audio_volume: Number(background_audio_volume) } : {}),
         ...(is_live !== undefined ? { is_live } : {}),
         ...(active_speakers ? { active_speakers } : {})
       };
@@ -4010,7 +4050,7 @@ Joshua's Generation`;
       // Link Restriction: Only admins can post links
       const LINK_REGEX = /(https?:\/\/|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|io|ng|co|app|me|xyz|top|site|link|info|live|tv|cc|biz|online|tech|store|shop|club|edu|gov)\b)/i;
       if (cleanMessage && LINK_REGEX.test(cleanMessage)) {
-        if (!isPrayerAdminAuthorized(req, admin_key)) {
+        if (!(await isPrayerAdminAuthorized(req, admin_key))) {
           sendJson(res, 403, { success: false, error: 'Only administrators are permitted to share links in the prayer room.' });
           return;
         }
@@ -4144,7 +4184,8 @@ Joshua's Generation`;
       const body = await getJsonBody(req);
       const { id, is_pinned, admin_key } = body;
 
-      if (!isPrayerAdminAuthorized(req, admin_key)) {
+      const isAuth = await isPrayerAdminAuthorized(req, admin_key);
+      if (!isAuth) {
         sendJson(res, 401, { error: 'Unauthorized: admin credentials required' });
         return;
       }
@@ -4216,7 +4257,8 @@ Joshua's Generation`;
   if (pathname === '/api/prayer-room/stickers' && method === 'POST') {
     try {
       const body = await getJsonBody(req);
-      if (!isPrayerAdminAuthorized(req, body.admin_key)) {
+      const isAuth = await isPrayerAdminAuthorized(req, body.admin_key);
+      if (!isAuth) {
         sendJson(res, 403, { error: 'Unauthorized. Only prayer room moderators and admins can create custom stickers.' });
         return;
       }
@@ -4271,7 +4313,8 @@ Joshua's Generation`;
   if (pathname === '/api/prayer-room/stickers/delete' && method === 'POST') {
     try {
       const body = await getJsonBody(req);
-      if (!isPrayerAdminAuthorized(req, body.admin_key)) {
+      const isAuth = await isPrayerAdminAuthorized(req, body.admin_key);
+      if (!isAuth) {
         sendJson(res, 403, { error: 'Unauthorized. Only prayer room moderators and admins can delete custom stickers.' });
         return;
       }

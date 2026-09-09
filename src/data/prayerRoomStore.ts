@@ -23,6 +23,8 @@ export interface PrayerRoomState {
   scripture: string;
   is_live: boolean;
   background_audio_url: string;
+  is_audio_playing?: boolean;
+  background_audio_volume?: number;
   active_speakers: Array<{ id: string; name: string; role: string; isSpeaking: boolean }>;
 }
 
@@ -61,6 +63,8 @@ export const prayerRoomStore = {
           scripture: '1 Thessalonians 5:17 — Pray without ceasing.',
           is_live: true,
           background_audio_url: '',
+          is_audio_playing: false,
+          background_audio_volume: 30,
           active_speakers: []
         },
         activeCount: 12
@@ -68,8 +72,13 @@ export const prayerRoomStore = {
     }
   },
 
-  async updateState(newState: Partial<PrayerRoomState>): Promise<boolean> {
+  async updateState(newState: Partial<PrayerRoomState> & { admin_key?: string; is_host?: boolean }): Promise<boolean> {
     const token = localStorage.getItem('jg_admin_token');
+    const modKey = localStorage.getItem('jg_prayer_moderator_key') || (token ? 'jgprayer2026' : '');
+    const payload = {
+      admin_key: modKey,
+      ...newState
+    };
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/state`, {
         method: 'POST',
@@ -77,10 +86,15 @@ export const prayerRoomStore = {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(newState)
+        body: JSON.stringify(payload)
       });
-      return res.ok;
-    } catch (e) {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to update prayer room state');
+      }
+      return true;
+    } catch (e: any) {
+      if (e.message) throw e;
       return false;
     }
   },
@@ -149,11 +163,17 @@ export const prayerRoomStore = {
     role?: 'host' | 'admin' | 'intercessor',
     requesterId?: string
   ): Promise<boolean> {
+    const token = localStorage.getItem('jg_admin_token');
+    const isHost = localStorage.getItem('jg_prayer_is_host') === 'true';
+    const modKey = localStorage.getItem('jg_prayer_moderator_key') || (token || isHost ? 'jgprayer2026' : '');
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/call/admin/action`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, targetId, role, requesterId })
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action, targetId, role, requesterId, admin_key: modKey, is_host: isHost })
       });
       return res.ok;
     } catch (e) {
@@ -254,6 +274,8 @@ export const prayerRoomStore = {
 
   async pinMessage(id: number | string, is_pinned: boolean, admin_key?: string): Promise<boolean> {
     const token = localStorage.getItem('jg_admin_token');
+    const isHost = localStorage.getItem('jg_prayer_is_host') === 'true';
+    const modKey = admin_key || localStorage.getItem('jg_prayer_moderator_key') || (token || isHost ? 'jgprayer2026' : '');
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages/pin`, {
         method: 'POST',
@@ -261,7 +283,7 @@ export const prayerRoomStore = {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ id, is_pinned, admin_key })
+        body: JSON.stringify({ id, is_pinned, admin_key: modKey, is_host: isHost })
       });
       return res.ok;
     } catch (e) {
@@ -270,11 +292,17 @@ export const prayerRoomStore = {
   },
 
   async deleteMessage(id: number | string): Promise<boolean> {
+    const token = localStorage.getItem('jg_admin_token');
+    const isHost = localStorage.getItem('jg_prayer_is_host') === 'true';
+    const modKey = localStorage.getItem('jg_prayer_moderator_key') || (token || isHost ? 'jgprayer2026' : '');
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages/delete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ id, admin_key: modKey, is_host: isHost })
       });
       return res.ok;
     } catch (e) {
@@ -283,11 +311,17 @@ export const prayerRoomStore = {
   },
 
   async clearMessages(): Promise<boolean> {
+    const token = localStorage.getItem('jg_admin_token');
+    const isHost = localStorage.getItem('jg_prayer_is_host') === 'true';
+    const modKey = localStorage.getItem('jg_prayer_moderator_key') || (token || isHost ? 'jgprayer2026' : '');
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages/clear`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ admin_key: modKey, is_host: isHost })
       });
       return res.ok;
     } catch (e) {

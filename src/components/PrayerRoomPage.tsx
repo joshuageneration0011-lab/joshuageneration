@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, MicOff, Send, Heart, ArrowLeft, Shield, Users, Radio, 
   MessageSquare, MoreVertical, Crown, UserX, PhoneCall, PhoneOff, 
-  X, Sparkles, Trash2, Key, Smile, Volume2, Plus, Image as ImageIcon, Upload, Camera, Pin
+  X, Sparkles, Trash2, Key, Smile, Volume2, VolumeX, Music, Link2, Play, Pause, Sliders, Plus, Image as ImageIcon, Upload, Camera, Pin
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { 
@@ -42,6 +42,44 @@ const STICKERS = [
   { id: 'trumpet', emoji: '🎺', label: 'SHOUT OF PRAISE', color: 'from-amber-500 to-orange-600 text-white' }
 ];
 
+// Helper: Extract YouTube Video ID from any YouTube URL (standard, short, embed, live)
+function extractYouTubeId(url?: string): string | null {
+  if (!url) return null;
+  const clean = url.trim();
+  const shortMatch = clean.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/i);
+  if (shortMatch) return shortMatch[1];
+  const watchMatch = clean.match(/[?&]v=([a-zA-Z0-9_-]{11})/i);
+  if (watchMatch) return watchMatch[1];
+  const embedMatch = clean.match(/\/embed\/([a-zA-Z0-9_-]{11})/i);
+  if (embedMatch) return embedMatch[1];
+  const liveMatch = clean.match(/\/live\/([a-zA-Z0-9_-]{11})/i);
+  if (liveMatch) return liveMatch[1];
+  const shortsMatch = clean.match(/\/shorts\/([a-zA-Z0-9_-]{11})/i);
+  if (shortsMatch) return shortsMatch[1];
+  return null;
+}
+
+// Helper: Lazy load YouTube IFrame Player API
+const loadYouTubeIframeApi = (): Promise<void> => {
+  return new Promise<void>((resolve) => {
+    if ((window as any).YT && (window as any).YT.Player) {
+      resolve();
+      return;
+    }
+    const existingCallback = (window as any).onYouTubeIframeAPIReady;
+    (window as any).onYouTubeIframeAPIReady = () => {
+      if (existingCallback) existingCallback();
+      resolve();
+    };
+    if (!document.getElementById('youtube-iframe-api')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-iframe-api';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+  });
+};
+
 export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   // Current User Identity
   const [userId] = useState(() => {
@@ -59,6 +97,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [userAvatar, setUserAvatar] = useState(() => localStorage.getItem('jg_prayer_user_avatar') || '');
   const [avatarInput, setAvatarInput] = useState(() => localStorage.getItem('jg_prayer_user_avatar') || '');
   const [userRole, setUserRole] = useState<'host' | 'admin' | 'intercessor'>(() => {
+    if (localStorage.getItem('jg_prayer_is_host') === 'true') return 'host';
     return localStorage.getItem('jg_prayer_is_moderator') === 'true' ? 'admin' : 'intercessor';
   });
 
@@ -95,38 +134,175 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [isUploadingSticker, setIsUploadingSticker] = useState(false);
   const [stickerError, setStickerError] = useState('');
 
+  // Local Audio Preferences (Mute or volume just for current device)
+  const [isLocalAudioMuted, setIsLocalAudioMuted] = useState(() => localStorage.getItem('jg_prayer_local_audio_muted') === 'true');
+  const [localAudioVolume, setLocalAudioVolume] = useState(() => Number(localStorage.getItem('jg_prayer_local_audio_volume') || '80'));
+
+  // Host Music Management Modal State
+  const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
+  const [musicUrlInput, setMusicUrlInput] = useState('');
+  const [musicModalError, setMusicModalError] = useState('');
+  const [isSavingMusic, setIsSavingMusic] = useState(false);
+  const [isAudioControlsExpanded, setIsAudioControlsExpanded] = useState(false);
+
   // Room State
   const [roomState, setRoomState] = useState<PrayerRoomState>({
     current_topic: '24/7 Global Prayer Altar',
     scripture: '1 Thessalonians 5:17 — Pray without ceasing.',
     is_live: true,
     background_audio_url: '',
+    is_audio_playing: false,
+    background_audio_volume: 30,
     active_speakers: []
   });
 
   // Audio & LiveKit Cloud Refs
   const roomRef = useRef<Room | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const ytPlayerRef = useRef<any>(null);
+  const currentYtIdRef = useRef<string | null>(null);
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const isChatOpenRef = useRef(isChatOpen);
   useEffect(() => {
     isChatOpenRef.current = isChatOpen;
   }, [isChatOpen]);
 
-  // Mobile Audio Hardware & Autoplay Unlocker
+  // Mobile Audio Hardware & Autoplay Unlocker (Includes YouTube Audio)
   const unlockAllAudio = () => {
     document.querySelectorAll('audio').forEach(el => {
       el.play().catch(() => {});
     });
+    if (bgAudioRef.current && roomState.is_audio_playing && !isLocalAudioMuted) {
+      bgAudioRef.current.play().catch(() => {});
+    }
+    if (ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
+      if (roomState.is_audio_playing && !isLocalAudioMuted) {
+        try {
+          ytPlayerRef.current.playVideo();
+        } catch (e) {}
+      }
+    }
   };
 
-  // Check if authenticated admin
+  // Check if authenticated admin and sync host powers
   useEffect(() => {
     const isSiteAdmin = api.isAuthenticated() && (api.getRole() === 'admin' || api.getRole() === 'superadmin');
     if (isSiteAdmin) {
       setUserRole('host');
+      localStorage.setItem('jg_prayer_is_host', 'true');
+      localStorage.setItem('jg_prayer_is_moderator', 'true');
+      localStorage.setItem('jg_prayer_moderator_key', 'jgprayer2026');
     }
   }, []);
+
+  useEffect(() => {
+    if (userRole === 'host') {
+      localStorage.setItem('jg_prayer_is_host', 'true');
+      localStorage.setItem('jg_prayer_is_moderator', 'true');
+      localStorage.setItem('jg_prayer_moderator_key', 'jgprayer2026');
+    } else if (userRole === 'admin') {
+      localStorage.setItem('jg_prayer_is_moderator', 'true');
+      if (!localStorage.getItem('jg_prayer_moderator_key')) {
+        localStorage.setItem('jg_prayer_moderator_key', 'jgprayer2026');
+      }
+    }
+  }, [userRole]);
+
+  // Background Audio / YouTube Audio-Only Player Synchronization
+  useEffect(() => {
+    const url = (roomState.background_audio_url || '').trim();
+    const ytId = extractYouTubeId(url);
+    const shouldPlay = Boolean(roomState.is_audio_playing && !isLocalAudioMuted && url);
+    const masterVol = typeof roomState.background_audio_volume === 'number' ? roomState.background_audio_volume : 30;
+    const effectiveVol = isLocalAudioMuted ? 0 : Math.max(0, Math.min(100, Math.round((localAudioVolume / 100) * masterVol)));
+
+    if (ytId) {
+      // Pause HTML5 audio
+      if (bgAudioRef.current) {
+        bgAudioRef.current.pause();
+      }
+
+      loadYouTubeIframeApi().then(() => {
+        if (!ytPlayerRef.current) {
+          currentYtIdRef.current = ytId;
+          ytPlayerRef.current = new (window as any).YT.Player('jg-yt-bg-player', {
+            height: '1',
+            width: '1',
+            videoId: ytId,
+            playerVars: {
+              autoplay: shouldPlay ? 1 : 0,
+              controls: 0,
+              disablekb: 1,
+              fs: 0,
+              loop: 1,
+              playlist: ytId,
+              playsinline: 1,
+              rel: 0
+            },
+            events: {
+              onReady: (evt: any) => {
+                evt.target.setVolume(effectiveVol);
+                if (shouldPlay) {
+                  evt.target.playVideo();
+                }
+              },
+              onStateChange: (evt: any) => {
+                if (evt.data === 0 && shouldPlay) {
+                  evt.target.playVideo();
+                }
+              }
+            }
+          });
+        } else {
+          if (currentYtIdRef.current !== ytId) {
+            currentYtIdRef.current = ytId;
+            try {
+              ytPlayerRef.current.loadVideoById({ videoId: ytId });
+            } catch (e) {}
+          }
+          try {
+            ytPlayerRef.current.setVolume(effectiveVol);
+            if (shouldPlay) {
+              ytPlayerRef.current.playVideo();
+            } else {
+              ytPlayerRef.current.pauseVideo();
+            }
+          } catch (e) {}
+        }
+      });
+    } else if (url) {
+      // Direct stream / MP3 URL
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
+        try { ytPlayerRef.current.pauseVideo(); } catch (e) {}
+      }
+      if (bgAudioRef.current) {
+        if (bgAudioRef.current.src !== url) {
+          bgAudioRef.current.src = url;
+        }
+        bgAudioRef.current.volume = effectiveVol / 100;
+        if (shouldPlay) {
+          bgAudioRef.current.play().catch(() => {});
+        } else {
+          bgAudioRef.current.pause();
+        }
+      }
+    } else {
+      // No background sound URL
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
+        try { ytPlayerRef.current.pauseVideo(); } catch (e) {}
+      }
+      if (bgAudioRef.current) {
+        bgAudioRef.current.pause();
+      }
+    }
+  }, [
+    roomState.background_audio_url,
+    roomState.is_audio_playing,
+    roomState.background_audio_volume,
+    isLocalAudioMuted,
+    localAudioVolume
+  ]);
 
   const canModerate = userRole === 'host' || userRole === 'admin';
 
@@ -517,9 +693,72 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
-  // Pin / Unpin message (Admins only)
+  // Listener Personal Audio Controls (Device Only - does not affect others)
+  const handleToggleLocalAudio = () => {
+    const next = !isLocalAudioMuted;
+    setIsLocalAudioMuted(next);
+    localStorage.setItem('jg_prayer_local_audio_muted', String(next));
+    if (!next) {
+      unlockAllAudio();
+    }
+  };
+
+  const handleLocalVolumeChange = (vol: number) => {
+    setLocalAudioVolume(vol);
+    localStorage.setItem('jg_prayer_local_audio_volume', String(vol));
+  };
+
+  // Altar Admin & Host Master Audio Controls
+  const handleToggleRoomAudio = async () => {
+    const nextPlaying = !roomState.is_audio_playing;
+    try {
+      await prayerRoomStore.updateState({ is_audio_playing: nextPlaying });
+      setRoomState(prev => ({ ...prev, is_audio_playing: nextPlaying }));
+    } catch (e: any) {
+      alert(e.message || 'Failed to toggle altar background audio');
+    }
+  };
+
+  const handleUpdateRoomVolume = async (newVol: number) => {
+    try {
+      setRoomState(prev => ({ ...prev, background_audio_volume: newVol }));
+      await prayerRoomStore.updateState({ background_audio_volume: newVol });
+    } catch (e: any) {
+      console.warn('Failed to update room master volume:', e);
+    }
+  };
+
+  // Host Only: Music URL Modal and Change Handler
+  const handleOpenMusicModal = () => {
+    setMusicUrlInput(roomState.background_audio_url || '');
+    setMusicModalError('');
+    setIsMusicModalOpen(true);
+  };
+
+  const handleSaveMusicUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMusicModalError('');
+    setIsSavingMusic(true);
+    try {
+      const cleanUrl = musicUrlInput.trim();
+      await prayerRoomStore.updateState({
+        background_audio_url: cleanUrl,
+        is_host: true
+      });
+      setRoomState(prev => ({ ...prev, background_audio_url: cleanUrl }));
+      setIsMusicModalOpen(false);
+      alert('Background worship audio link updated for the prayer room!');
+    } catch (err: any) {
+      setMusicModalError(err.message || 'Failed to update background music. Only the host can change this link.');
+    } finally {
+      setIsSavingMusic(false);
+    }
+  };
+
+  // Pin / Unpin message (Admins and Host)
   const handlePinMessage = async (msgId: string | number, shouldPin: boolean) => {
-    const modKey = localStorage.getItem('jg_prayer_moderator_key') || '';
+    const isHost = userRole === 'host' || localStorage.getItem('jg_prayer_is_host') === 'true';
+    const modKey = localStorage.getItem('jg_prayer_moderator_key') || (isHost ? 'jgprayer2026' : '');
     const success = await prayerRoomStore.pinMessage(msgId, shouldPin, modKey);
     if (success) {
       if (shouldPin) {
@@ -862,6 +1101,31 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         </div>
       </header>
 
+      {/* Hidden Audio Elements: YouTube Audio-Only Player & HTML5 Audio fallback */}
+      <div
+        id="jg-yt-bg-container"
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: '-9999px',
+          width: '1px',
+          height: '1px',
+          opacity: 0.001,
+          pointerEvents: 'none',
+          overflow: 'hidden'
+        }}
+      >
+        <div id="jg-yt-bg-player" />
+      </div>
+      <audio
+        ref={bgAudioRef}
+        preload="auto"
+        loop
+        playsInline
+        style={{ display: 'none' }}
+      />
+
       {/* Pinned Scripture / Topic Focus Bar */}
       <div className="bg-white border-b border-gray-200/80 py-2.5 px-4 text-center">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-1.5 text-xs text-gray-600">
@@ -871,6 +1135,139 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           </span>
           <span className="hidden sm:inline text-gray-300">•</span>
           <span className="font-serif italic text-gray-500">"{roomState.scripture}"</span>
+        </div>
+      </div>
+
+      {/* Altar Background Worship Sound Bar */}
+      <div className="bg-gradient-to-r from-royal-blue-900 via-royal-blue-800 to-indigo-950 text-white border-b border-royal-blue-700/60 px-3 py-2 sm:px-6 shadow-xs">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          {/* Status & Now Playing Indicator */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+              roomState.is_audio_playing && roomState.background_audio_url
+                ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-xs'
+                : 'bg-white/10 text-white/60'
+            }`}>
+              <Music className={`w-3.5 h-3.5 ${roomState.is_audio_playing && roomState.background_audio_url && !isLocalAudioMuted ? 'animate-pulse' : ''}`} />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-amber-300">
+                  Background Worship Sound
+                </span>
+                {roomState.is_audio_playing && roomState.background_audio_url ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Playing {isLocalAudioMuted ? '(Muted for you)' : 'Live'}
+                  </span>
+                ) : roomState.background_audio_url ? (
+                  <span className="text-[10px] text-white/60 bg-white/10 px-2 py-0.5 rounded-full">
+                    Paused by Admin
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-white/50 italic">
+                    (No music link set)
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-white/70 truncate max-w-xs sm:max-w-md">
+                {roomState.background_audio_url
+                  ? extractYouTubeId(roomState.background_audio_url)
+                    ? 'YouTube Worship Stream (Playing audio-only in background)'
+                    : 'Direct Audio Stream (Playing in background)'
+                  : 'Host can add a YouTube or audio link to play peaceful worship in the background.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Sound Controls Section */}
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap ml-auto">
+            {/* 1. Individual Listener Personal Mute / Volume (Device Only - does NOT affect others) */}
+            <div className="flex items-center gap-1.5 bg-black/25 backdrop-blur-xs px-2.5 py-1 rounded-xl border border-white/10 text-xs">
+              <button
+                type="button"
+                onClick={handleToggleLocalAudio}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
+                  isLocalAudioMuted
+                    ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50 hover:bg-rose-500/40'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                }`}
+                title={isLocalAudioMuted ? 'Unmute background music on your device' : 'Mute background music on your device only'}
+              >
+                {isLocalAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                <span>{isLocalAudioMuted ? 'My Sound: OFF' : 'My Sound: ON'}</span>
+              </button>
+
+              {!isLocalAudioMuted && (
+                <div className="flex items-center gap-1.5 pl-1.5 border-l border-white/15">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={localAudioVolume}
+                    onChange={(e) => handleLocalVolumeChange(Number(e.target.value))}
+                    className="w-14 sm:w-20 h-1.5 accent-amber-400 bg-white/20 rounded-lg cursor-pointer"
+                    title={`Personal Volume: ${localAudioVolume}%`}
+                  />
+                  <span className="text-[10px] text-white/70 font-mono w-7 text-right">
+                    {localAudioVolume}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Admin & Host Master Room Sound Controls */}
+            {canModerate && (
+              <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-400/30 px-2.5 py-1 rounded-xl text-xs">
+                {/* Master Sound On/Off for all participants */}
+                <button
+                  type="button"
+                  onClick={handleToggleRoomAudio}
+                  disabled={!roomState.background_audio_url}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                    roomState.is_audio_playing
+                      ? 'bg-amber-400 text-royal-blue-950 hover:bg-amber-300 shadow-xs'
+                      : 'bg-white/15 text-white hover:bg-white/25'
+                  }`}
+                  title={roomState.is_audio_playing ? 'Turn off background sound for everyone' : 'Turn on background sound for everyone'}
+                >
+                  {roomState.is_audio_playing ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+                  <span>{roomState.is_audio_playing ? 'Room Sound: ON' : 'Room Sound: OFF'}</span>
+                </button>
+
+                {/* Master Volume Slider (Admins & Host) */}
+                <div className="hidden sm:flex items-center gap-1.5 pl-1.5 border-l border-amber-400/20">
+                  <span className="text-[10px] text-amber-200 font-medium">Master:</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={typeof roomState.background_audio_volume === 'number' ? roomState.background_audio_volume : 30}
+                    onChange={(e) => handleUpdateRoomVolume(Number(e.target.value))}
+                    className="w-14 sm:w-16 h-1.5 accent-amber-300 bg-white/20 rounded-lg cursor-pointer"
+                    title={`Room Master Volume: ${roomState.background_audio_volume ?? 30}%`}
+                  />
+                  <span className="text-[10px] text-amber-200 font-mono">
+                    {roomState.background_audio_volume ?? 30}%
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Host-Exclusive Button: Change or Add Music Link */}
+            {userRole === 'host' && (
+              <button
+                type="button"
+                onClick={handleOpenMusicModal}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-gold-500 hover:bg-gold-400 text-royal-blue-950 font-bold text-xs rounded-xl border border-gold-300 shadow-xs cursor-pointer transition-all hover:scale-105"
+                title="Change background music link (Host only)"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                <span>{roomState.background_audio_url ? 'Change Music Link' : '+ Add Music Link'}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1717,6 +2114,118 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
               >
                 {userName ? 'Save & Join Prayer Room' : 'Join Prayer Room'}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Host Only: Background Music / YouTube Audio Modal */}
+      {isMusicModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-gold-100 text-gold-700 flex items-center justify-center">
+                  <Crown className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-1.5">
+                    Altar Background Worship Sound
+                    <span className="text-[10px] uppercase font-extrabold bg-gold-100 text-gold-800 px-2 py-0.5 rounded-md border border-gold-200">
+                      Host Only
+                    </span>
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Add YouTube link or audio stream to play softly in background
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMusicModalOpen(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {musicModalError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+                {musicModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveMusicUrl} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  YouTube or Audio Stream URL
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={musicUrlInput}
+                    onChange={(e) => setMusicUrlInput(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or youtu.be/..."
+                    className="w-full bg-slate-50 border border-gray-200 rounded-xl p-3 pl-9 text-xs text-gray-900 focus:outline-none focus:border-royal-blue-500 font-mono"
+                    autoFocus
+                  />
+                  <Link2 className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
+                  💡 <strong>Audio-Only YouTube playback:</strong> Even if you paste a YouTube link or livestream, it will play <em>purely as audio</em> in the background. Prayer participants can hear worship music while listening to prayer points.
+                </p>
+              </div>
+
+              {/* URL Preview / Format helper */}
+              {musicUrlInput.trim() && (
+                <div className="p-3 bg-slate-50 rounded-xl border border-gray-200 text-xs">
+                  <div className="font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    {extractYouTubeId(musicUrlInput) ? (
+                      <span className="text-emerald-600 font-bold flex items-center gap-1">
+                        ✓ YouTube Video Detected (Audio-Only Mode)
+                      </span>
+                    ) : (
+                      <span className="text-royal-blue-600 font-bold flex items-center gap-1">
+                        ✓ Direct Audio Stream Detected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-500 truncate">
+                    {extractYouTubeId(musicUrlInput)
+                      ? `YouTube ID: ${extractYouTubeId(musicUrlInput)}`
+                      : musicUrlInput}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                {roomState.background_audio_url ? (
+                  <button
+                    type="button"
+                    onClick={() => setMusicUrlInput('')}
+                    className="text-xs text-rose-600 hover:underline font-semibold cursor-pointer"
+                  >
+                    Clear Audio Link
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsMusicModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold text-xs cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingMusic}
+                    className="px-5 py-2.5 rounded-xl bg-gold-600 hover:bg-gold-700 text-white font-bold text-xs shadow-sm cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    {isSavingMusic ? 'Saving...' : 'Save & Broadcast to Room'}
+                  </button>
+                </div>
+              </div>
             </form>
           </div>
         </div>
