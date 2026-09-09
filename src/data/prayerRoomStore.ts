@@ -7,6 +7,16 @@ export interface PrayerMessage {
   created_at: string;
 }
 
+export interface CustomSticker {
+  id: string;
+  label: string;
+  emoji?: string;
+  image_url?: string;
+  color?: string;
+  is_custom?: boolean;
+  created_at?: string;
+}
+
 export interface PrayerRoomState {
   current_topic: string;
   scripture: string;
@@ -261,11 +271,72 @@ export const prayerRoomStore = {
     }
   },
 
+  // --- CUSTOM STICKERS ---
+
+  async getStickers(): Promise<CustomSticker[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/stickers`);
+      if (!res.ok) throw new Error('Failed to fetch stickers');
+      const data = await res.json();
+      return data.stickers || [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async createCustomSticker(data: {
+    label: string;
+    image_url?: string;
+    emoji?: string;
+    color?: string;
+    admin_key?: string;
+  }): Promise<CustomSticker | null> {
+    const token = localStorage.getItem('jg_admin_token');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/stickers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to create sticker');
+      }
+      const resData = await res.json();
+      return resData.sticker;
+    } catch (e: any) {
+      console.error('Error creating custom sticker:', e);
+      throw e;
+    }
+  },
+
+  async deleteCustomSticker(id: string, admin_key?: string): Promise<boolean> {
+    const token = localStorage.getItem('jg_admin_token');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/stickers/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ id, admin_key })
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  },
+
   subscribeToEvents(callbacks: {
     onMessage?: (msg: PrayerMessage) => void;
     onMessageDeleted?: (id: number | string) => void;
     onChatCleared?: () => void;
     onReaction?: (reaction: ReactionEvent) => void;
+    onNewSticker?: (sticker: CustomSticker) => void;
+    onDeletedSticker?: (id: string) => void;
     onStateUpdate?: (state: PrayerRoomState) => void;
     onCountUpdate?: (count: number) => void;
     onCallRoster?: (participants: CallParticipant[]) => void;
@@ -288,6 +359,10 @@ export const prayerRoomStore = {
             const data = JSON.parse(event.data);
             if (data.type === 'message' && callbacks.onMessage) {
               callbacks.onMessage(data.message);
+            } else if (data.type === 'new_sticker' && callbacks.onNewSticker) {
+              callbacks.onNewSticker(data.sticker);
+            } else if (data.type === 'deleted_sticker' && callbacks.onDeletedSticker) {
+              callbacks.onDeletedSticker(data.id);
             } else if (data.type === 'message_deleted' && callbacks.onMessageDeleted) {
               callbacks.onMessageDeleted(data.id);
             } else if (data.type === 'chat_cleared' && callbacks.onChatCleared) {

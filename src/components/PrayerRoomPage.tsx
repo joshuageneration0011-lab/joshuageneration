@@ -2,10 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, MicOff, Send, Heart, ArrowLeft, Shield, Users, Radio, 
   MessageSquare, MoreVertical, Crown, UserX, PhoneCall, PhoneOff, 
-  X, Sparkles, Trash2, Key, Smile, Volume2
+  X, Sparkles, Trash2, Key, Smile, Volume2, Plus, Image as ImageIcon, Upload
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
-import { prayerRoomStore, type PrayerMessage, type PrayerRoomState, type CallParticipant, type ReactionEvent } from '@/data/prayerRoomStore';
+import { 
+  prayerRoomStore, 
+  type PrayerMessage, 
+  type PrayerRoomState, 
+  type CallParticipant, 
+  type ReactionEvent,
+  type CustomSticker 
+} from '@/data/prayerRoomStore';
 import { api } from '@/utils/api';
 
 interface PrayerRoomPageProps {
@@ -72,6 +79,17 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [newMessage, setNewMessage] = useState('');
   const [reactions, setReactions] = useState<ReactionEvent[]>([]);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  // Custom Stickers State (WhatsApp / Telegram style)
+  const [customStickers, setCustomStickers] = useState<CustomSticker[]>([]);
+  const [stickerTab, setStickerTab] = useState<'custom' | 'preset'>('custom');
+  const [isCreateStickerOpen, setIsCreateStickerOpen] = useState(false);
+  const [newStickerLabel, setNewStickerLabel] = useState('');
+  const [newStickerEmoji, setNewStickerEmoji] = useState('🔥');
+  const [newStickerImage, setNewStickerImage] = useState<string>('');
+  const [isUploadingSticker, setIsUploadingSticker] = useState(false);
+  const [stickerError, setStickerError] = useState('');
 
   // Room State
   const [roomState, setRoomState] = useState<PrayerRoomState>({
@@ -185,16 +203,31 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       setMessages(msgs);
     });
 
+    prayerRoomStore.getStickers().then(stks => {
+      if (Array.isArray(stks)) {
+        setCustomStickers(stks);
+      }
+    });
+
     prayerRoomStore.getCallParticipants().then(pts => {
       setParticipants(pts);
     });
 
     const unsubscribe = prayerRoomStore.subscribeToEvents({
       onMessage: (msg) => {
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => {
+          if (prev.some(m => String(m.id) === String(msg.id))) return prev;
+          return [...prev, msg];
+        });
         if (!isChatOpenRef.current) {
           setUnreadChatCount(prev => prev + 1);
         }
+      },
+      onNewSticker: (stk) => {
+        setCustomStickers(prev => [stk, ...prev.filter(s => String(s.id) !== String(stk.id))]);
+      },
+      onDeletedSticker: (deletedId) => {
+        setCustomStickers(prev => prev.filter(s => String(s.id) !== String(deletedId)));
       },
       onMessageDeleted: (deletedId) => {
         setMessages(prev => prev.filter(m => String(m.id) !== String(deletedId)));
@@ -413,10 +446,12 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     setKeyError('');
     if (!keyInput.trim()) return;
 
-    const success = await prayerRoomStore.verifyModeratorKey(keyInput.trim(), userId);
+    const trimmedKey = keyInput.trim();
+    const success = await prayerRoomStore.verifyModeratorKey(trimmedKey, userId);
     if (success) {
       setUserRole('admin');
       localStorage.setItem('jg_prayer_is_moderator', 'true');
+      localStorage.setItem('jg_prayer_moderator_key', trimmedKey);
       setIsKeyModalOpen(false);
       setKeyInput('');
       alert('Moderator privileges granted! You now have full altar moderation powers.');
@@ -425,20 +460,29 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
-  // Send Chat Message
+  // Send Chat Message (Deduplicated against SSE broadcast)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isSendingMessage) return;
     const text = newMessage.trim();
     setNewMessage('');
-    const sent = await prayerRoomStore.sendMessage(userName || 'Intercessor', text, 'message');
-    if (sent) {
-      setMessages(prev => [...prev, sent]);
+    setIsSendingMessage(true);
+
+    try {
+      const sent = await prayerRoomStore.sendMessage(userName || 'Intercessor', text, 'message');
+      if (sent) {
+        setMessages(prev => {
+          if (prev.some(m => String(m.id) === String(sent.id))) return prev;
+          return [...prev, sent];
+        });
+      }
+    } finally {
+      setIsSendingMessage(false);
     }
   };
 
-  // Send Sticker
-  const handleSendSticker = async (sticker: typeof STICKERS[0]) => {
+  // Send Preset Sticker (Deduplicated against SSE broadcast)
+  const handleSendPresetSticker = async (sticker: typeof STICKERS[0]) => {
     setShowStickerPicker(false);
     const sent = await prayerRoomStore.sendMessage(
       userName || 'Intercessor',
@@ -447,7 +491,120 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       sticker.id
     );
     if (sent) {
-      setMessages(prev => [...prev, sent]);
+      setMessages(prev => {
+        if (prev.some(m => String(m.id) === String(sent.id))) return prev;
+        return [...prev, sent];
+      });
+    }
+  };
+
+  // Send Custom Altar Sticker with Image (WhatsApp / Telegram style)
+  const handleSendCustomSticker = async (sticker: CustomSticker) => {
+    setShowStickerPicker(false);
+    const sent = await prayerRoomStore.sendMessage(
+      userName || 'Intercessor',
+      sticker.label,
+      'sticker',
+      sticker.image_url || sticker.id
+    );
+    if (sent) {
+      setMessages(prev => {
+        if (prev.some(m => String(m.id) === String(sent.id))) return prev;
+        return [...prev, sent];
+      });
+    }
+  };
+
+  // Handle Image Upload for Custom Sticker (Canvas compression to lightweight PNG)
+  const handleStickerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setStickerError('Please select a valid image file (PNG, JPG, WebP, GIF)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvt) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 280;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/png', 0.85);
+          setNewStickerImage(compressed);
+          setStickerError('');
+        }
+      };
+      img.src = loadEvt.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Admin Create Custom Sticker
+  const handleCreateCustomSticker = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStickerLabel.trim()) {
+      setStickerError('Please provide a sticker title / label (e.g., Breakthrough, Holy Ghost Fire).');
+      return;
+    }
+    if (!newStickerImage) {
+      setStickerError('Please upload an image for your sticker.');
+      return;
+    }
+
+    setIsUploadingSticker(true);
+    setStickerError('');
+
+    try {
+      const adminKey = localStorage.getItem('jg_prayer_moderator_key') || 'jgprayer2026';
+      const created = await prayerRoomStore.createCustomSticker({
+        label: newStickerLabel.trim(),
+        image_url: newStickerImage,
+        emoji: newStickerEmoji || '🙏',
+        color: 'from-amber-500 to-amber-600 text-white',
+        admin_key: adminKey
+      });
+
+      if (created) {
+        setCustomStickers(prev => [created, ...prev.filter(s => String(s.id) !== String(created.id))]);
+        setIsCreateStickerOpen(false);
+        setNewStickerLabel('');
+        setNewStickerImage('');
+        setNewStickerEmoji('🔥');
+      }
+    } catch (err: any) {
+      setStickerError(err.message || 'Failed to create custom sticker. Moderator access required.');
+    } finally {
+      setIsUploadingSticker(false);
+    }
+  };
+
+  // Admin Delete Custom Sticker
+  const handleDeleteCustomSticker = async (e: React.MouseEvent, stickerId: string) => {
+    e.stopPropagation();
+    if (!confirm('Delete this custom sticker for everyone?')) {
+      return;
+    }
+    const adminKey = localStorage.getItem('jg_prayer_moderator_key') || 'jgprayer2026';
+    const ok = await prayerRoomStore.deleteCustomSticker(stickerId, adminKey);
+    if (ok) {
+      setCustomStickers(prev => prev.filter(s => String(s.id) !== String(stickerId)));
     }
   };
 
@@ -831,12 +988,26 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                     </div>
 
                     {isSticker ? (
-                      <div className="p-3 rounded-2xl bg-gradient-to-r from-royal-blue-50 to-gold-50 border border-royal-blue-100 shadow-xs inline-block max-w-[200px]">
-                        <div className="text-3xl mb-1">{msg.message.split(' ')[0]}</div>
-                        <p className="text-[10px] font-bold text-royal-blue-900 uppercase tracking-wider">
-                          {msg.message.substring(msg.message.indexOf(' ') + 1)}
-                        </p>
-                      </div>
+                      msg.sticker && (msg.sticker.startsWith('data:image') || msg.sticker.startsWith('http') || msg.sticker.startsWith('/')) ? (
+                        <div className="inline-flex flex-col items-center p-2 rounded-2xl bg-white/95 border border-royal-blue-100/70 shadow-xs max-w-[175px] backdrop-blur-xs">
+                          <img
+                            src={msg.sticker}
+                            alt={msg.message}
+                            className="w-28 h-28 object-contain drop-shadow-xs rounded-xl"
+                            loading="lazy"
+                          />
+                          <span className="mt-1.5 px-2.5 py-0.5 rounded-full bg-royal-blue-50 text-[10px] font-bold text-royal-blue-900 uppercase tracking-wider text-center leading-tight">
+                            {msg.message}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-2xl bg-gradient-to-r from-royal-blue-50 to-gold-50 border border-royal-blue-100 shadow-xs inline-block max-w-[200px]">
+                          <div className="text-3xl mb-1">{msg.message.split(' ')[0]}</div>
+                          <p className="text-[10px] font-bold text-royal-blue-900 uppercase tracking-wider">
+                            {msg.message.substring(msg.message.indexOf(' ') + 1) || msg.message}
+                          </p>
+                        </div>
+                      )
                     ) : (
                       <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-800 shadow-2xs">
                         {msg.message}
@@ -849,19 +1020,119 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             <div ref={chatBottomRef} />
           </div>
 
-          {/* WhatsApp / Telegram Style Stickers Popup Grid */}
+          {/* WhatsApp / Telegram Style Stickers Drawer */}
           {showStickerPicker && (
-            <div className="p-3 bg-white border-t border-gray-200 grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-              {STICKERS.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => handleSendSticker(s)}
-                  className={`p-2 rounded-xl bg-gradient-to-r ${s.color} flex items-center gap-2 cursor-pointer shadow-xs hover:scale-[1.02] transition-transform`}
-                >
-                  <span className="text-xl">{s.emoji}</span>
-                  <span className="text-[10px] font-bold leading-tight truncate">{s.label}</span>
-                </button>
-              ))}
+            <div className="p-3 bg-white border-t border-gray-200 flex flex-col gap-2 max-h-64 overflow-y-auto">
+              {/* Header with Tabs and Admin Sticker Creator */}
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setStickerTab('custom')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                      stickerTab === 'custom'
+                        ? 'bg-royal-blue-600 text-white shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 hover:bg-slate-100'
+                    }`}
+                  >
+                    Custom Stickers ({customStickers.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStickerTab('preset')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                      stickerTab === 'preset'
+                        ? 'bg-royal-blue-600 text-white shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 hover:bg-slate-100'
+                    }`}
+                  >
+                    Presets
+                  </button>
+                </div>
+
+                {canModerate && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateStickerOpen(true)}
+                    className="px-2 py-1 rounded-lg bg-gold-50 hover:bg-gold-100 border border-gold-300 text-gold-900 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                    title="Create custom sticker with your image (Admin)"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-gold-700" />
+                    <span>New Sticker</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Tab 1: Custom Altar Stickers */}
+              {stickerTab === 'custom' && (
+                <div>
+                  {customStickers.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-gray-400">
+                      <p>No custom stickers yet.</p>
+                      {canModerate && (
+                        <button
+                          type="button"
+                          onClick={() => setIsCreateStickerOpen(true)}
+                          className="mt-2 text-royal-blue-600 font-bold hover:underline"
+                        >
+                          + Upload First Custom Sticker
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {customStickers.map((stk) => (
+                        <div
+                          key={stk.id}
+                          onClick={() => handleSendCustomSticker(stk)}
+                          className="relative group p-2 rounded-xl bg-slate-50 hover:bg-royal-blue-50/50 border border-gray-200 hover:border-royal-blue-300 flex items-center gap-2 cursor-pointer shadow-2xs hover:scale-[1.02] transition-all"
+                        >
+                          {stk.image_url ? (
+                            <img
+                              src={stk.image_url}
+                              alt={stk.label}
+                              className="w-10 h-10 object-contain rounded-lg shrink-0 bg-white border border-gray-100 p-0.5"
+                            />
+                          ) : (
+                            <span className="text-2xl shrink-0">{stk.emoji || '🙏'}</span>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-bold text-gray-900 truncate leading-tight">{stk.label}</p>
+                            <span className="text-[9px] text-gray-400 uppercase font-semibold">Altar Sticker</span>
+                          </div>
+
+                          {canModerate && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteCustomSticker(e, stk.id)}
+                              className="absolute top-1 right-1 p-1 rounded-md bg-white/80 hover:bg-rose-50 text-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-2xs"
+                              title="Delete sticker for everyone (Admin only)"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 2: Preset Badges */}
+              {stickerTab === 'preset' && (
+                <div className="grid grid-cols-2 gap-2">
+                  {STICKERS.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => handleSendPresetSticker(s)}
+                      className={`p-2 rounded-xl bg-gradient-to-r ${s.color} flex items-center gap-2 cursor-pointer shadow-xs hover:scale-[1.02] transition-transform`}
+                    >
+                      <span className="text-xl">{s.emoji}</span>
+                      <span className="text-[10px] font-bold leading-tight truncate">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -967,6 +1238,153 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                   className="px-5 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white font-bold text-xs shadow-sm cursor-pointer transition-colors"
                 >
                   Activate Moderator
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Sticker Creator Modal (Admin Only, WhatsApp / Telegram style) */}
+      {isCreateStickerOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-gold-100 text-gold-700 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Create Custom Sticker</h3>
+                  <p className="text-[11px] text-gray-500">WhatsApp & Telegram style altar sticker</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateStickerOpen(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {stickerError && (
+              <div className="mb-4 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+                {stickerError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCustomSticker} className="space-y-4">
+              {/* Sticker Image Picker & Preview */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Sticker Image (PNG, JPG, WebP, GIF)
+                </label>
+                <div className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 hover:border-royal-blue-400 rounded-2xl p-4 bg-slate-50 transition-colors">
+                  {newStickerImage ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="p-3 bg-white rounded-2xl shadow-sm border border-gray-200">
+                        <img
+                          src={newStickerImage}
+                          alt="Sticker Preview"
+                          className="w-24 h-24 object-contain"
+                        />
+                      </div>
+                      <label className="text-[11px] font-bold text-royal-blue-600 hover:underline cursor-pointer">
+                        Change Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleStickerFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center gap-2 cursor-pointer w-full py-3">
+                      <div className="w-12 h-12 rounded-full bg-royal-blue-50 text-royal-blue-600 flex items-center justify-center">
+                        <Upload className="w-6 h-6" />
+                      </div>
+                      <span className="text-xs font-bold text-gray-800">
+                        Click to choose sticker image
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        Automatic transparent resize & optimization
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleStickerFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Sticker Label */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Sticker Label / Title
+                </label>
+                <input
+                  type="text"
+                  value={newStickerLabel}
+                  onChange={(e) => setNewStickerLabel(e.target.value)}
+                  placeholder="e.g. Mighty Breakthrough, Holy Ghost Fire"
+                  maxLength={60}
+                  className="w-full bg-slate-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-900 focus:outline-none focus:border-royal-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Quick Emoji Tag */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Reaction Emoji Tag
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {['🙏', '🔥', '🕊️', '🦁', '👑', '⚡', '✝️', '📖', '🎺', '❤️'].map((em) => (
+                    <button
+                      key={em}
+                      type="button"
+                      onClick={() => setNewStickerEmoji(em)}
+                      className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center cursor-pointer transition-all ${
+                        newStickerEmoji === em
+                          ? 'bg-royal-blue-600 text-white scale-110 shadow-sm'
+                          : 'bg-slate-100 hover:bg-slate-200 text-gray-800'
+                      }`}
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateStickerOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs text-gray-500 hover:text-gray-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingSticker || !newStickerImage || !newStickerLabel.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm cursor-pointer transition-colors flex items-center gap-1.5"
+                >
+                  {isUploadingSticker ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Saving Sticker...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-gold-300" />
+                      <span>Publish Sticker</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

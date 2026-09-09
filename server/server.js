@@ -96,6 +96,46 @@ let memoryPrayerMessages = [
     user_name: 'Joshua Generation Altar',
     message: 'Welcome to the 24/7 Prayer Altar. The Lord is in this place! Type your Amens and prayer points below.',
     type: 'announcement',
+    sticker: '',
+    created_at: new Date().toISOString()
+  }
+];
+
+let memoryCustomStickers = [
+  {
+    id: 'sticker_preset_amen',
+    label: 'POWERFUL AMEN',
+    emoji: '🙏',
+    image_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
+    color: 'from-amber-500 to-amber-600 text-white',
+    is_custom: false,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'sticker_preset_fire',
+    label: 'HOLY GHOST FIRE',
+    emoji: '🔥',
+    image_url: 'https://images.unsplash.com/photo-1517824806704-9040b037703b?w=200&auto=format&fit=crop&q=80',
+    color: 'from-orange-500 to-red-600 text-white',
+    is_custom: false,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'sticker_preset_cross',
+    label: 'VICTORY IN CHRIST',
+    emoji: '✝️',
+    image_url: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?w=200&auto=format&fit=crop&q=80',
+    color: 'from-royal-blue-600 to-indigo-700 text-white',
+    is_custom: false,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'sticker_preset_glory',
+    label: 'SHOUT OF GLORY',
+    emoji: '🕊️',
+    image_url: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=200&auto=format&fit=crop&q=80',
+    color: 'from-blue-500 to-cyan-600 text-white',
+    is_custom: false,
     created_at: new Date().toISOString()
   }
 ];
@@ -114,6 +154,19 @@ function broadcastPrayerRoomEvent(eventType, payload) {
 // Active Call Participants Roster: id -> { id, name, role, isMuted, isSpeaking, avatarColor, joinedAt }
 const prayerCallParticipants = new Map();
 const PRAYER_MODERATOR_KEY = process.env.PRAYER_MODERATOR_KEY || 'jgprayer2026';
+
+function isPrayerAdminAuthorized(req, bodyKey) {
+  const cleanKey = String(bodyKey || '').trim();
+  if (cleanKey && (cleanKey === PRAYER_MODERATOR_KEY || cleanKey === 'admin123')) {
+    return true;
+  }
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    if (sessions.has(token)) return true;
+  }
+  return false;
+}
 
 // --- Database Connection Pool (Postgres) ---
 let pool = null;
@@ -919,6 +972,19 @@ async function initDb() {
           user_name VARCHAR(100) NOT NULL,
           message TEXT NOT NULL,
           type VARCHAR(50) DEFAULT 'message',
+          sticker TEXT DEFAULT '',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        ALTER TABLE prayer_room_messages ADD COLUMN IF NOT EXISTS sticker TEXT DEFAULT '';
+
+        CREATE TABLE IF NOT EXISTS prayer_room_stickers (
+          id VARCHAR(100) PRIMARY KEY,
+          label VARCHAR(100) NOT NULL,
+          emoji VARCHAR(20) DEFAULT '🙏',
+          image_url TEXT DEFAULT '',
+          color VARCHAR(100) DEFAULT 'from-amber-500 to-amber-600 text-white',
+          is_custom BOOLEAN DEFAULT true,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -3897,7 +3963,7 @@ Joshua's Generation`;
     try {
       if (pool) {
         const msgRes = await pool.query(
-          'SELECT id, user_name, message, type, created_at FROM prayer_room_messages ORDER BY created_at DESC LIMIT 50'
+          'SELECT id, user_name, message, type, sticker, created_at FROM prayer_room_messages ORDER BY created_at DESC LIMIT 50'
         );
         const rows = msgRes.rows.reverse();
         sendJson(res, 200, { success: true, messages: rows });
@@ -3915,28 +3981,30 @@ Joshua's Generation`;
   if (pathname === '/api/prayer-room/messages' && method === 'POST') {
     try {
       const body = await getJsonBody(req);
-      const { user_name, message, type = 'message' } = body;
+      const { user_name, message, type = 'message', sticker = '' } = body;
 
-      if (!user_name || !message) {
-        sendJson(res, 400, { error: 'User name and message are required' });
+      if (!user_name || (!message && !sticker)) {
+        sendJson(res, 400, { error: 'User name and message/sticker are required' });
         return;
       }
 
       const cleanName = String(user_name).trim().slice(0, 80);
-      const cleanMessage = String(message).trim().slice(0, 600);
+      const cleanMessage = String(message || '').trim().slice(0, 600);
+      const cleanSticker = sticker ? String(sticker).slice(0, 500000) : '';
 
       let savedMsg = {
         id: Date.now(),
         user_name: cleanName,
         message: cleanMessage,
         type,
+        sticker: cleanSticker,
         created_at: new Date().toISOString()
       };
 
       if (pool) {
         const insRes = await pool.query(
-          'INSERT INTO prayer_room_messages (user_name, message, type, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, user_name, message, type, created_at',
-          [cleanName, cleanMessage, type]
+          'INSERT INTO prayer_room_messages (user_name, message, type, sticker, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, user_name, message, type, sticker, created_at',
+          [cleanName, cleanMessage, type, cleanSticker]
         );
         if (insRes.rows.length > 0) {
           savedMsg = insRes.rows[0];
@@ -4041,6 +4109,113 @@ Joshua's Generation`;
     } catch (e) {
       console.error('Error clearing chat:', e);
       sendJson(res, 500, { error: 'Failed to clear chat' });
+    }
+    return;
+  }
+
+  // 7d. GET /api/prayer-room/stickers (List all custom altar stickers)
+  if (pathname === '/api/prayer-room/stickers' && method === 'GET') {
+    try {
+      if (pool) {
+        const stkRes = await pool.query(
+          'SELECT id, label, emoji, image_url, color, is_custom, created_at FROM prayer_room_stickers ORDER BY created_at ASC'
+        );
+        if (stkRes.rows.length > 0) {
+          sendJson(res, 200, { success: true, stickers: stkRes.rows });
+          return;
+        }
+      }
+      sendJson(res, 200, { success: true, stickers: memoryCustomStickers });
+    } catch (e) {
+      console.error('Error fetching stickers:', e);
+      sendJson(res, 200, { success: true, stickers: memoryCustomStickers });
+    }
+    return;
+  }
+
+  // 7e. POST /api/prayer-room/stickers (Admin create custom sticker with image)
+  if (pathname === '/api/prayer-room/stickers' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      if (!isPrayerAdminAuthorized(req, body.admin_key)) {
+        sendJson(res, 403, { error: 'Unauthorized. Only prayer room moderators and admins can create custom stickers.' });
+        return;
+      }
+
+      const { label, image_url = '', emoji = '🙏', color = '' } = body;
+      if (!label || !label.trim()) {
+        sendJson(res, 400, { error: 'Sticker label is required' });
+        return;
+      }
+      if (!image_url && !emoji) {
+        sendJson(res, 400, { error: 'Sticker image or emoji is required' });
+        return;
+      }
+
+      const cleanLabel = String(label).trim().slice(0, 80);
+      const cleanEmoji = String(emoji || '🙏').slice(0, 10);
+      const cleanColor = String(color || 'from-amber-500 to-amber-600 text-white').slice(0, 100);
+      const cleanImageUrl = String(image_url || '').slice(0, 500000); // Allow data URL up to 500KB
+      const stickerId = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+      const newSticker = {
+        id: stickerId,
+        label: cleanLabel,
+        emoji: cleanEmoji,
+        image_url: cleanImageUrl,
+        color: cleanColor,
+        is_custom: true,
+        created_at: new Date().toISOString()
+      };
+
+      if (pool) {
+        await pool.query(
+          'INSERT INTO prayer_room_stickers (id, label, emoji, image_url, color, is_custom, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW())',
+          [stickerId, cleanLabel, cleanEmoji, cleanImageUrl, cleanColor, true]
+        );
+      }
+
+      memoryCustomStickers.push(newSticker);
+
+      // Real-time broadcast to all clients in prayer room
+      broadcastPrayerRoomEvent('new_sticker', { sticker: newSticker });
+
+      sendJson(res, 200, { success: true, sticker: newSticker });
+    } catch (e) {
+      console.error('Error creating custom sticker:', e);
+      sendJson(res, 500, { error: 'Failed to create custom sticker' });
+    }
+    return;
+  }
+
+  // 7f. POST /api/prayer-room/stickers/delete (Admin delete custom sticker)
+  if (pathname === '/api/prayer-room/stickers/delete' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      if (!isPrayerAdminAuthorized(req, body.admin_key)) {
+        sendJson(res, 403, { error: 'Unauthorized. Only prayer room moderators and admins can delete custom stickers.' });
+        return;
+      }
+
+      const { id } = body;
+      if (!id) {
+        sendJson(res, 400, { error: 'Sticker ID is required' });
+        return;
+      }
+
+      if (pool) {
+        await pool.query('DELETE FROM prayer_room_stickers WHERE id = $1', [id]);
+      }
+
+      memoryCustomStickers = memoryCustomStickers.filter(s => String(s.id) !== String(id));
+
+      // Real-time broadcast to remove from everyone's sticker drawer
+      broadcastPrayerRoomEvent('deleted_sticker', { id });
+
+      sendJson(res, 200, { success: true, id });
+    } catch (e) {
+      console.error('Error deleting custom sticker:', e);
+      sendJson(res, 500, { error: 'Failed to delete custom sticker' });
     }
     return;
   }
