@@ -32,6 +32,7 @@ export interface CallParticipant {
   isMuted: boolean;
   isSpeaking: boolean;
   avatarColor: string;
+  avatarUrl?: string;
   joinedAt: string;
 }
 
@@ -96,12 +97,18 @@ export const prayerRoomStore = {
     }
   },
 
-  async joinCall(id: string, name: string, role: 'host' | 'admin' | 'intercessor' = 'intercessor', avatarColor?: string): Promise<CallParticipant[]> {
+  async joinCall(
+    id: string,
+    name: string,
+    role: 'host' | 'admin' | 'intercessor' = 'intercessor',
+    avatarColor?: string,
+    avatarUrl?: string
+  ): Promise<CallParticipant[]> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/call/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name, role, avatarColor })
+        body: JSON.stringify({ id, name, role, avatarColor, avatarUrl })
       });
       if (!res.ok) throw new Error('Failed to join call');
       const data = await res.json();

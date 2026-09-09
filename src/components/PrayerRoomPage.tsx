@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, MicOff, Send, Heart, ArrowLeft, Shield, Users, Radio, 
   MessageSquare, MoreVertical, Crown, UserX, PhoneCall, PhoneOff, 
-  X, Sparkles, Trash2, Key, Smile, Volume2, Plus, Image as ImageIcon, Upload
+  X, Sparkles, Trash2, Key, Smile, Volume2, Plus, Image as ImageIcon, Upload, Camera
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { 
@@ -56,6 +56,8 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [userName, setUserName] = useState(() => localStorage.getItem('jg_prayer_user_name') || '');
   const [isNamePromptOpen, setIsNamePromptOpen] = useState(() => !localStorage.getItem('jg_prayer_user_name'));
   const [nameInput, setNameInput] = useState(() => localStorage.getItem('jg_prayer_user_name') || '');
+  const [userAvatar, setUserAvatar] = useState(() => localStorage.getItem('jg_prayer_user_avatar') || '');
+  const [avatarInput, setAvatarInput] = useState(() => localStorage.getItem('jg_prayer_user_avatar') || '');
   const [userRole, setUserRole] = useState<'host' | 'admin' | 'intercessor'>(() => {
     return localStorage.getItem('jg_prayer_is_moderator') === 'true' ? 'admin' : 'intercessor';
   });
@@ -294,13 +296,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   useEffect(() => {
     if (userName && isInCall) {
       const colorIndex = Math.abs(userName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % AVATAR_COLORS.length;
-      prayerRoomStore.joinCall(userId, userName, userRole, AVATAR_COLORS[colorIndex]).then(roster => {
+      prayerRoomStore.joinCall(userId, userName, userRole, AVATAR_COLORS[colorIndex], userAvatar).then(roster => {
         if (roster && roster.length > 0) {
           setParticipants(roster);
         }
       });
     }
-  }, [userName, isInCall, userRole]);
+  }, [userName, isInCall, userRole, userAvatar]);
 
   // Auto scroll chat
   useEffect(() => {
@@ -383,19 +385,59 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
-  const toggleCallMembership = () => {
-    if (isInCall) {
-      stopMic();
-      if (roomRef.current) {
-        roomRef.current.disconnect();
-      }
-      setIsMuted(true);
-      setIsSpeaking(false);
-      setIsInCall(false);
-      prayerRoomStore.leaveCall(userId);
-    } else {
-      setIsInCall(true);
+  const handleLeaveCall = () => {
+    stopMic();
+    if (roomRef.current) {
+      roomRef.current.disconnect();
     }
+    setIsMuted(true);
+    setIsSpeaking(false);
+    setIsInCall(false);
+    prayerRoomStore.leaveCall(userId);
+    // Automatically open Name and Photo Modal as requested
+    setNameInput(userName);
+    setAvatarInput(userAvatar);
+    setIsNamePromptOpen(true);
+  };
+
+  const handleOpenProfileModal = () => {
+    setNameInput(userName);
+    setAvatarInput(userAvatar);
+    setIsNamePromptOpen(true);
+  };
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 160;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setAvatarInput(dataUrl);
+        }
+      };
+      img.src = evt.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   // Moderator Actions
@@ -623,13 +665,26 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }, 3000);
   };
 
-  // Save Name
+  // Save Name & Optional Profile Image
   const handleSaveName = (e: React.FormEvent) => {
     e.preventDefault();
     if (nameInput.trim()) {
       const clean = nameInput.trim();
       setUserName(clean);
+      setUserAvatar(avatarInput);
       localStorage.setItem('jg_prayer_user_name', clean);
+      if (avatarInput) {
+        localStorage.setItem('jg_prayer_user_avatar', avatarInput);
+      } else {
+        localStorage.removeItem('jg_prayer_user_avatar');
+      }
+      setIsInCall(true);
+      const colorIndex = Math.abs(clean.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % AVATAR_COLORS.length;
+      prayerRoomStore.joinCall(userId, clean, userRole, AVATAR_COLORS[colorIndex], avatarInput).then(roster => {
+        if (roster && roster.length > 0) {
+          setParticipants(roster);
+        }
+      });
       setIsNamePromptOpen(false);
     }
   };
@@ -815,8 +870,16 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
                 {/* Avatar with Mic Indicator */}
                 <div className="relative my-2">
-                  <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full ${p.avatarColor || 'bg-royal-blue-600'} text-white font-bold text-xl flex items-center justify-center shadow-md`}>
-                    {initials}
+                  <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-full ${p.avatarColor || 'bg-royal-blue-600'} text-white font-bold text-xl flex items-center justify-center shadow-md overflow-hidden`}>
+                    {p.avatarUrl ? (
+                      <img
+                        src={p.avatarUrl}
+                        alt={p.name}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      initials
+                    )}
                   </div>
 
                   {/* Mic Status Badge */}
@@ -891,33 +954,42 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           {/* Toggle Chat Drawer */}
           <button
             onClick={() => setIsChatOpen(!isChatOpen)}
-            className={`relative p-3 rounded-xl border text-xs font-semibold flex items-center justify-center cursor-pointer transition-colors ${
+            className={`relative px-3.5 py-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
               isChatOpen
-                ? 'bg-royal-blue-600 text-white border-royal-blue-600'
+                ? 'bg-royal-blue-600 text-white border-royal-blue-600 shadow-xs'
                 : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
             }`}
-            title="Open Chat"
+            title="Type message"
           >
-            <MessageSquare className="w-5 h-5" />
+            <MessageSquare className="w-4 h-4" />
+            <span className="font-bold whitespace-nowrap">Type message</span>
             {unreadChatCount > 0 && !isChatOpen && (
-              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+              <span className="bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
                 {unreadChatCount}
               </span>
             )}
           </button>
 
-          {/* Leave / Join Button */}
-          <button
-            onClick={toggleCallMembership}
-            className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center cursor-pointer transition-colors ${
-              isInCall
-                ? 'bg-gray-100 text-gray-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border-gray-200'
-                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            }`}
-            title={isInCall ? 'Leave Call' : 'Rejoin Call'}
-          >
-            {isInCall ? <PhoneOff className="w-5 h-5" /> : <PhoneCall className="w-5 h-5" />}
-          </button>
+          {/* Leave Call Button */}
+          {isInCall ? (
+            <button
+              onClick={handleLeaveCall}
+              className="px-3.5 py-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300"
+              title="Leave Call"
+            >
+              <PhoneOff className="w-4 h-4 text-rose-600" />
+              <span className="font-bold whitespace-nowrap">Leave Call</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleOpenProfileModal}
+              className="px-3.5 py-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              title="Join Call"
+            >
+              <PhoneCall className="w-4 h-4 text-emerald-600" />
+              <span className="font-bold whitespace-nowrap">Join Call</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1392,34 +1464,107 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         </div>
       )}
 
-      {/* Name Input Modal */}
+      {/* Name & Photo Profile Modal */}
       {isNamePromptOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
-            <div className="w-10 h-10 rounded-full bg-royal-blue-100 text-royal-blue-600 flex items-center justify-center mb-3">
-              <Users className="w-5 h-5" />
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-full bg-royal-blue-100 text-royal-blue-600 flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
+              {userName && (
+                <button
+                  type="button"
+                  onClick={() => setIsNamePromptOpen(false)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
+
             <h3 className="text-base font-bold text-gray-900">
-              Join 24/7 Prayer Room
+              {userName ? 'Altar Profile & Name' : 'Join 24/7 Prayer Room'}
             </h3>
-            <p className="text-xs text-gray-500 mt-1 mb-4">
-              Enter your name so brethren can recognize you in the prayer room:
+            <p className="text-xs text-gray-500 mt-0.5 mb-4">
+              Enter your name and an optional photo so brethren recognize you on the altar:
             </p>
+
             <form onSubmit={handleSaveName} className="space-y-4">
-              <input
-                type="text"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                placeholder="Your Name (e.g. Pastor David, Sis. Faith)"
-                className="w-full bg-slate-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-900 focus:outline-none focus:border-royal-blue-500"
-                autoFocus
-                required
-              />
+              {/* Optional Photo Upload */}
+              <div className="flex flex-col items-center justify-center gap-1.5 p-3 bg-slate-50 border border-gray-200 rounded-xl">
+                <div className="relative group">
+                  <div className="w-20 h-20 rounded-full bg-white border-2 border-dashed border-gray-300 hover:border-royal-blue-500 overflow-hidden flex items-center justify-center cursor-pointer transition-colors shadow-2xs">
+                    {avatarInput ? (
+                      <img
+                        src={avatarInput}
+                        alt="Avatar Preview"
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-gray-400 group-hover:text-royal-blue-600">
+                        <Camera className="w-6 h-6" />
+                        <span className="text-[10px] font-bold mt-1">Add Photo</span>
+                      </div>
+                    )}
+                  </div>
+                  <label className="absolute bottom-0 right-0 p-1.5 rounded-full bg-royal-blue-600 hover:bg-royal-blue-700 text-white shadow-md cursor-pointer transition-transform group-hover:scale-110">
+                    <Camera className="w-3.5 h-3.5" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] font-bold text-royal-blue-600 hover:underline cursor-pointer">
+                    {avatarInput ? 'Change Photo' : '+ Upload Photo (Optional)'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                  {avatarInput && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarInput('')}
+                      className="text-[11px] text-rose-500 hover:underline font-semibold cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-400 text-center">
+                  Your photo will show inside your circle on the stage
+                </span>
+              </div>
+
+              {/* Name Input */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Your Name (e.g. Pastor David, Sis. Faith)"
+                  className="w-full bg-slate-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-900 focus:outline-none focus:border-royal-blue-500"
+                  autoFocus
+                  required
+                />
+              </div>
+
               <button
                 type="submit"
                 className="w-full py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
               >
-                Join Prayer Room
+                {userName ? 'Save & Join Prayer Room' : 'Join Prayer Room'}
               </button>
             </form>
           </div>

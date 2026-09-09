@@ -4233,7 +4233,7 @@ Joshua's Generation`;
   if (pathname === '/api/prayer-room/call/join' && method === 'POST') {
     try {
       const body = await getJsonBody(req);
-      const { id, name, role = 'intercessor', avatarColor } = body;
+      const { id, name, role = 'intercessor', avatarColor, avatarUrl } = body;
       if (!id || !name) {
         sendJson(res, 400, { error: 'id and name are required' });
         return;
@@ -4245,6 +4245,7 @@ Joshua's Generation`;
         isMuted: true,
         isSpeaking: false,
         avatarColor: avatarColor || '#d97706',
+        avatarUrl: avatarUrl ? String(avatarUrl).slice(0, 200000) : '',
         joinedAt: new Date().toISOString()
       };
       prayerCallParticipants.set(participant.id, participant);
