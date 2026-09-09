@@ -79,6 +79,38 @@ const DEFAULTS_FILE = path.resolve(__dirname, 'default_data.json');
 // In-memory sessions store
 const sessions = new Map(); // token -> { username, expiresAt }
 
+// --- 24/7 Prayer Room In-Memory State & Event Broadcaster ---
+const prayerRoomClients = new Set();
+let memoryPrayerRoomState = {
+  current_topic: '24/7 Global Prayer Altar',
+  scripture: '1 Thessalonians 5:17 — Pray without ceasing.',
+  is_live: true,
+  background_audio_url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-peace-112191.mp3',
+  active_speakers: [
+    { id: 'leader-1', name: 'Prayer Leader', role: 'Minister', isSpeaking: true }
+  ]
+};
+let memoryPrayerMessages = [
+  {
+    id: 1,
+    user_name: 'Joshua Generation Altar',
+    message: 'Welcome to the 24/7 Prayer Altar. The Lord is in this place! Type your Amens and prayer points below.',
+    type: 'announcement',
+    created_at: new Date().toISOString()
+  }
+];
+
+function broadcastPrayerRoomEvent(eventType, payload) {
+  const data = `data: ${JSON.stringify({ type: eventType, ...payload })}\n\n`;
+  for (const client of prayerRoomClients) {
+    try {
+      client.write(data);
+    } catch (err) {
+      prayerRoomClients.delete(client);
+    }
+  }
+}
+
 // --- Database Connection Pool (Postgres) ---
 let pool = null;
 const dbConnectionString = process.env.DATABASE_URL || 'postgresql://jg_admin:GgCXXuFM5H40Yj4uv@localhost:5432/joshuagen';
@@ -867,6 +899,39 @@ async function initDb() {
         );
       `);
 
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS prayer_room_state (
+          id INT PRIMARY KEY DEFAULT 1,
+          current_topic VARCHAR(255) DEFAULT '24/7 Global Prayer Altar',
+          scripture VARCHAR(255) DEFAULT '1 Thessalonians 5:17 — Pray without ceasing.',
+          is_live BOOLEAN DEFAULT true,
+          background_audio_url TEXT DEFAULT '',
+          active_speakers JSONB DEFAULT '[]',
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS prayer_room_messages (
+          id SERIAL PRIMARY KEY,
+          user_name VARCHAR(100) NOT NULL,
+          message TEXT NOT NULL,
+          type VARCHAR(50) DEFAULT 'message',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS prayer_room_requests (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100) DEFAULT 'Anonymous',
+          request TEXT NOT NULL,
+          is_anonymous BOOLEAN DEFAULT false,
+          status VARCHAR(50) DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        INSERT INTO prayer_room_state (id, current_topic, scripture, is_live, background_audio_url, active_speakers)
+        VALUES (1, '24/7 Global Prayer Altar', '1 Thessalonians 5:17 — Pray without ceasing.', true, 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-peace-112191.mp3', '[{"id":"leader-1","name":"Prayer Leader","role":"Minister","isSpeaking":true}]')
+        ON CONFLICT (id) DO NOTHING;
+      `);
+
       let defaults = { sermons: [], books: [], blogPosts: [], radio: { url: 'https://mixlr.com/users/8375836/embed', active: false } };
       if (fs.existsSync(DEFAULTS_FILE)) {
         try {
@@ -1108,7 +1173,8 @@ const server = http.createServer(async (req, res) => {
     const reservedSlugs = [
       'admin', 'sermons', 'books', 'blog', 'events', 'radio', 'donate',
       'contact', 'privacy-policy', 'terms', 'cookie-policy', 'createimage',
-      'getupdates', 'southafricaupdates', 'sondaughter', 'thank-you', 'podcast', 'counter'
+      'getupdates', 'southafricaupdates', 'sondaughter', 'thank-you', 'podcast', 'counter',
+      '247prayers', 'prayer', 'prayer-room', '247prayer'
     ];
 
     if (rawSlug && !reservedSlugs.includes(rawSlug.toLowerCase()) && !rawSlug.includes('.')) {
@@ -1146,6 +1212,7 @@ const server = http.createServer(async (req, res) => {
     pathname === '/getupdates' || pathname === '/getupdates/' ||
     pathname === '/southafricaupdates' || pathname === '/southafricaupdates/' ||
     pathname === '/sondaughter' || pathname === '/sondaughter/' ||
+    pathname === '/247prayers' || pathname === '/247prayers/' || pathname === '/prayer' || pathname === '/prayer-room' ||
     pathname === '/sermons' || pathname === '/sermons/' || pathname === '/sermon' || pathname === '/sermon/' || pathname.startsWith('/sermon/') ||
     pathname === '/blog' || pathname === '/blog/' || pathname.startsWith('/blog/') ||
     pathname === '/books' || pathname === '/books/' || pathname.startsWith('/books/') ||
@@ -3693,6 +3760,245 @@ Joshua's Generation`;
     } catch (e) {
       console.error('Failed to submit message:', e);
       sendJson(res, 500, { error: 'Failed to submit message' });
+    }
+    return;
+  }
+
+  // ==========================================
+  // --- 24/7 PRAYER ROOM ALTAR API HANDLERS ---
+  // ==========================================
+
+  // 1. GET /api/prayer-room/stream (Server-Sent Events for Real-time chat, reactions, presence)
+  if (pathname === '/api/prayer-room/stream' && method === 'GET') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'X-Accel-Buffering': 'no'
+    });
+
+    prayerRoomClients.add(res);
+
+    // Send initial handshake with active count
+    res.write(`data: ${JSON.stringify({ type: 'init', count: Math.max(prayerRoomClients.size, 15) })}\n\n`);
+
+    // Broadcast count update to everyone
+    broadcastPrayerRoomEvent('count', { count: Math.max(prayerRoomClients.size, 15) });
+
+    // Periodic heartbeat comment to keep connection alive through proxies
+    const heartbeat = setInterval(() => {
+      try {
+        res.write(': keepalive\n\n');
+      } catch (err) {
+        clearInterval(heartbeat);
+      }
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      prayerRoomClients.delete(res);
+      broadcastPrayerRoomEvent('count', { count: Math.max(prayerRoomClients.size, 15) });
+    });
+    return;
+  }
+
+  // 2. GET /api/prayer-room/state
+  if (pathname === '/api/prayer-room/state' && method === 'GET') {
+    try {
+      let state = memoryPrayerRoomState;
+      if (pool) {
+        const dbRes = await pool.query('SELECT * FROM prayer_room_state WHERE id = 1 LIMIT 1');
+        if (dbRes.rows.length > 0) {
+          const row = dbRes.rows[0];
+          state = {
+            current_topic: row.current_topic || state.current_topic,
+            scripture: row.scripture || state.scripture,
+            is_live: row.is_live !== false,
+            background_audio_url: row.background_audio_url || state.background_audio_url,
+            active_speakers: Array.isArray(row.active_speakers) ? row.active_speakers : []
+          };
+          memoryPrayerRoomState = state;
+        }
+      }
+      sendJson(res, 200, {
+        success: true,
+        state,
+        activeCount: Math.max(prayerRoomClients.size, 15)
+      });
+    } catch (e) {
+      console.error('Error fetching prayer room state:', e);
+      sendJson(res, 200, {
+        success: true,
+        state: memoryPrayerRoomState,
+        activeCount: Math.max(prayerRoomClients.size, 15)
+      });
+    }
+    return;
+  }
+
+  // 3. POST /api/prayer-room/state (Admin update)
+  if (pathname === '/api/prayer-room/state' && method === 'POST') {
+    try {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) {
+        sendJson(res, 401, { error: 'Unauthorized: Admin access required.' });
+        return;
+      }
+      const body = await getJsonBody(req);
+      const { current_topic, scripture, background_audio_url, is_live, active_speakers } = body;
+
+      if (pool) {
+        await pool.query(`
+          INSERT INTO prayer_room_state (id, current_topic, scripture, background_audio_url, is_live, active_speakers, updated_at)
+          VALUES (1, $1, $2, $3, $4, $5, NOW())
+          ON CONFLICT (id) DO UPDATE SET
+            current_topic = EXCLUDED.current_topic,
+            scripture = EXCLUDED.scripture,
+            background_audio_url = EXCLUDED.background_audio_url,
+            is_live = EXCLUDED.is_live,
+            active_speakers = EXCLUDED.active_speakers,
+            updated_at = NOW()
+        `, [
+          current_topic || memoryPrayerRoomState.current_topic,
+          scripture || memoryPrayerRoomState.scripture,
+          background_audio_url !== undefined ? background_audio_url : memoryPrayerRoomState.background_audio_url,
+          is_live !== undefined ? is_live : memoryPrayerRoomState.is_live,
+          JSON.stringify(active_speakers || memoryPrayerRoomState.active_speakers)
+        ]);
+      }
+
+      memoryPrayerRoomState = {
+        ...memoryPrayerRoomState,
+        ...(current_topic ? { current_topic } : {}),
+        ...(scripture ? { scripture } : {}),
+        ...(background_audio_url !== undefined ? { background_audio_url } : {}),
+        ...(is_live !== undefined ? { is_live } : {}),
+        ...(active_speakers ? { active_speakers } : {})
+      };
+
+      // Broadcast state update to all listeners
+      broadcastPrayerRoomEvent('state', { state: memoryPrayerRoomState });
+
+      sendJson(res, 200, { success: true, state: memoryPrayerRoomState });
+    } catch (e) {
+      console.error('Error updating prayer room state:', e);
+      sendJson(res, 500, { error: 'Failed to update prayer room state' });
+    }
+    return;
+  }
+
+  // 4. GET /api/prayer-room/messages (Last 50 messages)
+  if (pathname === '/api/prayer-room/messages' && method === 'GET') {
+    try {
+      if (pool) {
+        const msgRes = await pool.query(
+          'SELECT id, user_name, message, type, created_at FROM prayer_room_messages ORDER BY created_at DESC LIMIT 50'
+        );
+        const rows = msgRes.rows.reverse();
+        sendJson(res, 200, { success: true, messages: rows });
+        return;
+      }
+      sendJson(res, 200, { success: true, messages: memoryPrayerMessages.slice(-50) });
+    } catch (e) {
+      console.error('Error fetching prayer messages:', e);
+      sendJson(res, 200, { success: true, messages: memoryPrayerMessages.slice(-50) });
+    }
+    return;
+  }
+
+  // 5. POST /api/prayer-room/messages (Post chat / announcement)
+  if (pathname === '/api/prayer-room/messages' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { user_name, message, type = 'message' } = body;
+
+      if (!user_name || !message) {
+        sendJson(res, 400, { error: 'User name and message are required' });
+        return;
+      }
+
+      const cleanName = String(user_name).trim().slice(0, 80);
+      const cleanMessage = String(message).trim().slice(0, 600);
+
+      let savedMsg = {
+        id: Date.now(),
+        user_name: cleanName,
+        message: cleanMessage,
+        type,
+        created_at: new Date().toISOString()
+      };
+
+      if (pool) {
+        const insRes = await pool.query(
+          'INSERT INTO prayer_room_messages (user_name, message, type, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, user_name, message, type, created_at',
+          [cleanName, cleanMessage, type]
+        );
+        if (insRes.rows.length > 0) {
+          savedMsg = insRes.rows[0];
+        }
+      }
+
+      memoryPrayerMessages.push(savedMsg);
+      if (memoryPrayerMessages.length > 100) {
+        memoryPrayerMessages = memoryPrayerMessages.slice(-100);
+      }
+
+      // Broadcast to all active clients
+      broadcastPrayerRoomEvent('message', { message: savedMsg });
+
+      sendJson(res, 200, { success: true, message: savedMsg });
+    } catch (e) {
+      console.error('Error posting prayer message:', e);
+      sendJson(res, 500, { error: 'Failed to post prayer message' });
+    }
+    return;
+  }
+
+  // 6. POST /api/prayer-room/reaction (Live Amen / Fire reaction shower)
+  if (pathname === '/api/prayer-room/reaction' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { type = 'amen', user_name = 'Intercessor' } = body;
+
+      broadcastPrayerRoomEvent('reaction', {
+        reactionType: type,
+        user_name: String(user_name).slice(0, 40),
+        xOffset: Math.floor(Math.random() * 80) + 10
+      });
+
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendJson(res, 200, { success: true });
+    }
+    return;
+  }
+
+  // 7. POST /api/prayer-room/requests (Submit prayer request)
+  if (pathname === '/api/prayer-room/requests' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { name = 'Anonymous', request, is_anonymous = false } = body;
+
+      if (!request || !request.trim()) {
+        sendJson(res, 400, { error: 'Prayer request cannot be empty' });
+        return;
+      }
+
+      const cleanName = is_anonymous ? 'Anonymous' : String(name).trim().slice(0, 80);
+      const cleanReq = String(request).trim().slice(0, 1000);
+
+      if (pool) {
+        await pool.query(
+          'INSERT INTO prayer_room_requests (name, request, is_anonymous, created_at) VALUES ($1, $2, $3, NOW())',
+          [cleanName, cleanReq, !!is_anonymous]
+        );
+      }
+
+      sendJson(res, 200, { success: true, message: 'Prayer request submitted successfully' });
+    } catch (e) {
+      console.error('Error submitting prayer request:', e);
+      sendJson(res, 500, { error: 'Failed to submit prayer request' });
     }
     return;
   }

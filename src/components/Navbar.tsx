@@ -7,6 +7,7 @@ import SearchModal from './SearchModal';
 
 const navLinks = [
   { name: 'Home', href: '/', icon: Home, page: 'home' as Page },
+  { name: '24/7 Prayer', href: '/247prayers', icon: Radio, page: '247prayers' as Page, isLive: true },
   { name: 'Sermons', href: '/sermons', icon: Tv, page: 'sermons' as Page },
   { name: 'Books', href: '/books', icon: BookOpen, page: 'books' as Page },
   { name: 'Blog', href: '/blog', icon: Library, page: 'blog' as Page },
@@ -212,6 +213,12 @@ export default function Navbar({
                     )}
                   >
                     {link.name}
+                    {(link as any).isLive && (
+                      <span className="ml-1.5 relative inline-flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -360,7 +367,12 @@ export default function Navbar({
                   )}
                 >
                   <link.icon className={cn('w-5 h-5', active ? 'text-royal-blue-500' : 'text-gray-400')} />
-                  {link.name}
+                  <span>{link.name}</span>
+                  {(link as any).isLive && (
+                    <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">
+                      LIVE
+                    </span>
+                  )}
                 </a>
               );
             })}

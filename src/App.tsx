@@ -42,6 +42,7 @@ const SonsDaughtersPage = lazy(() => import('@/components/SonsDaughtersPage'));
 const ImageGeneratorPage = lazy(() => import('@/components/ImageGeneratorPage'));
 const CustomFormPage = lazy(() => import('@/components/CustomFormPage'));
 const CounterPage = lazy(() => import('@/components/CounterPage'));
+const PrayerRoomPage = lazy(() => import('@/components/PrayerRoomPage'));
 import type { Sermon, Book, BlogPost, Event } from '@/types';
 
 const PageLoader = () => (
@@ -80,8 +81,11 @@ const getPageFromPath = (): Page => {
     window.location.href = '/counter/index.html';
     return 'home';
   }
+  if (rawPath === '247prayers' || rawPath === 'prayer' || rawPath === 'prayer-room' || rawPath === '247prayer') {
+    return '247prayers';
+  }
 
-  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form'];
+  const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form', '247prayers', 'prayer', 'prayer-room', '247prayer'];
   if (validPages.includes(rawPath)) {
     return rawPath;
   }
@@ -143,7 +147,7 @@ export default function App() {
     const rawPath = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').trim();
     if (!rawPath) return;
 
-    const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form', 'counter'];
+    const validPages: string[] = ['home', 'admin', 'admin-login', 'getupdates', 'southafricaupdates', 'sondaughter', 'sermons', 'sermon-player', 'books', 'book-details', 'blog', 'blog-details', 'donate', 'thank-you', 'partnership', 'podcast', 'contact', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'sons-daughters', 'partners', 'encounter', 'encounters', 'daily-devotional', 'events', 'createimage', 'create-image', 'image-generator', 'ai-generator', 'dall-e', 'custom-form', 'counter', '247prayers', 'prayer', 'prayer-room', '247prayer'];
     
     const isStandardPage = validPages.includes(rawPath.toLowerCase()) || 
       rawPath.startsWith('blog/') || 
@@ -515,6 +519,14 @@ export default function App() {
     return (
       <Suspense fallback={<PageLoader />}>
         <SouthAfricaUpdatesPage onBack={() => navigate('home')} />
+      </Suspense>
+    );
+  }
+
+  if (currentPage === '247prayers' || currentPage === 'prayer' || currentPage === 'prayer-room' || currentPage === '247prayer') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <PrayerRoomPage onNavigate={navigate} />
       </Suspense>
     );
   }
