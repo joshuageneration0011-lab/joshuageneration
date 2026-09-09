@@ -111,6 +111,9 @@ function broadcastPrayerRoomEvent(eventType, payload) {
   }
 }
 
+// Active Call Participants Roster: id -> { id, name, role, isMuted, isSpeaking, avatarColor, joinedAt }
+const prayerCallParticipants = new Map();
+
 // --- Database Connection Pool (Postgres) ---
 let pool = null;
 const dbConnectionString = process.env.DATABASE_URL || 'postgresql://jg_admin:GgCXXuFM5H40Yj4uv@localhost:5432/joshuagen';
@@ -3999,6 +4002,147 @@ Joshua's Generation`;
     } catch (e) {
       console.error('Error submitting prayer request:', e);
       sendJson(res, 500, { error: 'Failed to submit prayer request' });
+    }
+    return;
+  }
+
+  // 8. GET /api/prayer-room/call/participants
+  if (pathname === '/api/prayer-room/call/participants' && method === 'GET') {
+    sendJson(res, 200, {
+      success: true,
+      participants: Array.from(prayerCallParticipants.values())
+    });
+    return;
+  }
+
+  // 9. POST /api/prayer-room/call/join (User joins the group prayer call)
+  if (pathname === '/api/prayer-room/call/join' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { id, name, role = 'intercessor', avatarColor } = body;
+      if (!id || !name) {
+        sendJson(res, 400, { error: 'id and name are required' });
+        return;
+      }
+      const participant = {
+        id: String(id),
+        name: String(name).trim().slice(0, 60),
+        role: role === 'host' ? 'host' : role === 'admin' ? 'admin' : 'intercessor',
+        isMuted: true,
+        isSpeaking: false,
+        avatarColor: avatarColor || '#d97706',
+        joinedAt: new Date().toISOString()
+      };
+      prayerCallParticipants.set(participant.id, participant);
+      broadcastPrayerRoomEvent('call_roster', {
+        participants: Array.from(prayerCallParticipants.values()),
+        joinedUser: participant
+      });
+      sendJson(res, 200, { success: true, participant, participants: Array.from(prayerCallParticipants.values()) });
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to join call' });
+    }
+    return;
+  }
+
+  // 10. POST /api/prayer-room/call/leave (User leaves the group prayer call)
+  if (pathname === '/api/prayer-room/call/leave' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { id } = body;
+      if (id && prayerCallParticipants.has(String(id))) {
+        prayerCallParticipants.delete(String(id));
+        broadcastPrayerRoomEvent('call_roster', {
+          participants: Array.from(prayerCallParticipants.values()),
+          leftUserId: id
+        });
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendJson(res, 200, { success: true });
+    }
+    return;
+  }
+
+  // 11. POST /api/prayer-room/call/state (Update self mute/speaking status)
+  if (pathname === '/api/prayer-room/call/state' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { id, isMuted, isSpeaking } = body;
+      if (id && prayerCallParticipants.has(String(id))) {
+        const p = prayerCallParticipants.get(String(id));
+        if (isMuted !== undefined) p.isMuted = !!isMuted;
+        if (isSpeaking !== undefined) p.isSpeaking = !!isSpeaking;
+        prayerCallParticipants.set(String(id), p);
+        broadcastPrayerRoomEvent('call_user_state', {
+          id: String(id),
+          isMuted: p.isMuted,
+          isSpeaking: p.isSpeaking
+        });
+      }
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendJson(res, 200, { success: true });
+    }
+    return;
+  }
+
+  // 12. POST /api/prayer-room/call/admin/action (Host / Admin moderation actions)
+  if (pathname === '/api/prayer-room/call/admin/action' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { action, targetId, role, requesterId } = body;
+
+      if (action === 'mute' && targetId) {
+        if (prayerCallParticipants.has(String(targetId))) {
+          const p = prayerCallParticipants.get(String(targetId));
+          p.isMuted = true;
+          p.isSpeaking = false;
+          prayerCallParticipants.set(String(targetId), p);
+          broadcastPrayerRoomEvent('call_force_mute', { targetId: String(targetId) });
+          broadcastPrayerRoomEvent('call_user_state', { id: String(targetId), isMuted: true, isSpeaking: false });
+        }
+      } else if (action === 'mute_all') {
+        for (const [pId, p] of prayerCallParticipants.entries()) {
+          if (pId !== String(requesterId) && p.role !== 'host') {
+            p.isMuted = true;
+            p.isSpeaking = false;
+          }
+        }
+        broadcastPrayerRoomEvent('call_force_mute_all', { exceptId: String(requesterId) });
+        broadcastPrayerRoomEvent('call_roster', { participants: Array.from(prayerCallParticipants.values()) });
+      } else if (action === 'set_role' && targetId && role) {
+        if (prayerCallParticipants.has(String(targetId))) {
+          const p = prayerCallParticipants.get(String(targetId));
+          p.role = role;
+          prayerCallParticipants.set(String(targetId), p);
+          broadcastPrayerRoomEvent('call_roster', { participants: Array.from(prayerCallParticipants.values()) });
+        }
+      } else if (action === 'remove' && targetId) {
+        if (prayerCallParticipants.has(String(targetId))) {
+          prayerCallParticipants.delete(String(targetId));
+          broadcastPrayerRoomEvent('call_user_ejected', { targetId: String(targetId) });
+          broadcastPrayerRoomEvent('call_roster', { participants: Array.from(prayerCallParticipants.values()) });
+        }
+      }
+
+      sendJson(res, 200, { success: true, participants: Array.from(prayerCallParticipants.values()) });
+    } catch (e) {
+      console.error('Error executing admin action:', e);
+      sendJson(res, 500, { error: 'Failed to execute moderation action' });
+    }
+    return;
+  }
+
+  // 13. POST /api/prayer-room/signal (WebRTC Peer signaling relay)
+  if (pathname === '/api/prayer-room/signal' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { type, fromId, toId, payload } = body;
+      broadcastPrayerRoomEvent('webrtc_signal', { type, fromId, toId, payload });
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendJson(res, 200, { success: true });
     }
     return;
   }

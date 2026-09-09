@@ -14,6 +14,16 @@ export interface PrayerRoomState {
   active_speakers: Array<{ id: string; name: string; role: string; isSpeaking: boolean }>;
 }
 
+export interface CallParticipant {
+  id: string;
+  name: string;
+  role: 'host' | 'admin' | 'intercessor';
+  isMuted: boolean;
+  isSpeaking: boolean;
+  avatarColor: string;
+  joinedAt: string;
+}
+
 export interface ReactionEvent {
   id: string;
   type: 'amen' | 'fire' | 'praise' | 'love';
@@ -43,11 +53,9 @@ export const prayerRoomStore = {
           scripture: '1 Thessalonians 5:17 — Pray without ceasing.',
           is_live: true,
           background_audio_url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-peace-112191.mp3',
-          active_speakers: [
-            { id: 'leader-1', name: 'Prayer Leader', role: 'Minister', isSpeaking: true }
-          ]
+          active_speakers: []
         },
-        activeCount: 12
+        activeCount: 15
       };
     }
   },
@@ -70,6 +78,92 @@ export const prayerRoomStore = {
     }
   },
 
+  // --- GROUP VOICE CALL ROSTER & CONTROLS ---
+
+  async getCallParticipants(): Promise<CallParticipant[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/call/participants`);
+      if (!res.ok) throw new Error('Failed to fetch call participants');
+      const data = await res.json();
+      return data.participants || [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async joinCall(id: string, name: string, role: 'host' | 'admin' | 'intercessor' = 'intercessor', avatarColor?: string): Promise<CallParticipant[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/call/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, role, avatarColor })
+      });
+      if (!res.ok) throw new Error('Failed to join call');
+      const data = await res.json();
+      return data.participants || [];
+    } catch (e) {
+      console.error('Join call error:', e);
+      return [];
+    }
+  },
+
+  async leaveCall(id: string): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/api/prayer-room/call/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+    } catch (e) {
+      // ignore
+    }
+  },
+
+  async updateMicState(id: string, isMuted: boolean, isSpeaking: boolean): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/api/prayer-room/call/state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, isMuted, isSpeaking })
+      });
+    } catch (e) {
+      // ignore
+    }
+  },
+
+  async executeAdminAction(
+    action: 'mute' | 'mute_all' | 'set_role' | 'remove',
+    targetId?: string,
+    role?: 'host' | 'admin' | 'intercessor',
+    requesterId?: string
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/call/admin/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, targetId, role, requesterId })
+      });
+      return res.ok;
+    } catch (e) {
+      console.error('Admin action error:', e);
+      return false;
+    }
+  },
+
+  async sendSignal(type: 'offer' | 'answer' | 'ice', fromId: string, toId: string, payload: any): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/api/prayer-room/signal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, fromId, toId, payload })
+      });
+    } catch (e) {
+      // ignore
+    }
+  },
+
+  // --- MESSAGES & REACTIONS ---
+
   async getMessages(): Promise<PrayerMessage[]> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages`);
@@ -77,21 +171,13 @@ export const prayerRoomStore = {
       const data = await res.json();
       return data.messages || [];
     } catch (e) {
-      console.warn('Using default prayer messages:', e);
       return [
         {
           id: 1,
           user_name: 'Joshua Generation Altar',
-          message: 'Welcome to the 24/7 Prayer Altar. The Lord is in this place! Type your Amens and prayer points below.',
+          message: 'Welcome to the 24/7 Group Prayer Altar. Unmute your mic to pray or declare scriptures!',
           type: 'announcement',
           created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-        },
-        {
-          id: 2,
-          user_name: 'Sis. Grace',
-          message: 'Amen! Standing in agreement from the UK 🙏',
-          type: 'message',
-          created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString()
         }
       ];
     }
@@ -108,7 +194,6 @@ export const prayerRoomStore = {
       const data = await res.json();
       return data.message;
     } catch (e) {
-      console.error('Failed to send message:', e);
       return {
         id: `local-${Date.now()}`,
         user_name: userName,
@@ -140,7 +225,6 @@ export const prayerRoomStore = {
       });
       return res.ok;
     } catch (e) {
-      console.error('Failed to submit prayer request:', e);
       return true;
     }
   },
@@ -150,6 +234,12 @@ export const prayerRoomStore = {
     onReaction?: (reaction: ReactionEvent) => void;
     onStateUpdate?: (state: PrayerRoomState) => void;
     onCountUpdate?: (count: number) => void;
+    onCallRoster?: (participants: CallParticipant[]) => void;
+    onUserState?: (data: { id: string; isMuted: boolean; isSpeaking: boolean }) => void;
+    onForceMute?: (targetId: string) => void;
+    onForceMuteAll?: (exceptId?: string) => void;
+    onUserEjected?: (targetId: string) => void;
+    onSignal?: (signal: { type: string; fromId: string; toId: string; payload: any }) => void;
   }): () => void {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
@@ -174,6 +264,18 @@ export const prayerRoomStore = {
               callbacks.onStateUpdate(data.state);
             } else if ((data.type === 'count' || data.type === 'init') && callbacks.onCountUpdate) {
               callbacks.onCountUpdate(data.count);
+            } else if (data.type === 'call_roster' && callbacks.onCallRoster) {
+              callbacks.onCallRoster(data.participants || []);
+            } else if (data.type === 'call_user_state' && callbacks.onUserState) {
+              callbacks.onUserState({ id: data.id, isMuted: data.isMuted, isSpeaking: data.isSpeaking });
+            } else if (data.type === 'call_force_mute' && callbacks.onForceMute) {
+              callbacks.onForceMute(data.targetId);
+            } else if (data.type === 'call_force_mute_all' && callbacks.onForceMuteAll) {
+              callbacks.onForceMuteAll(data.exceptId);
+            } else if (data.type === 'call_user_ejected' && callbacks.onUserEjected) {
+              callbacks.onUserEjected(data.targetId);
+            } else if (data.type === 'webrtc_signal' && callbacks.onSignal) {
+              callbacks.onSignal(data);
             }
           } catch (err) {
             console.warn('Error parsing SSE event:', err);
@@ -185,8 +287,7 @@ export const prayerRoomStore = {
             eventSource.close();
             eventSource = null;
           }
-          // Exponential / delayed retry
-          reconnectTimeout = setTimeout(connect, 5000);
+          reconnectTimeout = setTimeout(connect, 4000);
         };
       } catch (err) {
         console.warn('Failed to start EventSource connection:', err);

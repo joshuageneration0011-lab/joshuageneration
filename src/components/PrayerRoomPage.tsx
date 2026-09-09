@@ -1,41 +1,73 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Volume2, VolumeX, Mic, MicOff, Hand, Send, Sparkles, Heart, Flame, 
+  Volume2, VolumeX, Mic, MicOff, Send, Sparkles, Heart, Flame, 
   Share2, ArrowLeft, Shield, Users, Radio, MessageSquare, AlertCircle, 
-  CheckCircle, Settings, Music, Eye
+  CheckCircle, Settings, Music, Crown, MoreVertical, UserPlus, UserX,
+  PhoneCall, PhoneOff
 } from 'lucide-react';
-import { prayerRoomStore, type PrayerMessage, type PrayerRoomState, type ReactionEvent } from '@/data/prayerRoomStore';
+import { prayerRoomStore, type PrayerMessage, type PrayerRoomState, type CallParticipant, type ReactionEvent } from '@/data/prayerRoomStore';
 import { api } from '@/utils/api';
 
 interface PrayerRoomPageProps {
   onNavigate: (page: string) => void;
 }
 
+const AVATAR_COLORS = [
+  'from-amber-500 to-amber-600',
+  'from-blue-500 to-indigo-600',
+  'from-emerald-500 to-teal-600',
+  'from-purple-500 to-purple-600',
+  'from-rose-500 to-pink-600',
+  'from-cyan-500 to-blue-600'
+];
+
 export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
-  // Room state
+  // Current User Identity
+  const [userId] = useState(() => {
+    let stored = localStorage.getItem('jg_prayer_user_id');
+    if (!stored) {
+      stored = `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      localStorage.setItem('jg_prayer_user_id', stored);
+    }
+    return stored;
+  });
+
+  const [userName, setUserName] = useState(() => localStorage.getItem('jg_prayer_user_name') || '');
+  const [isNamePromptOpen, setIsNamePromptOpen] = useState(() => !localStorage.getItem('jg_prayer_user_name'));
+  const [nameInput, setNameInput] = useState(() => localStorage.getItem('jg_prayer_user_name') || '');
+  const [userRole, setUserRole] = useState<'host' | 'admin' | 'intercessor'>('intercessor');
+
+  // Call & Roster State
+  const [participants, setParticipants] = useState<CallParticipant[]>([]);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isInCall, setIsInCall] = useState(true);
+  const [selectedParticipantMenu, setSelectedParticipantMenu] = useState<string | null>(null);
+
+  // Room State
   const [roomState, setRoomState] = useState<PrayerRoomState>({
     current_topic: '24/7 Global Prayer Altar',
     scripture: '1 Thessalonians 5:17 — Pray without ceasing.',
     is_live: true,
     background_audio_url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-peace-112191.mp3',
-    active_speakers: [
-      { id: 'leader-1', name: 'Prayer Leader', role: 'Minister', isSpeaking: true }
-    ]
+    active_speakers: []
   });
 
-  const [activeCount, setActiveCount] = useState<number>(18);
+  // Chat & Reactions
   const [messages, setMessages] = useState<PrayerMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [userName, setUserName] = useState(() => localStorage.getItem('jg_prayer_user_name') || 'Believer');
-  const [isNamePromptOpen, setIsNamePromptOpen] = useState(false);
-  const [nameInput, setNameInput] = useState(userName);
-
-  // Audio & Interaction state
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [isMicActive, setIsMicActive] = useState(false);
-  const [isHandRaised, setIsHandRaised] = useState(false);
-  const [volume, setVolume] = useState(0.8);
   const [reactions, setReactions] = useState<ReactionEvent[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(true);
+
+  // Audio & Hardware Refs
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [volume, setVolume] = useState(0.8);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
   // Prayer Request Modal
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -43,28 +75,27 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
 
-  // Admin Host Modal
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Host Settings Modal
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editTopic, setEditTopic] = useState('');
   const [editScripture, setEditScripture] = useState('');
   const [editAudioUrl, setEditAudioUrl] = useState('');
 
-  // Audio element reference
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const chatBottomRef = useRef<HTMLDivElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-
-  // Check Admin Role
+  // Check if authenticated site admin
   useEffect(() => {
-    setIsAdmin(api.isAuthenticated() && (api.getRole() === 'admin' || api.getRole() === 'superadmin'));
+    const isSiteAdmin = api.isAuthenticated() && (api.getRole() === 'admin' || api.getRole() === 'superadmin');
+    if (isSiteAdmin) {
+      setUserRole('host');
+    }
   }, []);
 
-  // Fetch initial data & setup SSE subscription
+  // Determine if current user can moderate (Host or Admin)
+  const canModerate = userRole === 'host' || userRole === 'admin';
+
+  // Fetch initial room state & messages
   useEffect(() => {
     prayerRoomStore.getState().then(res => {
       setRoomState(res.state);
-      setActiveCount(res.activeCount || 15);
       setEditTopic(res.state.current_topic);
       setEditScripture(res.state.scripture);
       setEditAudioUrl(res.state.background_audio_url || '');
@@ -74,7 +105,11 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       setMessages(msgs);
     });
 
-    // Real-time Event Subscription (SSE)
+    prayerRoomStore.getCallParticipants().then(pts => {
+      setParticipants(pts);
+    });
+
+    // Subscribe to SSE stream for real-time sync
     const unsubscribe = prayerRoomStore.subscribeToEvents({
       onMessage: (msg) => {
         setMessages(prev => [...prev, msg]);
@@ -85,31 +120,154 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           setReactions(prev => prev.filter(r => r.id !== reaction.id));
         }, 3200);
       },
-      onStateUpdate: (updatedState) => {
-        setRoomState(updatedState);
-        setEditTopic(updatedState.current_topic);
-        setEditScripture(updatedState.scripture);
-        setEditAudioUrl(updatedState.background_audio_url || '');
+      onStateUpdate: (updated) => {
+        setRoomState(updated);
+        setEditTopic(updated.current_topic);
+        setEditScripture(updated.scripture);
+        setEditAudioUrl(updated.background_audio_url || '');
       },
-      onCountUpdate: (count) => {
-        setActiveCount(count);
+      onCallRoster: (roster) => {
+        setParticipants(roster);
+        // Sync our role if updated by another admin
+        const me = roster.find(p => p.id === userId);
+        if (me && me.role && userRole !== 'host') {
+          setUserRole(me.role);
+        }
+      },
+      onUserState: (data) => {
+        setParticipants(prev => prev.map(p => {
+          if (p.id === data.id) {
+            return { ...p, isMuted: data.isMuted, isSpeaking: data.isSpeaking };
+          }
+          return p;
+        }));
+      },
+      onForceMute: (targetId) => {
+        if (targetId === userId) {
+          handleForceMuted();
+        }
+      },
+      onForceMuteAll: (exceptId) => {
+        if (exceptId !== userId && userRole !== 'host') {
+          handleForceMuted();
+        }
+      },
+      onUserEjected: (targetId) => {
+        if (targetId === userId) {
+          setIsInCall(false);
+          stopMic();
+          alert('You have been removed from the prayer call.');
+        }
       }
     });
 
     return () => {
       unsubscribe();
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
+      stopMic();
+      prayerRoomStore.leaveCall(userId);
     };
-  }, []);
+  }, [userId]);
 
-  // Auto-scroll chat
+  // Join call automatically when name is known
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (userName && isInCall) {
+      const colorIndex = Math.abs(userName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % AVATAR_COLORS.length;
+      prayerRoomStore.joinCall(userId, userName, userRole, AVATAR_COLORS[colorIndex]).then(roster => {
+        if (roster && roster.length > 0) {
+          setParticipants(roster);
+        }
+      });
+    }
+  }, [userName, isInCall, userRole]);
 
-  // Audio Play/Pause Handling
+  // Handle Forced Mute from Admin
+  const handleForceMuted = () => {
+    stopMic();
+    setIsMuted(true);
+    setIsSpeaking(false);
+    prayerRoomStore.updateMicState(userId, true, false);
+    // Notification
+    alert('A moderator has muted your microphone.');
+  };
+
+  // Start / Stop Microphone & Audio Level Analyser
+  const toggleMic = async () => {
+    if (!isInCall) {
+      alert('Please join the call first.');
+      return;
+    }
+
+    if (!isMuted) {
+      // Muting
+      stopMic();
+      setIsMuted(true);
+      setIsSpeaking(false);
+      prayerRoomStore.updateMicState(userId, true, false);
+    } else {
+      // Unmuting
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+
+        // Setup Web Audio Analyser for Speaking Detection
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = audioCtx;
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+
+        setIsMuted(false);
+        prayerRoomStore.updateMicState(userId, false, false);
+
+        // Speaking Level Loop
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        let lastSpeakingState = false;
+
+        const checkVolume = () => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / dataArray.length;
+          const isNowSpeaking = average > 18; // Volume threshold
+
+          if (isNowSpeaking !== lastSpeakingState) {
+            lastSpeakingState = isNowSpeaking;
+            setIsSpeaking(isNowSpeaking);
+            prayerRoomStore.updateMicState(userId, false, isNowSpeaking);
+          }
+
+          animationFrameRef.current = requestAnimationFrame(checkVolume);
+        };
+
+        checkVolume();
+      } catch (err) {
+        alert('Could not access your microphone. Please check your browser audio permissions.');
+      }
+    }
+  };
+
+  const stopMic = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+  };
+
+  // Sanctuary Background Audio Player
   const toggleAudio = () => {
     if (!audioRef.current) return;
     if (isPlayingAudio) {
@@ -118,95 +276,72 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     } else {
       audioRef.current.play().then(() => {
         setIsPlayingAudio(true);
-      }).catch(err => {
-        console.warn('Audio autoplay blocked or failed:', err);
-      });
+      }).catch(() => {});
     }
   };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
-    setVolume(val);
-    if (audioRef.current) {
-      audioRef.current.volume = val;
-    }
-  };
-
-  // Mic toggle for minister/speaker
-  const toggleMic = async () => {
-    if (isMicActive) {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-        mediaStreamRef.current = null;
-      }
-      setIsMicActive(false);
+  // Leave / Rejoin Call
+  const toggleCallMembership = () => {
+    if (isInCall) {
+      stopMic();
+      setIsMuted(true);
+      setIsSpeaking(false);
+      setIsInCall(false);
+      prayerRoomStore.leaveCall(userId);
     } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaStreamRef.current = stream;
-        setIsMicActive(true);
-        // Announce speaker in room
-        prayerRoomStore.sendMessage('Host Altar', `${userName} has activated the microphone to lead prayer.`, 'announcement');
-      } catch (err) {
-        alert('Microphone access was denied or not available on this device.');
-      }
+      setIsInCall(true);
     }
   };
 
-  // Raise Hand
-  const toggleRaiseHand = () => {
-    const nextState = !isHandRaised;
-    setIsHandRaised(nextState);
-    if (nextState) {
-      prayerRoomStore.sendMessage(userName, `raised hand to pray / share testimony`, 'announcement');
-      triggerReaction('amen');
+  // Admin Actions
+  const handleAdminMute = async (targetId: string) => {
+    setSelectedParticipantMenu(null);
+    await prayerRoomStore.executeAdminAction('mute', targetId, undefined, userId);
+  };
+
+  const handleAdminMuteAll = async () => {
+    if (confirm('Mute all intercessors in the call?')) {
+      await prayerRoomStore.executeAdminAction('mute_all', undefined, undefined, userId);
     }
   };
 
-  // Send Chat Message
+  const handleAdminSetRole = async (targetId: string, role: 'host' | 'admin' | 'intercessor') => {
+    setSelectedParticipantMenu(null);
+    await prayerRoomStore.executeAdminAction('set_role', targetId, role, userId);
+  };
+
+  const handleAdminRemove = async (targetId: string) => {
+    setSelectedParticipantMenu(null);
+    if (confirm('Remove this participant from the call?')) {
+      await prayerRoomStore.executeAdminAction('remove', targetId, undefined, userId);
+    }
+  };
+
+  // Chat Submission
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-
     const text = newMessage.trim();
     setNewMessage('');
-    const sent = await prayerRoomStore.sendMessage(userName, text, 'message');
+    const sent = await prayerRoomStore.sendMessage(userName || 'Intercessor', text, 'message');
     if (sent) {
       setMessages(prev => [...prev, sent]);
     }
   };
 
-  // Quick Reaction
+  // Reaction Tap
   const triggerReaction = (type: 'amen' | 'fire' | 'praise' | 'love') => {
-    prayerRoomStore.sendReaction(type, userName);
+    prayerRoomStore.sendReaction(type, userName || 'Intercessor');
     const newReaction: ReactionEvent = {
       id: `${Date.now()}-${Math.random()}`,
       type,
-      user_name: userName,
+      user_name: userName || 'Intercessor',
       xOffset: Math.floor(Math.random() * 80) + 10
     };
     setReactions(prev => [...prev.slice(-15), newReaction]);
     setTimeout(() => {
       setReactions(prev => prev.filter(r => r.id !== newReaction.id));
     }, 3200);
-  };
-
-  // Submit Prayer Request
-  const handleSubmitPrayerRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!requestText.trim()) return;
-
-    await prayerRoomStore.submitPrayerRequest(userName, requestText, isAnonymous);
-    // Also post a prayer request message into chat
-    const author = isAnonymous ? 'A Member' : userName;
-    await prayerRoomStore.sendMessage(author, `[Prayer Request]: ${requestText.trim()}`, 'prayer_request');
-
-    setRequestSubmitted(true);
-    setTimeout(() => {
-      setRequestSubmitted(false);
-      setIsRequestModalOpen(false);
-      setRequestText('');
-    }, 1800);
   };
 
   // Save Name
@@ -218,6 +353,23 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       localStorage.setItem('jg_prayer_user_name', clean);
       setIsNamePromptOpen(false);
     }
+  };
+
+  // Submit Prayer Request
+  const handleSubmitPrayerRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestText.trim()) return;
+
+    await prayerRoomStore.submitPrayerRequest(userName || 'Believer', requestText, isAnonymous);
+    const author = isAnonymous ? 'A Believer' : (userName || 'Believer');
+    await prayerRoomStore.sendMessage(author, `[Prayer Request]: ${requestText.trim()}`, 'prayer_request');
+
+    setRequestSubmitted(true);
+    setTimeout(() => {
+      setRequestSubmitted(false);
+      setIsRequestModalOpen(false);
+      setRequestText('');
+    }, 1800);
   };
 
   // Admin Save Settings
@@ -236,16 +388,14 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         background_audio_url: editAudioUrl
       }));
       setIsSettingsOpen(false);
-    } else {
-      alert('Failed to update room settings.');
     }
   };
 
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: "Joshua's Generation 24/7 Global Prayer Altar",
-        text: `Join the 24/7 Prayer Altar right now: ${roomState.current_topic}`,
+        title: "Joshua's Generation 24/7 Prayer Call",
+        text: `Join the live interactive prayer call: ${roomState.current_topic}`,
         url: window.location.href
       }).catch(() => {});
     } else {
@@ -255,8 +405,8 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col relative overflow-x-hidden select-none font-sans">
-      {/* Ambient background sound element */}
+    <div className="min-h-screen bg-[#faf9f6] text-slate-900 flex flex-col relative overflow-x-hidden font-sans">
+      {/* Background Sanctuary Soaking Audio */}
       <audio
         ref={audioRef}
         src={roomState.background_audio_url || 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-peace-112191.mp3'}
@@ -269,17 +419,17 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         {reactions.map(r => (
           <div
             key={r.id}
-            className="absolute bottom-20 transition-all duration-3000 ease-out animate-float-up flex flex-col items-center"
+            className="absolute bottom-24 transition-all duration-3000 ease-out animate-float-up flex flex-col items-center"
             style={{ left: `${r.xOffset}%` }}
           >
-            <span className="text-3xl filter drop-shadow-[0_4px_12px_rgba(234,179,8,0.6)]">
+            <span className="text-3xl filter drop-shadow-[0_4px_10px_rgba(217,119,6,0.3)]">
               {r.type === 'amen' && '🙏'}
               {r.type === 'fire' && '🔥'}
               {r.type === 'praise' && '🕊️'}
               {r.type === 'love' && '❤️'}
             </span>
             {r.user_name && (
-              <span className="text-[10px] text-amber-200 bg-black/60 px-1.5 py-0.5 rounded-full mt-1 backdrop-blur-sm">
+              <span className="text-[11px] font-semibold text-slate-800 bg-white/95 px-2 py-0.5 rounded-full mt-1 border border-amber-200 shadow-sm">
                 {r.user_name}
               </span>
             )}
@@ -287,272 +437,290 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         ))}
       </div>
 
-      {/* Top Header Bar */}
-      <header className="border-b border-amber-500/20 bg-[#090e1a]/95 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-6">
+      {/* Pristine Light Header */}
+      <header className="border-b border-amber-100 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-6 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => onNavigate('home')}
-              className="flex items-center gap-1 text-slate-400 hover:text-amber-400 text-xs sm:text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 text-slate-500 hover:text-amber-700 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
               title="Return to Main Website"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Home</span>
+              <span className="hidden sm:inline">Main Website</span>
             </button>
-            <div className="h-4 w-px bg-slate-800" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-amber-400 p-0.5 shadow-[0_0_15px_rgba(217,119,6,0.3)]">
+            <div className="h-4 w-px bg-slate-200" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-amber-300 p-0.5 shadow-sm flex items-center justify-center">
                 <img
                   src="https://joshuasgeneration.com/favicon.png"
                   alt="Joshua's Generation Logo"
-                  className="w-full h-full object-cover rounded-full bg-slate-900"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
+                  className="w-full h-full object-cover rounded-full bg-white"
+                  onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                 />
               </div>
               <div>
-                <h1 className="text-xs sm:text-sm font-bold tracking-wide text-white uppercase flex items-center gap-1.5">
+                <h1 className="text-xs sm:text-sm font-bold tracking-wide text-slate-900 uppercase flex items-center gap-1.5">
                   <span>Joshua's Generation</span>
-                  <span className="text-amber-400 font-serif">Altar</span>
+                  <span className="text-amber-600 font-serif">Altar</span>
                 </h1>
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span className="text-emerald-400 font-semibold uppercase tracking-wider text-[10px]">24/7 LIVE</span>
+                  <span className="text-emerald-700 font-bold uppercase text-[10px] tracking-wider">Group Call Active</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-1.5 bg-slate-900/80 border border-amber-500/20 px-2.5 py-1 rounded-full text-xs text-amber-300">
-              <Users className="w-3.5 h-3.5" />
-              <span className="font-semibold">{activeCount}</span>
-              <span className="hidden md:inline text-slate-400">Praying</span>
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full text-xs text-amber-900 font-semibold shadow-2xs">
+              <Users className="w-3.5 h-3.5 text-amber-700" />
+              <span>{participants.length || 1}</span>
+              <span className="hidden sm:inline text-amber-800">in Call</span>
             </div>
 
             <button
               onClick={handleShare}
-              className="p-1.5 sm:px-3 sm:py-1 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs flex items-center gap-1.5 transition-all"
-              title="Share Room"
+              className="p-1.5 sm:px-3 sm:py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Share Prayer Call Link"
             >
-              <Share2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Invite</span>
+              <Share2 className="w-3.5 h-3.5 text-slate-600" />
+              <span className="hidden sm:inline font-medium">Invite</span>
             </button>
 
-            {isAdmin && (
+            {canModerate && (
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="p-1.5 sm:px-3 sm:py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs flex items-center gap-1.5 transition-all"
+                className="p-1.5 sm:px-3 sm:py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs flex items-center gap-1.5 transition-all cursor-pointer font-medium"
                 title="Moderator Controls"
               >
-                <Settings className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Host Controls</span>
+                <Settings className="w-3.5 h-3.5 text-amber-700" />
+                <span className="hidden sm:inline">Altar Settings</span>
               </button>
             )}
           </div>
         </div>
       </header>
 
-      {/* Pinned Scripture / Prayer Focus Banner */}
-      <div className="bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-amber-950/40 border-b border-amber-500/20 py-2.5 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-center sm:text-left">
+      {/* Clean Golden Scripture Banner */}
+      <div className="bg-gradient-to-r from-amber-50 via-amber-100/50 to-amber-50 border-b border-amber-200/70 py-2.5 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-center sm:text-left">
           <div className="flex items-center justify-center sm:justify-start gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
-            <span className="text-xs sm:text-sm font-semibold text-amber-200 tracking-wide">
+            <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-xs sm:text-sm font-bold text-amber-950 tracking-wide">
               {roomState.current_topic}
             </span>
           </div>
-          <div className="text-[11px] sm:text-xs text-slate-400 font-serif italic">
+          <div className="text-[11px] sm:text-xs text-slate-700 font-serif italic">
             "{roomState.scripture}"
           </div>
         </div>
       </div>
 
-      {/* Main Sanctuary Layout */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Main Sanctuary Area */}
+      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-28">
         
-        {/* Left / Center Column: Altar & Audio Stage */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+        {/* Left / Center: Interactive Group Call Grid */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-5">
           
-          {/* Main Altar Stage Glass Card */}
-          <div className="relative rounded-2xl bg-gradient-to-b from-slate-900/90 to-[#0b101e]/90 border border-amber-500/30 p-6 sm:p-8 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center">
-            
-            {/* Background Glow */}
-            <div className="absolute -top-24 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Stage Title */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold mb-6">
-              <Radio className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-              <span>Holy Ghost Intercession Altar</span>
-            </div>
-
-            {/* Center Altar Speaker Visualizer */}
-            <div className="relative my-4 flex items-center justify-center">
-              {/* Outer Pulsing Wave Rings */}
-              <div className={`absolute w-44 h-44 rounded-full border border-amber-400/20 ${isPlayingAudio || isMicActive ? 'animate-ping duration-1000' : 'opacity-20'}`} />
-              <div className={`absolute w-36 h-36 rounded-full border border-amber-400/30 ${isPlayingAudio || isMicActive ? 'animate-pulse' : 'opacity-30'}`} />
-              
-              {/* Center Stage Avatar */}
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-amber-600 via-amber-500 to-amber-300 p-1 shadow-[0_0_35px_rgba(217,119,6,0.4)] flex items-center justify-center relative">
-                <div className="w-full h-full rounded-full bg-slate-950 flex flex-col items-center justify-center p-3 text-center">
-                  <Flame className={`w-8 h-8 ${isPlayingAudio || isMicActive ? 'text-amber-400 animate-bounce' : 'text-amber-600'} transition-all`} />
-                  <span className="text-[11px] font-bold text-amber-100 uppercase tracking-widest mt-1">
-                    {isMicActive ? userName : 'Minister'}
+          {/* Group Call Header Bar */}
+          <div className="flex items-center justify-between bg-white rounded-2xl p-4 border border-amber-200/80 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-300 flex items-center justify-center text-amber-700">
+                <Radio className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>Interactive Prayer Room</span>
+                  <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold uppercase">
+                    Voice Call
                   </span>
-                  <span className="text-[9px] text-amber-400/80">
-                    {isMicActive ? 'Speaking' : 'At the Altar'}
-                  </span>
-                </div>
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Like WhatsApp/Telegram group call — unmute anytime to pray aloud with the brethren.
+                </p>
               </div>
             </div>
 
-            {/* Speaking Status Banner */}
-            <div className="mt-4 mb-6">
-              <p className="text-base sm:text-lg font-medium text-slate-200">
-                {isMicActive 
-                  ? "You are currently speaking to the room" 
-                  : isPlayingAudio 
-                    ? "Prayer sanctuary audio is active — tune your spirit into prayer" 
-                    : "Tap 'Tune In & Listen' below to hear prayer & atmosphere"}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                "For where two or three are gathered together in my name, there am I in the midst of them." — Matthew 18:20
-              </p>
-            </div>
-
-            {/* Audio Stage Controls */}
-            <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-md">
-              {/* Main Listen Audio Button */}
+            {/* Moderator Action: Mute All */}
+            {canModerate && (
               <button
-                onClick={toggleAudio}
-                className={`flex-1 min-w-[150px] px-5 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
-                  isPlayingAudio
-                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/25'
-                    : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40'
-                }`}
+                onClick={handleAdminMuteAll}
+                className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Silence all participants"
               >
-                {isPlayingAudio ? (
-                  <>
-                    <Volume2 className="w-4 h-4 animate-pulse" />
-                    <span>Mute Audio</span>
-                  </>
-                ) : (
-                  <>
-                    <VolumeX className="w-4 h-4" />
-                    <span>Tune In & Listen</span>
-                  </>
-                )}
+                <MicOff className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Mute All</span>
               </button>
-
-              {/* Raise Hand Button */}
-              <button
-                onClick={toggleRaiseHand}
-                className={`px-4 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                  isHandRaised
-                    ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-300'
-                    : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                }`}
-                title="Request to pray aloud"
-              >
-                <Hand className={`w-4 h-4 ${isHandRaised ? 'text-emerald-400 animate-bounce' : ''}`} />
-                <span>{isHandRaised ? 'Hand Raised' : 'Raise Hand'}</span>
-              </button>
-
-              {/* Pastor / Leader Mic Button */}
-              {isAdmin && (
-                <button
-                  onClick={toggleMic}
-                  className={`px-4 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                    isMicActive
-                      ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/30'
-                      : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40'
-                  }`}
-                  title="Lead in Prayer (Broadcast Microphone)"
-                >
-                  {isMicActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  <span>{isMicActive ? 'Mute Mic' : 'Lead Prayer'}</span>
-                </button>
-              )}
-            </div>
-
-            {/* Volume Slider Bar */}
-            {isPlayingAudio && (
-              <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-                <VolumeX className="w-3.5 h-3.5" />
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={volume}
-                  onChange={handleVolumeChange}
-                  className="w-28 accent-amber-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer"
-                />
-                <Volume2 className="w-3.5 h-3.5" />
-              </div>
             )}
           </div>
 
-          {/* Quick Intercession Action Bar */}
-          <div className="rounded-xl bg-slate-900/60 border border-amber-500/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-slate-300">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Need prayer for healing, deliverance, or breakthrough?</span>
+          {/* Participants Call Grid (Like WhatsApp / Telegram Group Call) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+            {participants.map((p) => {
+              const isMe = p.id === userId;
+              const isThisSpeaking = isMe ? isSpeaking : p.isSpeaking;
+              const isThisMuted = isMe ? isMuted : p.isMuted;
+              const initials = p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P';
+
+              return (
+                <div
+                  key={p.id}
+                  className={`relative rounded-2xl p-4 flex flex-col items-center justify-between text-center transition-all duration-300 bg-white border ${
+                    isThisSpeaking
+                      ? 'border-emerald-500 shadow-md ring-2 ring-emerald-400/40'
+                      : 'border-slate-200/90 shadow-2xs hover:border-amber-300'
+                  }`}
+                >
+                  {/* Speaking Indicator Glow */}
+                  {isThisSpeaking && (
+                    <span className="absolute top-2.5 right-2.5 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                  )}
+
+                  {/* Top Action / Moderator Dropdown Trigger */}
+                  {canModerate && !isMe && (
+                    <div className="absolute top-2 left-2">
+                      <button
+                        onClick={() => setSelectedParticipantMenu(selectedParticipantMenu === p.id ? null : p.id)}
+                        className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                        title="Moderate Participant"
+                      >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Dropdown Menu for Admin */}
+                      {selectedParticipantMenu === p.id && (
+                        <div className="absolute left-0 mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs">
+                          <button
+                            onClick={() => handleAdminMute(p.id)}
+                            className="w-full px-3 py-2 text-slate-700 hover:bg-amber-50 hover:text-amber-900 flex items-center gap-2 cursor-pointer"
+                          >
+                            <MicOff className="w-3.5 h-3.5 text-red-500" />
+                            <span>Mute Mic</span>
+                          </button>
+                          {p.role !== 'admin' && p.role !== 'host' && (
+                            <button
+                              onClick={() => handleAdminSetRole(p.id, 'admin')}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-amber-50 hover:text-amber-900 flex items-center gap-2 cursor-pointer"
+                            >
+                              <Shield className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Make Admin</span>
+                            </button>
+                          )}
+                          {p.role === 'admin' && (
+                            <button
+                              onClick={() => handleAdminSetRole(p.id, 'intercessor')}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-amber-50 hover:text-amber-900 flex items-center gap-2 cursor-pointer"
+                            >
+                              <UserX className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Remove Admin</span>
+                            </button>
+                          )}
+                          <div className="h-px bg-slate-100 my-1" />
+                          <button
+                            onClick={() => handleAdminRemove(p.id)}
+                            className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                            <span>Eject from Call</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Avatar Circle with Sound Waves */}
+                  <div className="relative my-2">
+                    {/* Pulsing Ripple if Speaking */}
+                    {isThisSpeaking && (
+                      <div className="absolute inset-0 rounded-full border-2 border-emerald-400 animate-ping opacity-60" />
+                    )}
+
+                    <div className={`w-16 h-16 rounded-full bg-gradient-to-tr ${p.avatarColor || 'from-amber-500 to-amber-600'} text-white font-bold text-lg flex items-center justify-center shadow-md`}>
+                      {initials}
+                    </div>
+
+                    {/* Mic State Icon Badge */}
+                    <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] border-2 border-white shadow-xs ${
+                      isThisMuted ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white animate-pulse'
+                    }`}>
+                      {isThisMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                    </div>
+                  </div>
+
+                  {/* Name & Role Tag */}
+                  <div className="mt-2 w-full">
+                    <p className="text-xs font-bold text-slate-900 truncate">
+                      {p.name} {isMe && <span className="text-amber-600 font-semibold">(You)</span>}
+                    </p>
+                    <div className="mt-0.5 flex items-center justify-center">
+                      {p.role === 'host' ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded-full">
+                          <Crown className="w-2.5 h-2.5" /> Host
+                        </span>
+                      ) : p.role === 'admin' ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-100/80 px-1.5 py-0.5 rounded-full">
+                          <Shield className="w-2.5 h-2.5" /> Admin
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Intercessor
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Fast Prayer Actions & Tips */}
+          <div className="bg-white rounded-2xl p-4 border border-amber-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <span>Need prayer or intercession for your family, health, or breakthrough?</span>
             </div>
             <button
               onClick={() => setIsRequestModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 text-xs font-bold uppercase tracking-wider transition-all shadow-md"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
             >
               Submit Prayer Request
             </button>
           </div>
-
-          {/* Guidelines / Intercession Tips */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-400">
-            <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800">
-              <span className="font-semibold text-amber-300 block mb-1">1. Atmosphere</span>
-              Find a quiet place to pray without distractions. Let the presence of God fill your room.
-            </div>
-            <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800">
-              <span className="font-semibold text-amber-300 block mb-1">2. Agreement</span>
-              Type "Amen" in faith as prayer points are raised. There is power in united agreement.
-            </div>
-            <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800">
-              <span className="font-semibold text-amber-300 block mb-1">3. Intercession</span>
-              Pray for the nations, the church, families, and souls to be won for Jesus Christ.
-            </div>
-          </div>
         </div>
 
-        {/* Right Column: Live Prayer Chat & Amens */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-[600px] lg:h-auto rounded-2xl bg-slate-900/90 border border-amber-500/30 overflow-hidden shadow-xl">
+        {/* Right Column: Live Chat & Intercessory Stream */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-[560px] bg-white rounded-2xl border border-amber-200/80 shadow-xs overflow-hidden">
           
           {/* Chat Header */}
-          <div className="p-3.5 border-b border-amber-500/20 bg-[#090e1a] flex items-center justify-between">
+          <div className="p-3.5 border-b border-slate-100 bg-[#fdfcfb] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Live Prayer Stream</span>
+              <MessageSquare className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                Live Prayer Chat
+              </span>
             </div>
             <button
               onClick={() => setIsNamePromptOpen(true)}
-              className="text-[11px] text-amber-400 hover:underline flex items-center gap-1"
+              className="text-[11px] text-amber-700 hover:underline flex items-center gap-1 font-medium cursor-pointer"
             >
-              <span>{userName}</span>
-              <span className="text-slate-500">(change)</span>
+              <span>{userName || 'Set Name'}</span>
+              <span className="text-slate-400">(edit)</span>
             </button>
           </div>
 
-          {/* Chat Messages Feed */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-slate-700">
+          {/* Chat Feed */}
+          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#faf9f6]/40 scrollbar-thin scrollbar-thumb-slate-200">
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 text-xs">
-                <Flame className="w-8 h-8 text-slate-600 mb-2 animate-pulse" />
-                <p>The altar is open. Be the first to type an Amen or prayer point!</p>
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 text-xs">
+                <Flame className="w-8 h-8 text-amber-500/40 mb-2 animate-pulse" />
+                <p>The altar is live. Type an Amen or post a scripture to stand in agreement!</p>
               </div>
             ) : (
               messages.map((msg, idx) => {
@@ -561,8 +729,8 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
                 if (isSystem) {
                   return (
-                    <div key={msg.id || idx} className="my-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-                      <p className="text-[11px] font-medium text-amber-300">
+                    <div key={msg.id || idx} className="my-2 p-2 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                      <p className="text-[11px] font-semibold text-amber-900">
                         {msg.message}
                       </p>
                     </div>
@@ -571,17 +739,17 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
                 if (isPrayerRequest) {
                   return (
-                    <div key={msg.id || idx} className="p-2.5 rounded-lg bg-red-950/30 border border-red-500/30">
+                    <div key={msg.id || idx} className="p-3 rounded-xl bg-rose-50 border border-rose-200 shadow-2xs">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] font-bold text-red-300 flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-red-400" />
+                        <span className="text-[11px] font-bold text-rose-800 flex items-center gap-1">
+                          <Heart className="w-3 h-3 text-rose-500 fill-rose-500" />
                           {msg.user_name}
                         </span>
-                        <span className="text-[9px] text-slate-500">
+                        <span className="text-[9px] text-slate-400">
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-200 italic">{msg.message}</p>
+                      <p className="text-xs text-rose-950 font-medium italic">{msg.message}</p>
                     </div>
                   );
                 }
@@ -589,14 +757,14 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                 return (
                   <div key={msg.id || idx} className="flex flex-col gap-0.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-amber-300">
+                      <span className="text-[11px] font-bold text-slate-800">
                         {msg.user_name}
                       </span>
-                      <span className="text-[9px] text-slate-500">
+                      <span className="text-[9px] text-slate-400">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/60 text-xs text-slate-200">
+                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-800 shadow-2xs">
                       {msg.message}
                     </div>
                   </div>
@@ -606,50 +774,50 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Quick Reaction Bar */}
-          <div className="px-3 py-2 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-1.5">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Tap Amen:</span>
-            <div className="flex items-center gap-1">
+          {/* Quick Reaction Taps */}
+          <div className="px-3 py-2 border-t border-slate-100 bg-white flex items-center justify-between gap-1.5">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Tap:</span>
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => triggerReaction('amen')}
-                className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-amber-500/20 text-xs border border-slate-700 hover:border-amber-500/40 transition-all flex items-center gap-1"
+                className="px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-xs border border-amber-200 transition-all flex items-center gap-1 cursor-pointer"
                 title="Tap Amen"
               >
                 <span>🙏</span>
-                <span className="text-[10px] font-bold text-amber-300">Amen</span>
+                <span className="text-[10px] font-bold text-amber-900">Amen</span>
               </button>
               <button
                 onClick={() => triggerReaction('fire')}
-                className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-orange-500/20 text-xs border border-slate-700 hover:border-orange-500/40 transition-all flex items-center gap-1"
+                className="px-2.5 py-1 rounded-full bg-orange-50 hover:bg-orange-100 text-xs border border-orange-200 transition-all flex items-center gap-1 cursor-pointer"
                 title="Tap Fire"
               >
                 <span>🔥</span>
-                <span className="text-[10px] font-bold text-orange-300">Fire</span>
+                <span className="text-[10px] font-bold text-orange-900">Fire</span>
               </button>
               <button
                 onClick={() => triggerReaction('praise')}
-                className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-blue-500/20 text-xs border border-slate-700 hover:border-blue-500/40 transition-all flex items-center gap-1"
+                className="px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-xs border border-blue-200 transition-all flex items-center gap-1 cursor-pointer"
                 title="Tap Glory"
               >
                 <span>🕊️</span>
-                <span className="text-[10px] font-bold text-blue-300">Glory</span>
+                <span className="text-[10px] font-bold text-blue-900">Glory</span>
               </button>
             </div>
           </div>
 
-          {/* Chat Message Input Form */}
-          <form onSubmit={handleSendMessage} className="p-3 border-t border-amber-500/20 bg-[#080d19] flex items-center gap-2">
+          {/* Chat Message Input */}
+          <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-[#fdfcfb] flex items-center gap-2">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={`Write a prayer point, ${userName}...`}
-              className="flex-1 bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+              placeholder={`Write in the chat, ${userName || 'intercessor'}...`}
+              className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
             <button
               type="submit"
               disabled={!newMessage.trim()}
-              className="p-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold transition-all"
+              className="p-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold transition-all cursor-pointer shadow-sm"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -657,36 +825,97 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         </div>
       </div>
 
-      {/* Change Name Modal */}
+      {/* Floating Bottom Group Call Control Dock (WhatsApp / Telegram Style) */}
+      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4">
+        <div className="bg-white/95 backdrop-blur-xl border border-amber-200/90 rounded-2xl shadow-xl px-4 py-3 flex items-center justify-between gap-3">
+          
+          {/* Main Microphone Button */}
+          <button
+            onClick={toggleMic}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm ${
+              !isMuted
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50'
+                : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+            }`}
+          >
+            {!isMuted ? (
+              <>
+                <Mic className="w-4 h-4 animate-pulse" />
+                <span>Microphone Unmuted</span>
+              </>
+            ) : (
+              <>
+                <MicOff className="w-4 h-4" />
+                <span>Tap to Unmute Mic</span>
+              </>
+            )}
+          </button>
+
+          {/* Sanctuary Audio Stream Toggle */}
+          <button
+            onClick={toggleAudio}
+            className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              isPlayingAudio
+                ? 'bg-amber-100 border-amber-300 text-amber-900'
+                : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+            }`}
+            title="Toggle 24/7 Atmosphere Instrumentals"
+          >
+            {isPlayingAudio ? <Volume2 className="w-4 h-4 text-amber-700" /> : <VolumeX className="w-4 h-4" />}
+            <span className="hidden sm:inline">Atmosphere</span>
+          </button>
+
+          {/* Call Connection Toggle */}
+          <button
+            onClick={toggleCallMembership}
+            className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              isInCall
+                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200'
+                : 'bg-emerald-100 border-emerald-300 text-emerald-800'
+            }`}
+            title={isInCall ? 'Disconnect from Call' : 'Join Voice Call'}
+          >
+            {isInCall ? <PhoneOff className="w-4 h-4" /> : <PhoneCall className="w-4 h-4" />}
+            <span className="hidden sm:inline">{isInCall ? 'Leave' : 'Join'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Name Input Prompt Modal */}
       {isNamePromptOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/30 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">Set Your Display Name</h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Enter the name that will show when you type in the prayer room or raise your hand:
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-amber-200 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-1">
+              Join the 24/7 Prayer Call
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Enter your name so brethren can recognize you when you speak or pray:
             </p>
             <form onSubmit={handleSaveName} className="space-y-4">
               <input
                 type="text"
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
-                placeholder="e.g. Sis. Faith or Bro. Emmanuel"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-500"
+                placeholder="e.g. Pastor David, Sis. Faith, Emmanuel"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:outline-none focus:border-amber-500"
                 autoFocus
+                required
               />
               <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsNamePromptOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
-                >
-                  Cancel
-                </button>
+                {userName && (
+                  <button
+                    type="button"
+                    onClick={() => setIsNamePromptOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm cursor-pointer"
                 >
-                  Save Name
+                  Enter Altar Call
                 </button>
               </div>
             </form>
@@ -696,43 +925,41 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
       {/* Prayer Request Modal */}
       {isRequestModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h3 className="text-sm font-bold text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <Heart className="w-4 h-4 text-amber-400" />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-amber-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center gap-2">
+              <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
               <span>Submit Prayer Request</span>
             </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Our intercessors will stand in agreement with you before the Lord right now.
+            <p className="text-xs text-slate-500 mb-4">
+              Our intercessors will stand in agreement with you right now before the Lord.
             </p>
 
             {requestSubmitted ? (
               <div className="py-8 flex flex-col items-center justify-center text-center">
-                <CheckCircle className="w-12 h-12 text-emerald-400 mb-2 animate-bounce" />
-                <p className="text-sm font-bold text-white">Prayer Request Received!</p>
-                <p className="text-xs text-slate-400 mt-1">Standing in agreement with you in Jesus' name.</p>
+                <CheckCircle className="w-12 h-12 text-emerald-500 mb-2 animate-bounce" />
+                <p className="text-sm font-bold text-slate-900">Prayer Request Received!</p>
+                <p className="text-xs text-slate-500 mt-1">Standing in holy agreement with you in Jesus' name.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmitPrayerRequest} className="space-y-4">
-                <div>
-                  <textarea
-                    value={requestText}
-                    onChange={(e) => setRequestText(e.target.value)}
-                    placeholder="Describe your prayer need (healing, family, breakthrough, direction)..."
-                    rows={4}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500"
-                    required
-                  />
-                </div>
+                <textarea
+                  value={requestText}
+                  onChange={(e) => setRequestText(e.target.value)}
+                  placeholder="Describe your prayer need (healing, family, breakthrough, spiritual growth)..."
+                  rows={4}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
+                  required
+                />
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    id="anon"
+                    id="anon-light"
                     checked={isAnonymous}
                     onChange={(e) => setIsAnonymous(e.target.checked)}
-                    className="accent-amber-500"
+                    className="accent-amber-600 cursor-pointer"
                   />
-                  <label htmlFor="anon" className="text-xs text-slate-400 cursor-pointer">
+                  <label htmlFor="anon-light" className="text-xs text-slate-600 cursor-pointer">
                     Keep request anonymous
                   </label>
                 </div>
@@ -740,13 +967,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                   <button
                     type="button"
                     onClick={() => setIsRequestModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                    className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                    className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm cursor-pointer"
                   >
                     Send to Altar
                   </button>
@@ -758,75 +985,74 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       )}
 
       {/* Admin Host Settings Modal */}
-      {isSettingsOpen && isAdmin && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-amber-300 uppercase tracking-wider flex items-center gap-2">
-                <Shield className="w-4 h-4 text-amber-400" />
-                <span>Altar Host Controls</span>
+      {isSettingsOpen && canModerate && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-amber-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wider flex items-center gap-2">
+                <Shield className="w-4 h-4 text-amber-600" />
+                <span>Altar Room Controls</span>
               </h3>
-              <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-white text-xs">
+              <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-700 text-xs cursor-pointer">
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleSaveSettings} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Current Prayer Topic / Focus Banner
                 </label>
                 <input
                   type="text"
                   value={editTopic}
                   onChange={(e) => setEditTopic(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Pinned Scripture of the Hour
                 </label>
                 <input
                   type="text"
                   value={editScripture}
                   onChange={(e) => setEditScripture(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  24/7 Atmospheric Worship / Prayer Audio Stream URL
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  24/7 Background Atmosphere Soaking Stream URL
                 </label>
                 <input
                   type="url"
                   value={editAudioUrl}
                   onChange={(e) => setEditAudioUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Direct MP3 stream URL or peaceful soaking worship stream to play when ministers are offline.
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Continuous instrumental or worship stream for ambient atmosphere.
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsSettingsOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm cursor-pointer"
                 >
-                  Update Altar State
+                  Save Altar Settings
                 </button>
               </div>
             </form>
