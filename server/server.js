@@ -3875,6 +3875,11 @@ Joshua's Generation`;
       'X-Accel-Buffering': 'no'
     });
 
+    const streamUserId = parsedUrl.searchParams.get('userId');
+    if (streamUserId) {
+      res._streamUserId = streamUserId;
+    }
+
     prayerRoomClients.add(res);
 
     // Send initial handshake with active count
@@ -3896,6 +3901,15 @@ Joshua's Generation`;
       clearInterval(heartbeat);
       prayerRoomClients.delete(res);
       broadcastPrayerRoomEvent('count', { count: Math.max(prayerRoomClients.size, 15) });
+
+      // When browser tab is closed, immediately remove participant from call
+      if (res._streamUserId && prayerCallParticipants.has(String(res._streamUserId))) {
+        prayerCallParticipants.delete(String(res._streamUserId));
+        broadcastPrayerRoomEvent('call_roster', {
+          participants: Array.from(prayerCallParticipants.values()),
+          leftUserId: res._streamUserId
+        });
+      }
     });
     return;
   }
@@ -4389,8 +4403,12 @@ Joshua's Generation`;
   // 10. POST /api/prayer-room/call/leave (User leaves the group prayer call)
   if (pathname === '/api/prayer-room/call/leave' && method === 'POST') {
     try {
-      const body = await getJsonBody(req);
-      const { id } = body;
+      let id = parsedUrl.searchParams.get('id');
+      try {
+        const body = await getJsonBody(req);
+        if (body && body.id) id = body.id;
+      } catch (e) {}
+
       if (id && prayerCallParticipants.has(String(id))) {
         prayerCallParticipants.delete(String(id));
         broadcastPrayerRoomEvent('call_roster', {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, MicOff, Send, Heart, ArrowLeft, Shield, Users, Radio, 
   MessageSquare, MoreVertical, Crown, UserX, PhoneCall, PhoneOff, 
-  X, Sparkles, Trash2, Key, Smile, Volume2, VolumeX, Music, Link2, Play, Pause, Sliders, Plus, Image as ImageIcon, Upload, Camera, Pin
+  X, Sparkles, Trash2, Key, Smile, Volume2, VolumeX, Music, Link2, Play, Pause, Sliders, Plus, Image as ImageIcon, Upload, Camera, Pin, Edit3
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { 
@@ -209,6 +209,32 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   }, [userRole]);
 
+  // Helper to immediately apply volume & unMute to live players
+  const applyLiveVolume = (customLocalVol?: number, customMasterVol?: number, customMuted?: boolean) => {
+    const isMuted = customMuted !== undefined ? customMuted : isLocalAudioMuted;
+    const lVol = customLocalVol !== undefined ? customLocalVol : localAudioVolume;
+    const mVol = customMasterVol !== undefined 
+      ? customMasterVol 
+      : (typeof roomState.background_audio_volume === 'number' ? roomState.background_audio_volume : 30);
+    const effective = isMuted ? 0 : Math.max(0, Math.min(100, Math.round((lVol / 100) * mVol)));
+
+    if (ytPlayerRef.current) {
+      try {
+        if (isMuted) {
+          if (typeof ytPlayerRef.current.mute === 'function') ytPlayerRef.current.mute();
+        } else {
+          if (typeof ytPlayerRef.current.unMute === 'function') ytPlayerRef.current.unMute();
+          if (typeof ytPlayerRef.current.setVolume === 'function') ytPlayerRef.current.setVolume(effective);
+        }
+      } catch (e) {}
+    }
+
+    if (bgAudioRef.current) {
+      bgAudioRef.current.muted = isMuted;
+      bgAudioRef.current.volume = effective / 100;
+    }
+  };
+
   // Background Audio / YouTube Audio-Only Player Synchronization
   useEffect(() => {
     const url = (roomState.background_audio_url || '').trim();
@@ -242,14 +268,23 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             },
             events: {
               onReady: (evt: any) => {
-                evt.target.setVolume(effectiveVol);
-                if (shouldPlay) {
-                  evt.target.playVideo();
-                }
+                try {
+                  if (!isLocalAudioMuted) {
+                    evt.target.unMute();
+                  }
+                  evt.target.setVolume(effectiveVol);
+                  if (shouldPlay) {
+                    evt.target.playVideo();
+                  }
+                } catch (e) {}
               },
               onStateChange: (evt: any) => {
-                if (evt.data === 0 && shouldPlay) {
-                  evt.target.playVideo();
+                // 0 is ENDED -> Loop back and keep playing forever
+                if (evt.data === 0) {
+                  try {
+                    evt.target.seekTo(0, true);
+                    evt.target.playVideo();
+                  } catch (e) {}
                 }
               }
             }
@@ -262,7 +297,12 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             } catch (e) {}
           }
           try {
-            ytPlayerRef.current.setVolume(effectiveVol);
+            if (isLocalAudioMuted) {
+              if (typeof ytPlayerRef.current.mute === 'function') ytPlayerRef.current.mute();
+            } else {
+              if (typeof ytPlayerRef.current.unMute === 'function') ytPlayerRef.current.unMute();
+              if (typeof ytPlayerRef.current.setVolume === 'function') ytPlayerRef.current.setVolume(effectiveVol);
+            }
             if (shouldPlay) {
               ytPlayerRef.current.playVideo();
             } else {
@@ -280,7 +320,15 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         if (bgAudioRef.current.src !== url) {
           bgAudioRef.current.src = url;
         }
+        bgAudioRef.current.loop = true;
+        bgAudioRef.current.muted = isLocalAudioMuted;
         bgAudioRef.current.volume = effectiveVol / 100;
+        bgAudioRef.current.onended = () => {
+          try {
+            bgAudioRef.current!.currentTime = 0;
+            bgAudioRef.current!.play().catch(() => {});
+          } catch (e) {}
+        };
         if (shouldPlay) {
           bgAudioRef.current.play().catch(() => {});
         } else {
@@ -303,6 +351,33 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     isLocalAudioMuted,
     localAudioVolume
   ]);
+
+  // Instrumental Infinite Looping Watchdog
+  useEffect(() => {
+    const url = (roomState.background_audio_url || '').trim();
+    const ytId = extractYouTubeId(url);
+    const shouldPlay = Boolean(roomState.is_audio_playing && !isLocalAudioMuted && url);
+
+    const interval = setInterval(() => {
+      if (!shouldPlay) return;
+      if (ytId && ytPlayerRef.current && typeof ytPlayerRef.current.getPlayerState === 'function') {
+        try {
+          const st = ytPlayerRef.current.getPlayerState();
+          // If video ended (0) or stopped while it should be playing
+          if (st === 0) {
+            ytPlayerRef.current.seekTo(0, true);
+            ytPlayerRef.current.playVideo();
+          }
+        } catch (e) {}
+      } else if (!ytId && bgAudioRef.current) {
+        if (bgAudioRef.current.paused && bgAudioRef.current.src) {
+          bgAudioRef.current.play().catch(() => {});
+        }
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [roomState.background_audio_url, roomState.is_audio_playing, isLocalAudioMuted]);
 
   const canModerate = userRole === 'host' || userRole === 'admin';
 
@@ -481,12 +556,27 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           alert('You have been removed from the live prayer room by an administrator for violating altar rules.');
         }
       }
-    });
+    }, userId);
 
     return () => {
       unsubscribe();
       stopMic();
       prayerRoomStore.leaveCall(userId);
+    };
+  }, [userId]);
+
+  // Immediately leave call when browser tab or window is closed
+  useEffect(() => {
+    const handleTabClose = () => {
+      if (userId) {
+        prayerRoomStore.leaveCall(userId);
+      }
+    };
+    window.addEventListener('beforeunload', handleTabClose);
+    window.addEventListener('pagehide', handleTabClose);
+    return () => {
+      window.removeEventListener('beforeunload', handleTabClose);
+      window.removeEventListener('pagehide', handleTabClose);
     };
   }, [userId]);
 
@@ -587,6 +677,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
+  // Leave call cleanly without popping up the profile modal
   const handleLeaveCall = () => {
     stopMic();
     if (roomRef.current) {
@@ -596,10 +687,27 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     setIsSpeaking(false);
     setIsInCall(false);
     prayerRoomStore.leaveCall(userId);
-    // Automatically open Name and Photo Modal as requested
-    setNameInput(userName);
-    setAvatarInput(userAvatar);
-    setIsNamePromptOpen(true);
+  };
+
+  // Rejoin call using existing name/photo
+  const handleJoinCall = () => {
+    if (isKicked) {
+      alert('You have been removed from this live prayer call by an administrator for violating rules.');
+      return;
+    }
+    if (!userName.trim()) {
+      setNameInput('');
+      setAvatarInput('');
+      setIsNamePromptOpen(true);
+      return;
+    }
+    setIsInCall(true);
+    const colorIndex = Math.abs(userName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % AVATAR_COLORS.length;
+    prayerRoomStore.joinCall(userId, userName, userRole, AVATAR_COLORS[colorIndex], userAvatar).then(roster => {
+      if (roster && roster.length > 0) {
+        setParticipants(roster);
+      }
+    });
   };
 
   const handleOpenProfileModal = () => {
@@ -698,6 +806,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     const next = !isLocalAudioMuted;
     setIsLocalAudioMuted(next);
     localStorage.setItem('jg_prayer_local_audio_muted', String(next));
+    applyLiveVolume(undefined, undefined, next);
     if (!next) {
       unlockAllAudio();
     }
@@ -706,6 +815,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const handleLocalVolumeChange = (vol: number) => {
     setLocalAudioVolume(vol);
     localStorage.setItem('jg_prayer_local_audio_volume', String(vol));
+    applyLiveVolume(vol, undefined, false);
   };
 
   // Altar Admin & Host Master Audio Controls
@@ -714,6 +824,9 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     try {
       await prayerRoomStore.updateState({ is_audio_playing: nextPlaying });
       setRoomState(prev => ({ ...prev, is_audio_playing: nextPlaying }));
+      if (nextPlaying) {
+        unlockAllAudio();
+      }
     } catch (e: any) {
       alert(e.message || 'Failed to toggle altar background audio');
     }
@@ -722,6 +835,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const handleUpdateRoomVolume = async (newVol: number) => {
     try {
       setRoomState(prev => ({ ...prev, background_audio_volume: newVol }));
+      applyLiveVolume(undefined, newVol, undefined);
       await prayerRoomStore.updateState({ background_audio_volume: newVol });
     } catch (e: any) {
       console.warn('Failed to update room master volume:', e);
@@ -1075,6 +1189,17 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
               <span>{participants.length || 1} in call</span>
             </div>
 
+            {/* Edit Profile / Details Button */}
+            <button
+              onClick={handleOpenProfileModal}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-full text-xs font-semibold cursor-pointer transition-colors"
+              title="Edit your name & profile photo"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-royal-blue-600" />
+              <span className="hidden sm:inline">Edit Details</span>
+              <span className="sm:hidden">Edit</span>
+            </button>
+
             {/* Moderator Secret Key Button */}
             {!canModerate && (
               <button
@@ -1138,28 +1263,28 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         </div>
       </div>
 
-      {/* Altar Background Worship Sound Bar */}
+      {/* Altar Background Worship Instrumental Bar */}
       <div className="bg-gradient-to-r from-royal-blue-900 via-royal-blue-800 to-indigo-950 text-white border-b border-royal-blue-700/60 px-3 py-2 sm:px-6 shadow-xs">
-        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
           {/* Status & Now Playing Indicator */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all ${
               roomState.is_audio_playing && roomState.background_audio_url
                 ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-xs'
                 : 'bg-white/10 text-white/60'
             }`}>
-              <Music className={`w-3.5 h-3.5 ${roomState.is_audio_playing && roomState.background_audio_url && !isLocalAudioMuted ? 'animate-pulse' : ''}`} />
+              <Music className={`w-4 h-4 ${roomState.is_audio_playing && roomState.background_audio_url && !isLocalAudioMuted ? 'animate-pulse' : ''}`} />
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-bold tracking-wider uppercase text-amber-300">
-                  Background Worship Sound
+                  Background Worship Instrumental
                 </span>
                 {roomState.is_audio_playing && roomState.background_audio_url ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Playing {isLocalAudioMuted ? '(Muted for you)' : 'Live'}
+                    Playing {isLocalAudioMuted ? '(Muted for you)' : 'Live • Auto-Loop'}
                   </span>
                 ) : roomState.background_audio_url ? (
                   <span className="text-[10px] text-white/60 bg-white/10 px-2 py-0.5 rounded-full">
@@ -1167,77 +1292,77 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                   </span>
                 ) : (
                   <span className="text-[10px] text-white/50 italic">
-                    (No music link set)
+                    (No instrumental set)
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-white/70 truncate max-w-xs sm:max-w-md">
                 {roomState.background_audio_url
                   ? extractYouTubeId(roomState.background_audio_url)
-                    ? 'YouTube Worship Stream (Playing audio-only in background)'
-                    : 'Direct Audio Stream (Playing in background)'
-                  : 'Host can add a YouTube or audio link to play peaceful worship in the background.'}
+                    ? 'YouTube Worship Stream (Playing audio-only in background • Auto-Looping)'
+                    : 'Direct Audio Stream (Playing in background • Auto-Looping)'
+                  : 'Host can add a YouTube or audio link to play peaceful worship instrumental in the background.'}
               </p>
             </div>
           </div>
 
           {/* Sound Controls Section */}
-          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap ml-auto">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap justify-between md:justify-end">
             {/* 1. Individual Listener Personal Mute / Volume (Device Only - does NOT affect others) */}
-            <div className="flex items-center gap-1.5 bg-black/25 backdrop-blur-xs px-2.5 py-1 rounded-xl border border-white/10 text-xs">
+            <div className="flex items-center gap-2 bg-black/30 backdrop-blur-xs px-2.5 py-1.5 rounded-xl border border-white/10 text-xs">
               <button
                 type="button"
                 onClick={handleToggleLocalAudio}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
                   isLocalAudioMuted
                     ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50 hover:bg-rose-500/40'
                     : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
                 }`}
-                title={isLocalAudioMuted ? 'Unmute background music on your device' : 'Mute background music on your device only'}
+                title={isLocalAudioMuted ? 'Unmute instrumental on your device' : 'Mute instrumental on your device only'}
               >
                 {isLocalAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                <span>{isLocalAudioMuted ? 'My Sound: OFF' : 'My Sound: ON'}</span>
+                <span>{isLocalAudioMuted ? 'My Instrumental: OFF' : 'My Instrumental: ON'}</span>
               </button>
 
               {!isLocalAudioMuted && (
-                <div className="flex items-center gap-1.5 pl-1.5 border-l border-white/15">
+                <div className="flex items-center gap-1.5 pl-2 border-l border-white/15">
                   <input
                     type="range"
                     min="0"
                     max="100"
                     value={localAudioVolume}
                     onChange={(e) => handleLocalVolumeChange(Number(e.target.value))}
-                    className="w-14 sm:w-20 h-1.5 accent-amber-400 bg-white/20 rounded-lg cursor-pointer"
-                    title={`Personal Volume: ${localAudioVolume}%`}
+                    className="w-16 sm:w-20 h-1.5 accent-amber-400 bg-white/20 rounded-lg cursor-pointer"
+                    title={`Personal Instrumental Volume: ${localAudioVolume}%`}
                   />
-                  <span className="text-[10px] text-white/70 font-mono w-7 text-right">
+                  <span className="text-[10px] text-white/80 font-mono w-7 text-right">
                     {localAudioVolume}%
                   </span>
                 </div>
               )}
             </div>
 
-            {/* 2. Admin & Host Master Room Sound Controls */}
+            {/* 2. Admin & Host Room Instrumental Controls */}
             {canModerate && (
-              <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-400/30 px-2.5 py-1 rounded-xl text-xs">
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-400/30 px-2.5 py-1.5 rounded-xl text-xs">
                 {/* Master Sound On/Off for all participants */}
                 <button
                   type="button"
                   onClick={handleToggleRoomAudio}
                   disabled={!roomState.background_audio_url}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     roomState.is_audio_playing
                       ? 'bg-amber-400 text-royal-blue-950 hover:bg-amber-300 shadow-xs'
                       : 'bg-white/15 text-white hover:bg-white/25'
                   }`}
-                  title={roomState.is_audio_playing ? 'Turn off background sound for everyone' : 'Turn on background sound for everyone'}
+                  title={roomState.is_audio_playing ? 'Turn off instrumental for everyone' : 'Turn on instrumental for everyone'}
                 >
                   {roomState.is_audio_playing ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
-                  <span>{roomState.is_audio_playing ? 'Room Sound: ON' : 'Room Sound: OFF'}</span>
+                  <span>{roomState.is_audio_playing ? 'Room Instrumental: ON' : 'Room Instrumental: OFF'}</span>
                 </button>
 
                 {/* Master Volume Slider (Admins & Host) */}
-                <div className="hidden sm:flex items-center gap-1.5 pl-1.5 border-l border-amber-400/20">
+                <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-amber-400/20">
                   <span className="text-[10px] text-amber-200 font-medium">Master:</span>
                   <input
                     type="range"
@@ -1246,7 +1371,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                     value={typeof roomState.background_audio_volume === 'number' ? roomState.background_audio_volume : 30}
                     onChange={(e) => handleUpdateRoomVolume(Number(e.target.value))}
                     className="w-14 sm:w-16 h-1.5 accent-amber-300 bg-white/20 rounded-lg cursor-pointer"
-                    title={`Room Master Volume: ${roomState.background_audio_volume ?? 30}%`}
+                    title={`Room Master Instrumental Volume: ${roomState.background_audio_volume ?? 30}%`}
                   />
                   <span className="text-[10px] text-amber-200 font-mono">
                     {roomState.background_audio_volume ?? 30}%
@@ -1260,8 +1385,8 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
               <button
                 type="button"
                 onClick={handleOpenMusicModal}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-gold-500 hover:bg-gold-400 text-royal-blue-950 font-bold text-xs rounded-xl border border-gold-300 shadow-xs cursor-pointer transition-all hover:scale-105"
-                title="Change background music link (Host only)"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gold-500 hover:bg-gold-400 text-royal-blue-950 font-bold text-xs rounded-xl border border-gold-300 shadow-xs cursor-pointer transition-all hover:scale-105"
+                title="Change background instrumental link (Host only)"
               >
                 <Link2 className="w-3.5 h-3.5" />
                 <span>{roomState.background_audio_url ? 'Change Music Link' : '+ Add Music Link'}</span>
@@ -1390,6 +1515,18 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                     </span>
                   )}
                 </div>
+
+                {isMe && (
+                  <button
+                    type="button"
+                    onClick={handleOpenProfileModal}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-royal-blue-600 hover:text-royal-blue-800 bg-royal-blue-50 hover:bg-royal-blue-100 px-2 py-0.5 rounded-full border border-royal-blue-200 cursor-pointer transition-colors shadow-2xs"
+                    title="Change your name or profile photo"
+                  >
+                    <Edit3 className="w-2.5 h-2.5 text-royal-blue-600" />
+                    <span>Edit Details</span>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -1464,7 +1601,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             </button>
           ) : (
             <button
-              onClick={handleOpenProfileModal}
+              onClick={handleJoinCall}
               className="py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer transition-colors bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 min-w-0"
               title="Join Call"
             >
@@ -2112,7 +2249,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                 type="submit"
                 className="w-full py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
               >
-                {userName ? 'Save & Join Prayer Room' : 'Join Prayer Room'}
+                {isInCall ? 'Save Details' : userName ? 'Save & Join Prayer Room' : 'Join Prayer Room'}
               </button>
             </form>
           </div>

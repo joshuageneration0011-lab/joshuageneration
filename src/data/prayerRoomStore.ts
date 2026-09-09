@@ -133,13 +133,17 @@ export const prayerRoomStore = {
     }
   },
 
-  async leaveCall(id: string): Promise<void> {
+  leaveCall(id: string): void {
     try {
-      await fetch(`${API_BASE_URL}/api/prayer-room/call/leave`, {
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        navigator.sendBeacon(`${API_BASE_URL}/api/prayer-room/call/leave?id=${encodeURIComponent(id)}`);
+      }
+      fetch(`${API_BASE_URL}/api/prayer-room/call/leave?id=${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      });
+        body: JSON.stringify({ id }),
+        keepalive: true
+      }).catch(() => {});
     } catch (e) {
       // ignore
     }
@@ -417,13 +421,16 @@ export const prayerRoomStore = {
     onForceMuteAll?: (exceptId?: string) => void;
     onUserEjected?: (targetId: string) => void;
     onSignal?: (signal: { type: string; fromId: string; toId: string; payload: any }) => void;
-  }): () => void {
+  }, userId?: string): () => void {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
 
     const connect = () => {
       try {
-        eventSource = new EventSource(`${API_BASE_URL}/api/prayer-room/stream`);
+        const streamUrl = userId 
+          ? `${API_BASE_URL}/api/prayer-room/stream?userId=${encodeURIComponent(userId)}`
+          : `${API_BASE_URL}/api/prayer-room/stream`;
+        eventSource = new EventSource(streamUrl);
 
         eventSource.onmessage = (event) => {
           try {
