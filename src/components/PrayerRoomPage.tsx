@@ -38,8 +38,11 @@ const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
-  ]
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
+  ],
+  iceCandidatePoolSize: 10
 };
 
 export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
@@ -89,7 +92,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     active_speakers: []
   });
 
-  // Audio & WebRTC Refs
+  // Audio & WebRTC Refs & States
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -97,6 +100,44 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const remoteAudioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+  const initiatedPeersRef = useRef<Set<string>>(new Set());
+  const [remoteAudioStreams, setRemoteAudioStreams] = useState<Array<{ id: string; stream: MediaStream }>>([]);
+
+  const isChatOpenRef = useRef(isChatOpen);
+  useEffect(() => {
+    isChatOpenRef.current = isChatOpen;
+  }, [isChatOpen]);
+
+  // Mobile Audio Hardware & Autoplay Unlocker
+  const unlockAllAudio = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+          audioContextRef.current = new AudioCtx();
+        }
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(() => {});
+        }
+        // Play a silent buffer to unlock iOS Safari / WebKit audio session
+        try {
+          const buffer = audioContextRef.current.createBuffer(1, 1, 22050);
+          const source = audioContextRef.current.createBufferSource();
+          source.buffer = buffer;
+          source.connect(audioContextRef.current.destination);
+          source.start(0);
+        } catch (e) {}
+      }
+    } catch (e) {}
+
+    // Resume all remote audio elements
+    document.querySelectorAll('audio').forEach(el => {
+      if (el.srcObject) {
+        el.play().catch(() => {});
+      }
+    });
+  };
 
   // Check if authenticated admin
   useEffect(() => {
@@ -119,11 +160,25 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnectionsRef.current.set(targetUserId, pc);
 
-    // Attach local audio track if we have one
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => {
-        pc?.addTrack(track, mediaStreamRef.current!);
-      });
+    // ALWAYS pre-add bidirectional audio transceiver.
+    // This pre-negotiates m=audio in the SDP so replaceTrack immediately streams audio without renegotiation!
+    try {
+      const transceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
+      if (mediaStreamRef.current) {
+        const liveTrack = mediaStreamRef.current.getAudioTracks()[0];
+        if (liveTrack && liveTrack.readyState === 'live') {
+          transceiver.sender.replaceTrack(liveTrack).catch(err => {
+            console.warn('[WebRTC] Initial replaceTrack error:', err);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[WebRTC] addTransceiver fallback:', err);
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => {
+          pc?.addTrack(track, mediaStreamRef.current!);
+        });
+      }
     }
 
     // ICE Candidate exchange
@@ -135,19 +190,36 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
     // Incoming Remote Audio Track
     pc.ontrack = (event) => {
+      console.log(`[WebRTC] Incoming track from peer ${targetUserId}:`, event.track.kind);
+      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+
+      // Render via React DOM audio elements
+      setRemoteAudioStreams(prev => {
+        const filtered = prev.filter(item => item.id !== targetUserId);
+        return [...filtered, { id: targetUserId, stream }];
+      });
+
+      // Also maintain standalone HTMLAudioElement as secondary guaranteed output
       let audioEl = remoteAudioElsRef.current.get(targetUserId);
       if (!audioEl) {
         audioEl = document.createElement('audio');
+        audioEl.id = `remote-audio-${targetUserId}`;
         audioEl.autoplay = true;
+        audioEl.volume = 1.0;
+        audioEl.setAttribute('playsinline', 'true');
+        audioEl.setAttribute('webkit-playsinline', 'true');
         (audioEl as any).playsInline = true;
         document.body.appendChild(audioEl);
         remoteAudioElsRef.current.set(targetUserId, audioEl);
       }
-      audioEl.srcObject = event.streams[0];
-      audioEl.play().catch(() => {});
+      audioEl.srcObject = stream;
+      audioEl.play().catch(e => {
+        console.warn(`[WebRTC] Autoplay pending user gesture for ${targetUserId}:`, e);
+      });
     };
 
     pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC] Peer ${targetUserId} state: ${pc?.connectionState}`);
       if (pc?.connectionState === 'disconnected' || pc?.connectionState === 'failed' || pc?.connectionState === 'closed') {
         const audioEl = remoteAudioElsRef.current.get(targetUserId);
         if (audioEl) {
@@ -156,7 +228,10 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           audioEl.remove();
           remoteAudioElsRef.current.delete(targetUserId);
         }
+        setRemoteAudioStreams(prev => prev.filter(item => item.id !== targetUserId));
         peerConnectionsRef.current.delete(targetUserId);
+        initiatedPeersRef.current.delete(targetUserId);
+        pendingCandidatesRef.current.delete(targetUserId);
       }
     };
 
@@ -166,6 +241,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const initiateCallToPeer = async (targetUserId: string) => {
     try {
       const pc = getOrCreatePeerConnection(targetUserId);
+      if (initiatedPeersRef.current.has(targetUserId) && (pc.connectionState === 'connected' || pc.connectionState === 'connecting')) {
+        return;
+      }
+      if (pc.signalingState !== 'stable') {
+        return;
+      }
+      initiatedPeersRef.current.add(targetUserId);
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false
@@ -186,14 +268,38 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
       if (type === 'offer') {
         await pc.setRemoteDescription(new RTCSessionDescription(payload));
+        
+        // Drain pending ICE candidates for this peer
+        const pending = pendingCandidatesRef.current.get(fromId) || [];
+        for (const cand of pending) {
+          await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+        }
+        pendingCandidatesRef.current.delete(fromId);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         prayerRoomStore.sendSignal('answer', userId, fromId, answer);
       } else if (type === 'answer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(payload));
+        if (pc.signalingState === 'have-local-offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(payload));
+          
+          // Drain pending ICE candidates for this peer
+          const pending = pendingCandidatesRef.current.get(fromId) || [];
+          for (const cand of pending) {
+            await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+          }
+          pendingCandidatesRef.current.delete(fromId);
+        }
       } else if (type === 'ice') {
         if (payload) {
-          await pc.addIceCandidate(new RTCIceCandidate(payload)).catch(() => {});
+          if (pc.remoteDescription && pc.remoteDescription.type) {
+            await pc.addIceCandidate(new RTCIceCandidate(payload)).catch(() => {});
+          } else {
+            if (!pendingCandidatesRef.current.has(fromId)) {
+              pendingCandidatesRef.current.set(fromId, []);
+            }
+            pendingCandidatesRef.current.get(fromId)!.push(payload);
+          }
         }
       }
     } catch (err) {
@@ -201,7 +307,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
-  // Connect & Sync
+  // Connect & Sync (Stable across chat drawer opening/closing)
   useEffect(() => {
     prayerRoomStore.getState().then(res => {
       setRoomState(res.state);
@@ -218,7 +324,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     const unsubscribe = prayerRoomStore.subscribeToEvents({
       onMessage: (msg) => {
         setMessages(prev => [...prev, msg]);
-        if (!isChatOpen) {
+        if (!isChatOpenRef.current) {
           setUnreadChatCount(prev => prev + 1);
         }
       },
@@ -244,10 +350,10 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           setUserRole(me.role);
         }
 
-        // Establish WebRTC peer connection to all other participants
+        // Establish WebRTC peer connection to other participants
         roster.forEach(p => {
           if (p.id !== userId) {
-            // Tie-breaker: lexicographically smaller ID initiates offer
+            // Lexicographically smaller ID initiates offer
             if (userId < p.id) {
               initiateCallToPeer(p.id);
             }
@@ -300,10 +406,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         el.remove();
       });
       remoteAudioElsRef.current.clear();
+      setRemoteAudioStreams([]);
       peerConnectionsRef.current.forEach(pc => pc.close());
       peerConnectionsRef.current.clear();
+      initiatedPeersRef.current.clear();
+      pendingCandidatesRef.current.clear();
     };
-  }, [userId, isChatOpen]);
+  }, [userId]);
 
   // Join call once name is known
   useEffect(() => {
@@ -337,13 +446,22 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
   const handleForceUnmuted = () => {
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getAudioTracks().forEach(t => { t.enabled = true; });
-      setIsMuted(false);
-      prayerRoomStore.updateMicState(userId, false, false);
-      alert('A moderator has unmuted your microphone.');
-    } else {
-      toggleMic();
+      const track = mediaStreamRef.current.getAudioTracks()[0];
+      if (track && track.readyState === 'live') {
+        track.enabled = true;
+        peerConnectionsRef.current.forEach(pc => {
+          const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio' || s.track === null);
+          if (audioSender) {
+            audioSender.replaceTrack(track).catch(() => {});
+          }
+        });
+        setIsMuted(false);
+        prayerRoomStore.updateMicState(userId, false, false);
+        alert('A moderator has unmuted your microphone.');
+        return;
+      }
     }
+    toggleMic();
   };
 
   // Toggle Mic (Phone & Desktop WebRTC Audio)
@@ -353,13 +471,11 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       return;
     }
 
-    // Unlock all remote audio elements on user interaction (Required by mobile browsers)
-    remoteAudioElsRef.current.forEach(el => {
-      el.play().catch(() => {});
-    });
+    // Unlock phone audio output on user tap
+    unlockAllAudio();
 
     if (!isMuted) {
-      // Muting
+      // Muting: Keep connection active, mute audio track
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
       }
@@ -367,10 +483,12 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       setIsSpeaking(false);
       prayerRoomStore.updateMicState(userId, true, false);
     } else {
-      // Unmuting
+      // Unmuting: Acquire mic if needed and route to all active peer transceivers
       try {
         let stream = mediaStreamRef.current;
-        if (!stream || stream.getAudioTracks().length === 0 || stream.getAudioTracks()[0].readyState === 'ended') {
+        const hasLiveTrack = stream && stream.getAudioTracks().length > 0 && stream.getAudioTracks()[0].readyState === 'live';
+
+        if (!hasLiveTrack) {
           stream = await navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
@@ -379,29 +497,38 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             }
           });
           mediaStreamRef.current = stream;
-
-          // Connect tracks to all active peer connections
-          stream.getAudioTracks().forEach(track => {
-            peerConnectionsRef.current.forEach(pc => {
-              const senders = pc.getSenders();
-              const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-              if (audioSender) {
-                audioSender.replaceTrack(track);
-              } else {
-                pc.addTrack(track, stream!);
-              }
-            });
-          });
-        } else {
-          stream.getAudioTracks().forEach(t => { t.enabled = true; });
         }
 
-        // Setup Web Audio Analyser for speaking volume detection
-        if (!audioContextRef.current) {
-          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-          audioContextRef.current = audioCtx;
-          const source = audioCtx.createMediaStreamSource(stream);
-          const analyser = audioCtx.createAnalyser();
+        const micTrack = stream.getAudioTracks()[0];
+        if (micTrack) {
+          micTrack.enabled = true;
+
+          // Connect / swap mic track into every peer connection's audio sender
+          peerConnectionsRef.current.forEach(pc => {
+            const senders = pc.getSenders();
+            const audioSender = senders.find(s => s.track?.kind === 'audio' || s.track === null);
+            if (audioSender) {
+              audioSender.replaceTrack(micTrack).catch(err => {
+                console.warn('[WebRTC] replaceTrack warning on unmute:', err);
+              });
+            } else {
+              pc.addTrack(micTrack, stream!);
+            }
+          });
+        }
+
+        // Setup Web Audio Analyser for volume detection
+        const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+          audioContextRef.current = new AudioCtxClass();
+        }
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(() => {});
+        }
+
+        if (!analyserRef.current) {
+          const source = audioContextRef.current.createMediaStreamSource(stream);
+          const analyser = audioContextRef.current.createAnalyser();
           analyser.fftSize = 256;
           source.connect(analyser);
           analyserRef.current = analyser;
@@ -422,7 +549,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             sum += dataArray[i];
           }
           const average = sum / dataArray.length;
-          const isNowSpeaking = average > 16;
+          const isNowSpeaking = average > 14;
 
           if (isNowSpeaking !== lastSpeakingState) {
             lastSpeakingState = isNowSpeaking;
@@ -433,9 +560,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           animationFrameRef.current = requestAnimationFrame(checkVolume);
         };
 
-        checkVolume();
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        animationFrameRef.current = requestAnimationFrame(checkVolume);
       } catch (err) {
-        alert('Could not access microphone. Please check your microphone permissions.');
+        console.error('Mic access error:', err);
+        alert('Could not access microphone. Please check your phone or browser microphone permissions.');
       }
     }
   };
@@ -581,7 +712,30 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-900 flex flex-col relative font-sans">
+    <div 
+      className="min-h-screen bg-slate-50 text-gray-900 flex flex-col relative font-sans"
+      onClickCapture={unlockAllAudio}
+      onTouchStartCapture={unlockAllAudio}
+    >
+      {/* Hidden Audio Elements for Remote Participants */}
+      <div className="hidden" aria-hidden="true">
+        {remoteAudioStreams.map(item => (
+          <audio
+            key={item.id}
+            id={`remote-audio-elem-${item.id}`}
+            autoPlay
+            playsInline
+            ref={el => {
+              if (el) {
+                if (el.srcObject !== item.stream) {
+                  el.srcObject = item.stream;
+                }
+                el.play().catch(() => {});
+              }
+            }}
+          />
+        ))}
+      </div>
       {/* Floating Reactions */}
       <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
         {reactions.map(r => (
