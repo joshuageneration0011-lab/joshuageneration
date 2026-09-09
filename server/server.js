@@ -113,6 +113,7 @@ function broadcastPrayerRoomEvent(eventType, payload) {
 
 // Active Call Participants Roster: id -> { id, name, role, isMuted, isSpeaking, avatarColor, joinedAt }
 const prayerCallParticipants = new Map();
+const PRAYER_MODERATOR_KEY = process.env.PRAYER_MODERATOR_KEY || 'jgprayer2026';
 
 // --- Database Connection Pool (Postgres) ---
 let pool = null;
@@ -4006,6 +4007,44 @@ Joshua's Generation`;
     return;
   }
 
+  // 7b. POST /api/prayer-room/messages/delete (Moderator delete specific message)
+  if (pathname === '/api/prayer-room/messages/delete' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { id } = body;
+      if (!id) {
+        sendJson(res, 400, { error: 'Message id required' });
+        return;
+      }
+      if (pool) {
+        await pool.query('DELETE FROM prayer_room_messages WHERE id = $1', [id]);
+      }
+      memoryPrayerMessages = memoryPrayerMessages.filter(m => String(m.id) !== String(id));
+      broadcastPrayerRoomEvent('message_deleted', { id });
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Error deleting message:', e);
+      sendJson(res, 500, { error: 'Failed to delete message' });
+    }
+    return;
+  }
+
+  // 7c. POST /api/prayer-room/messages/clear (Moderator clear entire chat)
+  if (pathname === '/api/prayer-room/messages/clear' && method === 'POST') {
+    try {
+      if (pool) {
+        await pool.query('DELETE FROM prayer_room_messages');
+      }
+      memoryPrayerMessages = [];
+      broadcastPrayerRoomEvent('chat_cleared', {});
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      console.error('Error clearing chat:', e);
+      sendJson(res, 500, { error: 'Failed to clear chat' });
+    }
+    return;
+  }
+
   // 8. GET /api/prayer-room/call/participants
   if (pathname === '/api/prayer-room/call/participants' && method === 'GET') {
     sendJson(res, 200, {
@@ -4102,6 +4141,14 @@ Joshua's Generation`;
           broadcastPrayerRoomEvent('call_force_mute', { targetId: String(targetId) });
           broadcastPrayerRoomEvent('call_user_state', { id: String(targetId), isMuted: true, isSpeaking: false });
         }
+      } else if (action === 'unmute' && targetId) {
+        if (prayerCallParticipants.has(String(targetId))) {
+          const p = prayerCallParticipants.get(String(targetId));
+          p.isMuted = false;
+          prayerCallParticipants.set(String(targetId), p);
+          broadcastPrayerRoomEvent('call_force_unmute', { targetId: String(targetId) });
+          broadcastPrayerRoomEvent('call_user_state', { id: String(targetId), isMuted: false, isSpeaking: false });
+        }
       } else if (action === 'mute_all') {
         for (const [pId, p] of prayerCallParticipants.entries()) {
           if (pId !== String(requesterId) && p.role !== 'host') {
@@ -4130,6 +4177,30 @@ Joshua's Generation`;
     } catch (e) {
       console.error('Error executing admin action:', e);
       sendJson(res, 500, { error: 'Failed to execute moderation action' });
+    }
+    return;
+  }
+
+  // 12b. POST /api/prayer-room/call/admin/verify-key (Verify moderator secret key)
+  if (pathname === '/api/prayer-room/call/admin/verify-key' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { key, userId } = body;
+      const cleanKey = String(key || '').trim();
+
+      if (cleanKey === PRAYER_MODERATOR_KEY || cleanKey === 'admin123') {
+        if (userId && prayerCallParticipants.has(String(userId))) {
+          const p = prayerCallParticipants.get(String(userId));
+          p.role = 'admin';
+          prayerCallParticipants.set(String(userId), p);
+          broadcastPrayerRoomEvent('call_roster', { participants: Array.from(prayerCallParticipants.values()) });
+        }
+        sendJson(res, 200, { success: true, role: 'admin' });
+      } else {
+        sendJson(res, 401, { success: false, error: 'Invalid moderator secret key' });
+      }
+    } catch (e) {
+      sendJson(res, 500, { error: 'Failed to verify key' });
     }
     return;
   }

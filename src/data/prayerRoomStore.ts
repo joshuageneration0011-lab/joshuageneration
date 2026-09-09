@@ -2,7 +2,8 @@ export interface PrayerMessage {
   id: number | string;
   user_name: string;
   message: string;
-  type: 'message' | 'prayer_request' | 'amen' | 'announcement';
+  type: 'message' | 'prayer_request' | 'amen' | 'announcement' | 'sticker';
+  sticker?: string;
   created_at: string;
 }
 
@@ -35,10 +36,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
   ? import.meta.env.VITE_API_BASE_URL
   : (import.meta.env.DEV ? 'http://localhost:5001' : '');
 
-function getAdminToken(): string | null {
-  return localStorage.getItem('jg_admin_token');
-}
-
 export const prayerRoomStore = {
   async getState(): Promise<{ state: PrayerRoomState; activeCount: number }> {
     try {
@@ -46,22 +43,21 @@ export const prayerRoomStore = {
       if (!res.ok) throw new Error('Failed to fetch state');
       return await res.json();
     } catch (e) {
-      console.warn('Using offline fallback prayer room state:', e);
       return {
         state: {
           current_topic: '24/7 Global Prayer Altar',
           scripture: '1 Thessalonians 5:17 — Pray without ceasing.',
           is_live: true,
-          background_audio_url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-peace-112191.mp3',
+          background_audio_url: '',
           active_speakers: []
         },
-        activeCount: 15
+        activeCount: 12
       };
     }
   },
 
   async updateState(newState: Partial<PrayerRoomState>): Promise<boolean> {
-    const token = getAdminToken();
+    const token = localStorage.getItem('jg_admin_token');
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/state`, {
         method: 'POST',
@@ -73,12 +69,11 @@ export const prayerRoomStore = {
       });
       return res.ok;
     } catch (e) {
-      console.error('Failed to update room state:', e);
       return false;
     }
   },
 
-  // --- GROUP VOICE CALL ROSTER & CONTROLS ---
+  // --- CALL ROSTER & MODERATION ---
 
   async getCallParticipants(): Promise<CallParticipant[]> {
     try {
@@ -102,7 +97,6 @@ export const prayerRoomStore = {
       const data = await res.json();
       return data.participants || [];
     } catch (e) {
-      console.error('Join call error:', e);
       return [];
     }
   },
@@ -132,7 +126,7 @@ export const prayerRoomStore = {
   },
 
   async executeAdminAction(
-    action: 'mute' | 'mute_all' | 'set_role' | 'remove',
+    action: 'mute' | 'unmute' | 'mute_all' | 'set_role' | 'remove',
     targetId?: string,
     role?: 'host' | 'admin' | 'intercessor',
     requesterId?: string
@@ -145,7 +139,20 @@ export const prayerRoomStore = {
       });
       return res.ok;
     } catch (e) {
-      console.error('Admin action error:', e);
+      return false;
+    }
+  },
+
+  async verifyModeratorKey(key: string, userId: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/call/admin/verify-key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, userId })
+      });
+      const data = await res.json();
+      return res.ok && data.success;
+    } catch (e) {
       return false;
     }
   },
@@ -162,7 +169,7 @@ export const prayerRoomStore = {
     }
   },
 
-  // --- MESSAGES & REACTIONS ---
+  // --- MESSAGES & CHAT MODERATION ---
 
   async getMessages(): Promise<PrayerMessage[]> {
     try {
@@ -171,24 +178,21 @@ export const prayerRoomStore = {
       const data = await res.json();
       return data.messages || [];
     } catch (e) {
-      return [
-        {
-          id: 1,
-          user_name: 'Joshua Generation Altar',
-          message: 'Welcome to the 24/7 Group Prayer Altar. Unmute your mic to pray or declare scriptures!',
-          type: 'announcement',
-          created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-        }
-      ];
+      return [];
     }
   },
 
-  async sendMessage(userName: string, message: string, type: 'message' | 'prayer_request' | 'amen' = 'message'): Promise<PrayerMessage | null> {
+  async sendMessage(
+    userName: string,
+    message: string,
+    type: 'message' | 'prayer_request' | 'amen' | 'sticker' = 'message',
+    sticker?: string
+  ): Promise<PrayerMessage | null> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_name: userName, message, type })
+        body: JSON.stringify({ user_name: userName, message, type, sticker })
       });
       if (!res.ok) throw new Error('Failed to post message');
       const data = await res.json();
@@ -199,8 +203,35 @@ export const prayerRoomStore = {
         user_name: userName,
         message,
         type,
+        sticker,
         created_at: new Date().toISOString()
       };
+    }
+  },
+
+  async deleteMessage(id: number | string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async clearMessages(): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages/clear`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
     }
   },
 
@@ -212,31 +243,21 @@ export const prayerRoomStore = {
         body: JSON.stringify({ type, user_name: userName || 'Intercessor' })
       });
     } catch (e) {
-      // Ignored for fast optimistic reaction display
-    }
-  },
-
-  async submitPrayerRequest(name: string, request: string, isAnonymous: boolean): Promise<boolean> {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/prayer-room/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, request, is_anonymous: isAnonymous })
-      });
-      return res.ok;
-    } catch (e) {
-      return true;
+      // Ignored
     }
   },
 
   subscribeToEvents(callbacks: {
     onMessage?: (msg: PrayerMessage) => void;
+    onMessageDeleted?: (id: number | string) => void;
+    onChatCleared?: () => void;
     onReaction?: (reaction: ReactionEvent) => void;
     onStateUpdate?: (state: PrayerRoomState) => void;
     onCountUpdate?: (count: number) => void;
     onCallRoster?: (participants: CallParticipant[]) => void;
     onUserState?: (data: { id: string; isMuted: boolean; isSpeaking: boolean }) => void;
     onForceMute?: (targetId: string) => void;
+    onForceUnmute?: (targetId: string) => void;
     onForceMuteAll?: (exceptId?: string) => void;
     onUserEjected?: (targetId: string) => void;
     onSignal?: (signal: { type: string; fromId: string; toId: string; payload: any }) => void;
@@ -253,6 +274,10 @@ export const prayerRoomStore = {
             const data = JSON.parse(event.data);
             if (data.type === 'message' && callbacks.onMessage) {
               callbacks.onMessage(data.message);
+            } else if (data.type === 'message_deleted' && callbacks.onMessageDeleted) {
+              callbacks.onMessageDeleted(data.id);
+            } else if (data.type === 'chat_cleared' && callbacks.onChatCleared) {
+              callbacks.onChatCleared();
             } else if (data.type === 'reaction' && callbacks.onReaction) {
               callbacks.onReaction({
                 id: `${Date.now()}-${Math.random()}`,
@@ -270,6 +295,8 @@ export const prayerRoomStore = {
               callbacks.onUserState({ id: data.id, isMuted: data.isMuted, isSpeaking: data.isSpeaking });
             } else if (data.type === 'call_force_mute' && callbacks.onForceMute) {
               callbacks.onForceMute(data.targetId);
+            } else if (data.type === 'call_force_unmute' && callbacks.onForceUnmute) {
+              callbacks.onForceUnmute(data.targetId);
             } else if (data.type === 'call_force_mute_all' && callbacks.onForceMuteAll) {
               callbacks.onForceMuteAll(data.exceptId);
             } else if (data.type === 'call_user_ejected' && callbacks.onUserEjected) {

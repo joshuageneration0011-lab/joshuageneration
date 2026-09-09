@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, MicOff, Send, Heart, ArrowLeft, Shield, Users, Radio, 
   MessageSquare, MoreVertical, Crown, UserX, PhoneCall, PhoneOff, 
-  X, Sparkles
+  X, Sparkles, Trash2, Key, Smile, Volume2
 } from 'lucide-react';
 import { prayerRoomStore, type PrayerMessage, type PrayerRoomState, type CallParticipant, type ReactionEvent } from '@/data/prayerRoomStore';
 import { api } from '@/utils/api';
@@ -21,6 +21,27 @@ const AVATAR_COLORS = [
   'bg-cyan-700'
 ];
 
+const STICKERS = [
+  { id: 'amen', emoji: '🙏', label: 'POWERFUL AMEN', color: 'from-amber-500 to-amber-600 text-white' },
+  { id: 'fire', emoji: '🔥', label: 'HOLY GHOST FIRE', color: 'from-orange-500 to-red-600 text-white' },
+  { id: 'spirit', emoji: '🕊️', label: 'THE HOLY SPIRIT', color: 'from-blue-500 to-cyan-600 text-white' },
+  { id: 'lion', emoji: '🦁', label: 'LION OF JUDAH', color: 'from-amber-600 to-yellow-600 text-white' },
+  { id: 'crown', emoji: '👑', label: 'KING OF KINGS', color: 'from-yellow-500 to-amber-600 text-white' },
+  { id: 'sword', emoji: '⚔️', label: 'SWORD OF SPIRIT', color: 'from-slate-700 to-slate-900 text-white' },
+  { id: 'bible', emoji: '📖', label: 'RHEMA WORD', color: 'from-indigo-600 to-blue-700 text-white' },
+  { id: 'blood', emoji: '🩸', label: 'BLOOD OF JESUS', color: 'from-red-600 to-rose-700 text-white' },
+  { id: 'cross', emoji: '✝️', label: 'VICTORY IN CHRIST', color: 'from-royal-blue-600 to-indigo-700 text-white' },
+  { id: 'trumpet', emoji: '🎺', label: 'SHOUT OF PRAISE', color: 'from-amber-500 to-orange-600 text-white' }
+];
+
+const RTC_CONFIG: RTCConfiguration = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ]
+};
+
 export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   // Current User Identity
   const [userId] = useState(() => {
@@ -35,7 +56,9 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [userName, setUserName] = useState(() => localStorage.getItem('jg_prayer_user_name') || '');
   const [isNamePromptOpen, setIsNamePromptOpen] = useState(() => !localStorage.getItem('jg_prayer_user_name'));
   const [nameInput, setNameInput] = useState(() => localStorage.getItem('jg_prayer_user_name') || '');
-  const [userRole, setUserRole] = useState<'host' | 'admin' | 'intercessor'>('intercessor');
+  const [userRole, setUserRole] = useState<'host' | 'admin' | 'intercessor'>(() => {
+    return localStorage.getItem('jg_prayer_is_moderator') === 'true' ? 'admin' : 'intercessor';
+  });
 
   // Call & Participants
   const [participants, setParticipants] = useState<CallParticipant[]>([]);
@@ -44,8 +67,14 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [isInCall, setIsInCall] = useState(true);
   const [selectedParticipantMenu, setSelectedParticipantMenu] = useState<string | null>(null);
 
+  // Moderator Secret Key Modal
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [keyError, setKeyError] = useState('');
+
   // Chat & Drawer State
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [messages, setMessages] = useState<PrayerMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [reactions, setReactions] = useState<ReactionEvent[]>([]);
@@ -60,12 +89,14 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     active_speakers: []
   });
 
-  // Audio & Hardware Refs
+  // Audio & WebRTC Refs
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const remoteAudioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   // Check if authenticated admin
   useEffect(() => {
@@ -77,7 +108,100 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
   const canModerate = userRole === 'host' || userRole === 'admin';
 
-  // Load initial data & connect SSE stream
+  // --- WebRTC Multi-Peer Mesh Logic for Two-Way Audio ---
+
+  const getOrCreatePeerConnection = (targetUserId: string): RTCPeerConnection => {
+    let pc = peerConnectionsRef.current.get(targetUserId);
+    if (pc && pc.signalingState !== 'closed') {
+      return pc;
+    }
+
+    pc = new RTCPeerConnection(RTC_CONFIG);
+    peerConnectionsRef.current.set(targetUserId, pc);
+
+    // Attach local audio track if we have one
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => {
+        pc?.addTrack(track, mediaStreamRef.current!);
+      });
+    }
+
+    // ICE Candidate exchange
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        prayerRoomStore.sendSignal('ice', userId, targetUserId, event.candidate);
+      }
+    };
+
+    // Incoming Remote Audio Track
+    pc.ontrack = (event) => {
+      let audioEl = remoteAudioElsRef.current.get(targetUserId);
+      if (!audioEl) {
+        audioEl = document.createElement('audio');
+        audioEl.autoplay = true;
+        (audioEl as any).playsInline = true;
+        document.body.appendChild(audioEl);
+        remoteAudioElsRef.current.set(targetUserId, audioEl);
+      }
+      audioEl.srcObject = event.streams[0];
+      audioEl.play().catch(() => {});
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc?.connectionState === 'disconnected' || pc?.connectionState === 'failed' || pc?.connectionState === 'closed') {
+        const audioEl = remoteAudioElsRef.current.get(targetUserId);
+        if (audioEl) {
+          audioEl.pause();
+          audioEl.srcObject = null;
+          audioEl.remove();
+          remoteAudioElsRef.current.delete(targetUserId);
+        }
+        peerConnectionsRef.current.delete(targetUserId);
+      }
+    };
+
+    return pc;
+  };
+
+  const initiateCallToPeer = async (targetUserId: string) => {
+    try {
+      const pc = getOrCreatePeerConnection(targetUserId);
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false
+      });
+      await pc.setLocalDescription(offer);
+      prayerRoomStore.sendSignal('offer', userId, targetUserId, offer);
+    } catch (err) {
+      console.warn('Error creating WebRTC offer:', err);
+    }
+  };
+
+  const handleRemoteSignal = async (signal: { type: string; fromId: string; toId: string; payload: any }) => {
+    if (signal.toId !== userId) return;
+    const { fromId, type, payload } = signal;
+
+    try {
+      const pc = getOrCreatePeerConnection(fromId);
+
+      if (type === 'offer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(payload));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        prayerRoomStore.sendSignal('answer', userId, fromId, answer);
+      } else if (type === 'answer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(payload));
+      } else if (type === 'ice') {
+        if (payload) {
+          await pc.addIceCandidate(new RTCIceCandidate(payload)).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('Error handling remote WebRTC signal:', err);
+    }
+  };
+
+  // Connect & Sync
   useEffect(() => {
     prayerRoomStore.getState().then(res => {
       setRoomState(res.state);
@@ -98,6 +222,12 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           setUnreadChatCount(prev => prev + 1);
         }
       },
+      onMessageDeleted: (deletedId) => {
+        setMessages(prev => prev.filter(m => String(m.id) !== String(deletedId)));
+      },
+      onChatCleared: () => {
+        setMessages([]);
+      },
       onReaction: (reaction) => {
         setReactions(prev => [...prev.slice(-15), reaction]);
         setTimeout(() => {
@@ -113,6 +243,16 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         if (me && me.role && userRole !== 'host') {
           setUserRole(me.role);
         }
+
+        // Establish WebRTC peer connection to all other participants
+        roster.forEach(p => {
+          if (p.id !== userId) {
+            // Tie-breaker: lexicographically smaller ID initiates offer
+            if (userId < p.id) {
+              initiateCallToPeer(p.id);
+            }
+          }
+        });
       },
       onUserState: (data) => {
         setParticipants(prev => prev.map(p => {
@@ -127,6 +267,11 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           handleForceMuted();
         }
       },
+      onForceUnmute: (targetId) => {
+        if (targetId === userId) {
+          handleForceUnmuted();
+        }
+      },
       onForceMuteAll: (exceptId) => {
         if (exceptId !== userId && userRole !== 'host') {
           handleForceMuted();
@@ -138,6 +283,9 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           stopMic();
           alert('You have been removed from the prayer call.');
         }
+      },
+      onSignal: (signal) => {
+        handleRemoteSignal(signal);
       }
     });
 
@@ -145,6 +293,15 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       unsubscribe();
       stopMic();
       prayerRoomStore.leaveCall(userId);
+      // Clean up remote audio elements
+      remoteAudioElsRef.current.forEach(el => {
+        el.pause();
+        el.srcObject = null;
+        el.remove();
+      });
+      remoteAudioElsRef.current.clear();
+      peerConnectionsRef.current.forEach(pc => pc.close());
+      peerConnectionsRef.current.clear();
     };
   }, [userId, isChatOpen]);
 
@@ -169,53 +326,103 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   }, [messages, isChatOpen]);
 
   const handleForceMuted = () => {
-    stopMic();
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+    }
     setIsMuted(true);
     setIsSpeaking(false);
     prayerRoomStore.updateMicState(userId, true, false);
     alert('A moderator has muted your microphone.');
   };
 
-  // Toggle Mic
+  const handleForceUnmuted = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getAudioTracks().forEach(t => { t.enabled = true; });
+      setIsMuted(false);
+      prayerRoomStore.updateMicState(userId, false, false);
+      alert('A moderator has unmuted your microphone.');
+    } else {
+      toggleMic();
+    }
+  };
+
+  // Toggle Mic (Phone & Desktop WebRTC Audio)
   const toggleMic = async () => {
     if (!isInCall) {
       alert('Please reconnect to the call first.');
       return;
     }
 
+    // Unlock all remote audio elements on user interaction (Required by mobile browsers)
+    remoteAudioElsRef.current.forEach(el => {
+      el.play().catch(() => {});
+    });
+
     if (!isMuted) {
-      stopMic();
+      // Muting
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+      }
       setIsMuted(true);
       setIsSpeaking(false);
       prayerRoomStore.updateMicState(userId, true, false);
     } else {
+      // Unmuting
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaStreamRef.current = stream;
+        let stream = mediaStreamRef.current;
+        if (!stream || stream.getAudioTracks().length === 0 || stream.getAudioTracks()[0].readyState === 'ended') {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
+          mediaStreamRef.current = stream;
 
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        audioContextRef.current = audioCtx;
-        const source = audioCtx.createMediaStreamSource(stream);
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        source.connect(analyser);
-        analyserRef.current = analyser;
+          // Connect tracks to all active peer connections
+          stream.getAudioTracks().forEach(track => {
+            peerConnectionsRef.current.forEach(pc => {
+              const senders = pc.getSenders();
+              const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+              if (audioSender) {
+                audioSender.replaceTrack(track);
+              } else {
+                pc.addTrack(track, stream!);
+              }
+            });
+          });
+        } else {
+          stream.getAudioTracks().forEach(t => { t.enabled = true; });
+        }
+
+        // Setup Web Audio Analyser for speaking volume detection
+        if (!audioContextRef.current) {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          audioContextRef.current = audioCtx;
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 256;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+        }
 
         setIsMuted(false);
         prayerRoomStore.updateMicState(userId, false, false);
 
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        // Continuous volume check loop
+        const dataArray = new Uint8Array(analyserRef.current?.frequencyBinCount || 128);
         let lastSpeakingState = false;
 
         const checkVolume = () => {
-          if (!analyserRef.current) return;
+          if (!analyserRef.current || isMuted) return;
           analyserRef.current.getByteFrequencyData(dataArray);
           let sum = 0;
           for (let i = 0; i < dataArray.length; i++) {
             sum += dataArray[i];
           }
           const average = sum / dataArray.length;
-          const isNowSpeaking = average > 18;
+          const isNowSpeaking = average > 16;
 
           if (isNowSpeaking !== lastSpeakingState) {
             lastSpeakingState = isNowSpeaking;
@@ -228,7 +435,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
         checkVolume();
       } catch (err) {
-        alert('Could not access your microphone. Please check your browser audio permissions.');
+        alert('Could not access microphone. Please check your microphone permissions.');
       }
     }
   };
@@ -261,14 +468,19 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
-  // Admin Actions
+  // Moderator Actions
   const handleAdminMute = async (targetId: string) => {
     setSelectedParticipantMenu(null);
     await prayerRoomStore.executeAdminAction('mute', targetId, undefined, userId);
   };
 
+  const handleAdminUnmute = async (targetId: string) => {
+    setSelectedParticipantMenu(null);
+    await prayerRoomStore.executeAdminAction('unmute', targetId, undefined, userId);
+  };
+
   const handleAdminMuteAll = async () => {
-    if (confirm('Mute all other participants?')) {
+    if (confirm('Mute all other participants in the prayer room?')) {
       await prayerRoomStore.executeAdminAction('mute_all', undefined, undefined, userId);
     }
   };
@@ -280,18 +492,63 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
   const handleAdminRemove = async (targetId: string) => {
     setSelectedParticipantMenu(null);
-    if (confirm('Remove this person from the call?')) {
+    if (confirm('Remove this person from the prayer call?')) {
       await prayerRoomStore.executeAdminAction('remove', targetId, undefined, userId);
     }
   };
 
-  // Send Chat
+  // Delete message / Clear Chat
+  const handleDeleteMessage = async (msgId: string | number) => {
+    if (confirm('Delete this message for everyone?')) {
+      await prayerRoomStore.deleteMessage(msgId);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (confirm('Clear the entire prayer chat for everyone?')) {
+      await prayerRoomStore.clearMessages();
+    }
+  };
+
+  // Verify Moderator Secret Key
+  const handleVerifySecretKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setKeyError('');
+    if (!keyInput.trim()) return;
+
+    const success = await prayerRoomStore.verifyModeratorKey(keyInput.trim(), userId);
+    if (success) {
+      setUserRole('admin');
+      localStorage.setItem('jg_prayer_is_moderator', 'true');
+      setIsKeyModalOpen(false);
+      setKeyInput('');
+      alert('Moderator privileges granted! You now have full altar moderation powers.');
+    } else {
+      setKeyError('Invalid moderator secret key. Please check and try again.');
+    }
+  };
+
+  // Send Chat Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
     const text = newMessage.trim();
     setNewMessage('');
     const sent = await prayerRoomStore.sendMessage(userName || 'Intercessor', text, 'message');
+    if (sent) {
+      setMessages(prev => [...prev, sent]);
+    }
+  };
+
+  // Send Sticker
+  const handleSendSticker = async (sticker: typeof STICKERS[0]) => {
+    setShowStickerPicker(false);
+    const sent = await prayerRoomStore.sendMessage(
+      userName || 'Intercessor',
+      `${sticker.emoji} ${sticker.label}`,
+      'sticker',
+      sticker.id
+    );
     if (sent) {
       setMessages(prev => [...prev, sent]);
     }
@@ -370,7 +627,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                 </h1>
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-semibold text-emerald-600">24/7 LIVE</span>
+                  <span className="font-semibold text-emerald-600">LIVE AUDIO</span>
                 </div>
               </div>
             </div>
@@ -379,8 +636,20 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-royal-blue-50 border border-royal-blue-100 text-royal-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
               <Users className="w-3.5 h-3.5" />
-              <span>{participants.length || 1} in room</span>
+              <span>{participants.length || 1} in call</span>
             </div>
+
+            {/* Moderator Secret Key Button */}
+            {!canModerate && (
+              <button
+                onClick={() => setIsKeyModalOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-gold-700 border border-gold-200 rounded-full text-xs font-medium cursor-pointer transition-colors"
+                title="Enter Moderator Key"
+              >
+                <Key className="w-3.5 h-3.5 text-gold-600" />
+                <span className="hidden sm:inline">Mod Key</span>
+              </button>
+            )}
 
             {canModerate && (
               <button
@@ -437,14 +706,25 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                     </button>
 
                     {selectedParticipantMenu === p.id && (
-                      <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs font-medium">
-                        <button
-                          onClick={() => handleAdminMute(p.id)}
-                          className="w-full px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
-                        >
-                          <MicOff className="w-3.5 h-3.5 text-rose-500" />
-                          <span>Mute</span>
-                        </button>
+                      <div className="absolute right-0 mt-1 w-38 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-left text-xs font-medium">
+                        {isThisMuted ? (
+                          <button
+                            onClick={() => handleAdminUnmute(p.id)}
+                            className="w-full px-3 py-2 text-emerald-700 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer"
+                          >
+                            <Mic className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Unmute Mic</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleAdminMute(p.id)}
+                            className="w-full px-3 py-2 text-rose-700 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                          >
+                            <MicOff className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Mute Mic</span>
+                          </button>
+                        )}
+
                         {p.role !== 'admin' && p.role !== 'host' && (
                           <button
                             onClick={() => handleAdminSetRole(p.id, 'admin')}
@@ -468,7 +748,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                           className="w-full px-3 py-2 text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
                         >
                           <UserX className="w-3.5 h-3.5" />
-                          <span>Remove</span>
+                          <span>Eject</span>
                         </button>
                       </div>
                     )}
@@ -592,61 +872,135 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
               <MessageSquare className="w-4 h-4 text-royal-blue-600" />
               <h3 className="font-bold text-sm text-gray-900">Prayer Room Chat</h3>
             </div>
-            <button
-              onClick={() => setIsChatOpen(false)}
-              className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {canModerate && (
+                <button
+                  onClick={handleClearChat}
+                  className="text-[11px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                  title="Wipe chat history"
+                >
+                  Clear Chat
+                </button>
+              )}
+              {!canModerate && (
+                <button
+                  onClick={() => setIsKeyModalOpen(true)}
+                  className="text-[11px] text-gold-700 hover:underline font-semibold cursor-pointer flex items-center gap-0.5"
+                >
+                  <Key className="w-3 h-3" /> Mod Key
+                </button>
+              )}
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Messages Feed */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50 scrollbar-thin">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 text-xs">
-                <p>No messages yet. Send an Amen or prayer point!</p>
+                <p>No messages yet. Send a message, prayer point, or sticker!</p>
               </div>
             ) : (
-              messages.map((msg, idx) => (
-                <div key={msg.id || idx} className="flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-royal-blue-900">{msg.user_name}</span>
-                    <span className="text-gray-400">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+              messages.map((msg, idx) => {
+                const isSticker = msg.type === 'sticker' || !!msg.sticker;
+
+                return (
+                  <div key={msg.id || idx} className="flex flex-col gap-0.5 group">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-royal-blue-900">{msg.user_name}</span>
+                      <div className="flex items-center gap-1 text-gray-400">
+                        <span>
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {canModerate && (
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="text-gray-300 hover:text-rose-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            title="Delete message"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {isSticker ? (
+                      <div className="p-3 rounded-2xl bg-gradient-to-r from-royal-blue-50 to-gold-50 border border-royal-blue-100 shadow-xs inline-block max-w-[200px]">
+                        <div className="text-3xl mb-1">{msg.message.split(' ')[0]}</div>
+                        <p className="text-[10px] font-bold text-royal-blue-900 uppercase tracking-wider">
+                          {msg.message.substring(msg.message.indexOf(' ') + 1)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-800 shadow-2xs">
+                        {msg.message}
+                      </div>
+                    )}
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-800 shadow-2xs">
-                    {msg.message}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Quick Reaction Buttons */}
-          <div className="px-3 py-2 border-t border-gray-100 bg-white flex items-center justify-around">
+          {/* WhatsApp / Telegram Style Stickers Popup Grid */}
+          {showStickerPicker && (
+            <div className="p-3 bg-white border-t border-gray-200 grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {STICKERS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => handleSendSticker(s)}
+                  className={`p-2 rounded-xl bg-gradient-to-r ${s.color} flex items-center gap-2 cursor-pointer shadow-xs hover:scale-[1.02] transition-transform`}
+                >
+                  <span className="text-xl">{s.emoji}</span>
+                  <span className="text-[10px] font-bold leading-tight truncate">{s.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Quick Reaction Taps */}
+          <div className="px-3 py-2 border-t border-gray-100 bg-white flex items-center justify-between">
             <button
-              onClick={() => triggerReaction('amen')}
-              className="px-3 py-1 rounded-full bg-slate-100 hover:bg-gold-50 text-xs text-gray-700 hover:text-gold-900 flex items-center gap-1 cursor-pointer"
+              onClick={() => setShowStickerPicker(!showStickerPicker)}
+              className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
+                showStickerPicker
+                  ? 'bg-royal-blue-50 text-royal-blue-700 border-royal-blue-200'
+                  : 'text-gray-600 border-gray-200 hover:bg-gray-100'
+              }`}
             >
-              <span>🙏</span>
-              <span className="font-semibold">Amen</span>
+              <Smile className="w-4 h-4 text-gold-500" />
+              <span>Stickers</span>
             </button>
-            <button
-              onClick={() => triggerReaction('fire')}
-              className="px-3 py-1 rounded-full bg-slate-100 hover:bg-orange-50 text-xs text-gray-700 hover:text-orange-900 flex items-center gap-1 cursor-pointer"
-            >
-              <span>🔥</span>
-              <span className="font-semibold">Fire</span>
-            </button>
-            <button
-              onClick={() => triggerReaction('praise')}
-              className="px-3 py-1 rounded-full bg-slate-100 hover:bg-blue-50 text-xs text-gray-700 hover:text-blue-900 flex items-center gap-1 cursor-pointer"
-            >
-              <span>🕊️</span>
-              <span className="font-semibold">Glory</span>
-            </button>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => triggerReaction('amen')}
+                className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-gold-50 text-xs text-gray-700 hover:text-gold-900 flex items-center gap-1 cursor-pointer"
+              >
+                <span>🙏</span>
+                <span className="font-semibold text-[10px]">Amen</span>
+              </button>
+              <button
+                onClick={() => triggerReaction('fire')}
+                className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-orange-50 text-xs text-gray-700 hover:text-orange-900 flex items-center gap-1 cursor-pointer"
+              >
+                <span>🔥</span>
+                <span className="font-semibold text-[10px]">Fire</span>
+              </button>
+              <button
+                onClick={() => triggerReaction('praise')}
+                className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-50 text-xs text-gray-700 hover:text-blue-900 flex items-center gap-1 cursor-pointer"
+              >
+                <span>🕊️</span>
+                <span className="font-semibold text-[10px]">Glory</span>
+              </button>
+            </div>
           </div>
 
           {/* Chat Input */}
@@ -655,7 +1009,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type your message or prayer..."
+              placeholder="Type a prayer or message..."
               className="flex-1 bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-royal-blue-500"
             />
             <button
@@ -666,6 +1020,56 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
               <Send className="w-4 h-4" />
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Moderator Key Entry Modal */}
+      {isKeyModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <div className="w-10 h-10 rounded-full bg-amber-100 text-gold-700 flex items-center justify-center mb-3">
+              <Key className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900">
+              Moderator Secret Key
+            </h3>
+            <p className="text-xs text-gray-500 mt-1 mb-4">
+              Enter the altar secret key to gain full moderation powers (mute/unmute, clear chat, remove users):
+            </p>
+
+            {keyError && (
+              <p className="text-xs text-rose-600 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-200">
+                {keyError}
+              </p>
+            )}
+
+            <form onSubmit={handleVerifySecretKey} className="space-y-4">
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder="Enter secret key..."
+                className="w-full bg-slate-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-900 focus:outline-none focus:border-royal-blue-500"
+                autoFocus
+                required
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsKeyModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs text-gray-500 hover:text-gray-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 text-white font-bold text-xs shadow-sm cursor-pointer transition-colors"
+                >
+                  Activate Moderator
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
