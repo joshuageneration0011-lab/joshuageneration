@@ -4225,7 +4225,7 @@ Joshua's Generation`;
       const { identity, name, room = 'jg-247-prayer' } = body;
       
       const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://project-247-prayers-jg-22ebdx44.livekit.cloud';
-      const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APlpReTdJGd3Jac';
+      const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APIpReTdJGd3Jac';
       const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || 'eXCAoqsqLn1az1PV0NXxfFiID7hYbKUDaVjm7leS0jqA';
 
       const header = { alg: 'HS256', typ: 'JWT' };

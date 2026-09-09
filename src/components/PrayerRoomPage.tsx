@@ -313,8 +313,12 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
     if (!isMuted) {
       // Muting
-      if (room && room.localParticipant) {
-        await room.localParticipant.setMicrophoneEnabled(false);
+      try {
+        if (room && room.localParticipant) {
+          await room.localParticipant.setMicrophoneEnabled(false);
+        }
+      } catch (e) {
+        console.warn('[LiveKit] Mute warning:', e);
       }
       setIsMuted(true);
       setIsSpeaking(false);
@@ -322,6 +326,12 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     } else {
       // Unmuting
       try {
+        if (room && room.state !== 'connected') {
+          const data = await prayerRoomStore.getLiveKitToken(userId, userName || 'Intercessor');
+          if (data && data.token) {
+            await room.connect(data.url, data.token);
+          }
+        }
         if (room && room.localParticipant) {
           await room.localParticipant.setMicrophoneEnabled(true);
         }
