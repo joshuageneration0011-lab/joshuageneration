@@ -257,7 +257,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
     if (ytPlayerRef.current) {
       try {
-        if (isMutedEffective || effective === 0) {
+        if (isMutedEffective || effective <= 5) {
           if (typeof ytPlayerRef.current.mute === 'function') ytPlayerRef.current.mute();
         } else {
           if (typeof ytPlayerRef.current.unMute === 'function') ytPlayerRef.current.unMute();
@@ -1423,6 +1423,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                 </div>
               )}
             </div>
+
+            {/* YouTube Mobile Volume Helpful Note */}
+            {Boolean(extractYouTubeId(roomState.background_audio_url || '')) && !isLocalAudioMuted && (
+              <span className="sm:hidden text-[9px] text-amber-200/80 w-full block text-left pl-1">
+                💡 Tip on mobile: YouTube video audio level is controlled by your phone's volume buttons (or tap OFF to mute).
+              </span>
+            )}
 
             {/* 2. Admin & Host Room Instrumental Controls - Fully visible on Mobile Phones! */}
             {canModerate && (
