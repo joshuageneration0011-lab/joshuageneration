@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, MicOff, Send, Heart, ArrowLeft, Shield, Users, Radio, 
   MessageSquare, MoreVertical, Crown, UserX, PhoneCall, PhoneOff, 
-  X, Sparkles, Trash2, Key, Smile, Volume2, Plus, Image as ImageIcon, Upload, Camera
+  X, Sparkles, Trash2, Key, Smile, Volume2, Plus, Image as ImageIcon, Upload, Camera, Pin
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { 
@@ -82,6 +82,8 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   const [reactions, setReactions] = useState<ReactionEvent[]>([]);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [pinnedMessage, setPinnedMessage] = useState<PrayerMessage | null>(null);
+  const [isKicked, setIsKicked] = useState(false);
 
   // Custom Stickers State (WhatsApp / Telegram style)
   const [customStickers, setCustomStickers] = useState<CustomSticker[]>([]);
@@ -201,8 +203,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       setRoomState(res.state);
     });
 
-    prayerRoomStore.getMessages().then(msgs => {
-      setMessages(msgs);
+    prayerRoomStore.getMessages().then(res => {
+      if (res && res.messages) {
+        setMessages(res.messages);
+        if (res.pinned_message) {
+          setPinnedMessage(res.pinned_message);
+        }
+      }
     });
 
     prayerRoomStore.getStickers().then(stks => {
@@ -225,6 +232,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           setUnreadChatCount(prev => prev + 1);
         }
       },
+      onMessagePinned: (data) => {
+        if (data.is_pinned && data.message) {
+          setPinnedMessage(data.message);
+        } else {
+          setPinnedMessage(null);
+        }
+      },
       onNewSticker: (stk) => {
         setCustomStickers(prev => [stk, ...prev.filter(s => String(s.id) !== String(stk.id))]);
       },
@@ -233,9 +247,13 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
       },
       onMessageDeleted: (deletedId) => {
         setMessages(prev => prev.filter(m => String(m.id) !== String(deletedId)));
+        if (pinnedMessage && String(pinnedMessage.id) === String(deletedId)) {
+          setPinnedMessage(null);
+        }
       },
       onChatCleared: () => {
         setMessages([]);
+        setPinnedMessage(null);
       },
       onReaction: (reaction) => {
         setReactions(prev => [...prev.slice(-15), reaction]);
@@ -277,10 +295,14 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         }
       },
       onUserEjected: (targetId) => {
-        if (targetId === userId) {
+        if (targetId === userId || targetId === userName) {
           setIsInCall(false);
           stopMic();
-          alert('You have been removed from the prayer call.');
+          if (roomRef.current) {
+            roomRef.current.disconnect();
+          }
+          setIsKicked(true);
+          alert('You have been removed from the live prayer room by an administrator for violating altar rules.');
         }
       }
     });
@@ -337,6 +359,10 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
   // Toggle Mic (LiveKit Cloud Voice Audio)
   const toggleMic = async () => {
+    if (isKicked) {
+      alert('You have been removed from this live prayer call by an administrator for violating rules.');
+      return;
+    }
     if (!isInCall) {
       alert('Please reconnect to the call first.');
       return;
@@ -401,6 +427,10 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
   };
 
   const handleOpenProfileModal = () => {
+    if (isKicked) {
+      alert('You have been removed from this live prayer call by an administrator for violating rules.');
+      return;
+    }
     setNameInput(userName);
     setAvatarInput(userAvatar);
     setIsNamePromptOpen(true);
@@ -469,6 +499,42 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
+  const handleAdminKick = async (targetId: string, targetName?: string) => {
+    setSelectedParticipantMenu(null);
+    if (confirm(`Kick ${targetName || 'this user'} out from the live prayer room for violating rules?`)) {
+      await prayerRoomStore.executeAdminAction('kick', targetId, undefined, userId);
+    }
+  };
+
+  const handleAdminKickByName = async (nameToKick: string) => {
+    if (confirm(`Kick "${nameToKick}" out from the live session for violating rules?`)) {
+      const match = participants.find(p => p.name.toLowerCase() === nameToKick.toLowerCase());
+      if (match) {
+        await prayerRoomStore.executeAdminAction('kick', match.id, undefined, userId);
+      } else {
+        await prayerRoomStore.executeAdminAction('kick', nameToKick, undefined, userId);
+      }
+    }
+  };
+
+  // Pin / Unpin message (Admins only)
+  const handlePinMessage = async (msgId: string | number, shouldPin: boolean) => {
+    const modKey = localStorage.getItem('jg_prayer_moderator_key') || '';
+    const success = await prayerRoomStore.pinMessage(msgId, shouldPin, modKey);
+    if (success) {
+      if (shouldPin) {
+        const found = messages.find(m => String(m.id) === String(msgId));
+        if (found) {
+          setPinnedMessage({ ...found, is_pinned: true });
+        }
+      } else {
+        setPinnedMessage(null);
+      }
+    } else {
+      alert('Failed to update pinned message. Admin authorization required.');
+    }
+  };
+
   // Delete message / Clear Chat
   const handleDeleteMessage = async (msgId: string | number) => {
     if (confirm('Delete this message for everyone?')) {
@@ -502,22 +568,40 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
     }
   };
 
-  // Send Chat Message (Deduplicated against SSE broadcast)
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const LINK_REGEX = /(https?:\/\/|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|io|ng|co|app|me|xyz|top|site|link|info|live|tv|cc|biz|online|tech|store|shop|club|edu|gov)\b)/i;
+
+  // Send Chat Message (Click send button only, Enter key inserts newline without sending)
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!newMessage.trim() || isSendingMessage) return;
     const text = newMessage.trim();
+
+    // Check link restriction for non-admins
+    if (!canModerate && LINK_REGEX.test(text)) {
+      alert('Posting links in the prayer room chat is not allowed. Only altar administrators can post links.');
+      return;
+    }
+
     setNewMessage('');
     setIsSendingMessage(true);
 
     try {
-      const sent = await prayerRoomStore.sendMessage(userName || 'Intercessor', text, 'message');
+      const modKey = localStorage.getItem('jg_prayer_moderator_key') || '';
+      const sent = await prayerRoomStore.sendMessage(
+        userName || 'Intercessor',
+        text,
+        'message',
+        undefined,
+        modKey
+      );
       if (sent) {
         setMessages(prev => {
           if (prev.some(m => String(m.id) === String(sent.id))) return prev;
           return [...prev, sent];
         });
       }
+    } catch (err: any) {
+      alert(err.message || 'Failed to send message');
     } finally {
       setIsSendingMessage(false);
     }
@@ -857,11 +941,11 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                           </button>
                         )}
                         <button
-                          onClick={() => handleAdminRemove(p.id)}
-                          className="w-full px-3 py-2 text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                          onClick={() => handleAdminKick(p.id, p.name)}
+                          className="w-full px-3 py-2 text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer font-bold border-t border-gray-100"
                         >
-                          <UserX className="w-3.5 h-3.5" />
-                          <span>Eject</span>
+                          <UserX className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Kick Out</span>
                         </button>
                       </div>
                     )}
@@ -915,28 +999,29 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
         </div>
       </main>
 
-      {/* Floating Bottom Simple Control Dock */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4">
-        <div className="bg-white border border-gray-200/90 rounded-2xl shadow-xl px-4 py-3 flex items-center justify-between gap-3">
+      {/* Floating Bottom Simple Control Dock - Responsive 4-Column Grid that never overflows */}
+      <div className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1rem)] max-w-lg px-1 sm:px-2">
+        <div className="bg-white/95 backdrop-blur-md border border-gray-200/90 rounded-2xl shadow-xl p-1.5 sm:p-2.5 grid grid-cols-4 gap-1.5 sm:gap-2 items-center">
           
           {/* Mute / Unmute Button */}
           <button
             onClick={toggleMic}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+            className={`py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer shadow-xs min-w-0 ${
               !isMuted
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
             }`}
+            title={!isMuted ? 'Mute Mic' : 'Unmute Mic'}
           >
             {!isMuted ? (
               <>
-                <Mic className="w-4 h-4 animate-pulse" />
-                <span>Mute Mic</span>
+                <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 animate-pulse text-white" />
+                <span className="truncate">Mute</span>
               </>
             ) : (
               <>
-                <MicOff className="w-4 h-4" />
-                <span>Unmute Mic</span>
+                <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-rose-600" />
+                <span className="truncate">Unmute</span>
               </>
             )}
           </button>
@@ -944,50 +1029,50 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
           {/* Amen Reaction Button */}
           <button
             onClick={() => triggerReaction('amen')}
-            className="px-3.5 py-3 rounded-xl bg-gold-50 hover:bg-gold-100 text-gold-800 border border-gold-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl bg-gold-50 hover:bg-gold-100 text-gold-800 border border-gold-200 font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer transition-colors min-w-0"
             title="Tap Amen"
           >
-            <span>🙏</span>
-            <span>Amen</span>
+            <span className="shrink-0 text-xs sm:text-sm">🙏</span>
+            <span className="truncate">Amen</span>
           </button>
 
           {/* Toggle Chat Drawer */}
           <button
             onClick={() => setIsChatOpen(!isChatOpen)}
-            className={`relative px-3.5 py-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`relative py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer transition-colors min-w-0 ${
               isChatOpen
                 ? 'bg-royal-blue-600 text-white border-royal-blue-600 shadow-xs'
                 : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
             }`}
-            title="Type message"
+            title="Open Chat Drawer"
           >
-            <MessageSquare className="w-4 h-4" />
-            <span className="font-bold whitespace-nowrap">Type message</span>
+            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="font-bold truncate">Message</span>
             {unreadChatCount > 0 && !isChatOpen && (
-              <span className="bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
                 {unreadChatCount}
               </span>
             )}
           </button>
 
-          {/* Leave Call Button */}
+          {/* Leave Call / Join Call Button */}
           {isInCall ? (
             <button
               onClick={handleLeaveCall}
-              className="px-3.5 py-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300"
+              className="py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer transition-colors bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300 min-w-0"
               title="Leave Call"
             >
-              <PhoneOff className="w-4 h-4 text-rose-600" />
-              <span className="font-bold whitespace-nowrap">Leave Call</span>
+              <PhoneOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 shrink-0" />
+              <span className="font-bold truncate">Leave</span>
             </button>
           ) : (
             <button
               onClick={handleOpenProfileModal}
-              className="px-3.5 py-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              className="py-2 sm:py-2.5 px-1 sm:px-2 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer transition-colors bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 min-w-0"
               title="Join Call"
             >
-              <PhoneCall className="w-4 h-4 text-emerald-600" />
-              <span className="font-bold whitespace-nowrap">Join Call</span>
+              <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+              <span className="font-bold truncate">Join</span>
             </button>
           )}
         </div>
@@ -995,7 +1080,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
 
       {/* Slide-over Clean Chat Drawer */}
       {isChatOpen && (
-        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white border-l border-gray-200 shadow-2xl flex flex-col">
+        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white border-l border-gray-200 shadow-2xl flex flex-col h-[100dvh] overflow-hidden overscroll-none">
           {/* Chat Drawer Header */}
           <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-slate-50">
             <div className="flex items-center gap-2">
@@ -1029,6 +1114,38 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             </div>
           </div>
 
+          {/* Pinned Message Banner */}
+          {pinnedMessage && (
+            <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 flex items-start justify-between gap-2 shadow-2xs">
+              <div className="flex items-start gap-2 min-w-0">
+                <Pin className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">
+                      Pinned Message
+                    </span>
+                    <span className="text-[11px] font-bold text-royal-blue-900 truncate">
+                      • {pinnedMessage.user_name}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-800 font-medium whitespace-pre-wrap break-words mt-0.5">
+                    {pinnedMessage.message}
+                  </p>
+                </div>
+              </div>
+              {canModerate && (
+                <button
+                  type="button"
+                  onClick={() => handlePinMessage(pinnedMessage.id, false)}
+                  className="text-[10px] font-bold text-amber-700 hover:text-amber-900 hover:underline shrink-0 p-1 cursor-pointer"
+                  title="Unpin message"
+                >
+                  Unpin
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Messages Feed */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50 scrollbar-thin">
             {messages.length === 0 ? (
@@ -1038,23 +1155,55 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             ) : (
               messages.map((msg, idx) => {
                 const isSticker = msg.type === 'sticker' || !!msg.sticker;
+                const isThisPinned = String(pinnedMessage?.id) === String(msg.id);
 
                 return (
                   <div key={msg.id || idx} className="flex flex-col gap-0.5 group">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-bold text-royal-blue-900">{msg.user_name}</span>
-                      <div className="flex items-center gap-1 text-gray-400">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="font-bold text-royal-blue-900 truncate">{msg.user_name}</span>
+                        {isThisPinned && (
+                          <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                            <Pin className="w-2.5 h-2.5" /> Pinned
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-400 shrink-0">
                         <span>
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {canModerate && (
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="text-gray-300 hover:text-rose-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                            title="Delete message"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          <>
+                            {!isSticker && (
+                              <button
+                                onClick={() => handlePinMessage(msg.id, !isThisPinned)}
+                                className={`p-0.5 cursor-pointer transition-opacity ${
+                                  isThisPinned
+                                    ? 'text-amber-600 opacity-100'
+                                    : 'text-gray-300 hover:text-amber-600 opacity-0 group-hover:opacity-100'
+                                }`}
+                                title={isThisPinned ? 'Unpin message' : 'Pin message to top'}
+                              >
+                                <Pin className="w-3 h-3" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="text-gray-300 hover:text-rose-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                              title="Delete message"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                            {msg.user_name !== userName && (
+                              <button
+                                onClick={() => handleAdminKickByName(msg.user_name)}
+                                className="text-gray-300 hover:text-rose-600 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                title={`Kick "${msg.user_name}" out from live`}
+                              >
+                                <UserX className="w-3 h-3" />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -1081,7 +1230,7 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
                         </div>
                       )
                     ) : (
-                      <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-800 shadow-2xs">
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-xs sm:text-sm text-gray-800 shadow-2xs whitespace-pre-wrap break-words leading-relaxed">
                         {msg.message}
                       </div>
                     )}
@@ -1247,23 +1396,25 @@ export default function PrayerRoomPage({ onNavigate }: PrayerRoomPageProps) {
             </div>
           </div>
 
-          {/* Chat Input */}
-          <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-200 bg-white flex items-center gap-2">
-            <input
-              type="text"
+          {/* Chat Input - Multiline textarea, Enter key adds newline, Send ONLY on button click */}
+          <div className="p-3 border-t border-gray-200 bg-white flex items-end gap-2">
+            <textarea
+              rows={1}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a prayer or message..."
-              className="flex-1 bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-royal-blue-500"
+              className="flex-1 bg-slate-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[16px] sm:text-sm text-gray-900 focus:outline-none focus:border-royal-blue-500 resize-none leading-relaxed min-h-[42px] max-h-32"
             />
             <button
-              type="submit"
-              disabled={!newMessage.trim()}
-              className="p-2 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 disabled:opacity-50 text-white cursor-pointer transition-colors"
+              type="button"
+              onClick={() => handleSendMessage()}
+              disabled={!newMessage.trim() || isSendingMessage}
+              className="p-2.5 rounded-xl bg-royal-blue-600 hover:bg-royal-blue-700 disabled:opacity-50 text-white cursor-pointer transition-colors shrink-0 shadow-xs mb-0.5"
+              title="Click to send message"
             >
               <Send className="w-4 h-4" />
             </button>
-          </form>
+          </div>
         </div>
       )}
 

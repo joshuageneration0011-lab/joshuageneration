@@ -4,6 +4,7 @@ export interface PrayerMessage {
   message: string;
   type: 'message' | 'prayer_request' | 'amen' | 'announcement' | 'sticker';
   sticker?: string;
+  is_pinned?: boolean;
   created_at: string;
 }
 
@@ -143,7 +144,7 @@ export const prayerRoomStore = {
   },
 
   async executeAdminAction(
-    action: 'mute' | 'unmute' | 'mute_all' | 'set_role' | 'remove',
+    action: 'mute' | 'unmute' | 'mute_all' | 'set_role' | 'remove' | 'kick',
     targetId?: string,
     role?: 'host' | 'admin' | 'intercessor',
     requesterId?: string
@@ -202,14 +203,17 @@ export const prayerRoomStore = {
 
   // --- MESSAGES & CHAT MODERATION ---
 
-  async getMessages(): Promise<PrayerMessage[]> {
+  async getMessages(): Promise<{ messages: PrayerMessage[]; pinned_message?: PrayerMessage | null }> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages`);
       if (!res.ok) throw new Error('Failed to fetch messages');
       const data = await res.json();
-      return data.messages || [];
+      return {
+        messages: data.messages || [],
+        pinned_message: data.pinned_message || null
+      };
     } catch (e) {
-      return [];
+      return { messages: [], pinned_message: null };
     }
   },
 
@@ -217,26 +221,51 @@ export const prayerRoomStore = {
     userName: string,
     message: string,
     type: 'message' | 'prayer_request' | 'amen' | 'sticker' = 'message',
-    sticker?: string
+    sticker?: string,
+    admin_key?: string
   ): Promise<PrayerMessage | null> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_name: userName, message, type, sticker })
+        body: JSON.stringify({ user_name: userName, message, type, sticker, admin_key })
       });
-      if (!res.ok) throw new Error('Failed to post message');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to post message');
+      }
       const data = await res.json();
       return data.message;
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message && e.message.includes('administrators')) {
+        throw e;
+      }
       return {
         id: `local-${Date.now()}`,
         user_name: userName,
         message,
         type,
         sticker,
+        is_pinned: false,
         created_at: new Date().toISOString()
       };
+    }
+  },
+
+  async pinMessage(id: number | string, is_pinned: boolean, admin_key?: string): Promise<boolean> {
+    const token = localStorage.getItem('jg_admin_token');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/prayer-room/messages/pin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ id, is_pinned, admin_key })
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
     }
   },
 
@@ -339,6 +368,7 @@ export const prayerRoomStore = {
 
   subscribeToEvents(callbacks: {
     onMessage?: (msg: PrayerMessage) => void;
+    onMessagePinned?: (data: { id: number | string; is_pinned: boolean; message?: PrayerMessage }) => void;
     onMessageDeleted?: (id: number | string) => void;
     onChatCleared?: () => void;
     onReaction?: (reaction: ReactionEvent) => void;
@@ -366,6 +396,8 @@ export const prayerRoomStore = {
             const data = JSON.parse(event.data);
             if (data.type === 'message' && callbacks.onMessage) {
               callbacks.onMessage(data.message);
+            } else if (data.type === 'message_pinned' && callbacks.onMessagePinned) {
+              callbacks.onMessagePinned(data);
             } else if (data.type === 'new_sticker' && callbacks.onNewSticker) {
               callbacks.onNewSticker(data.sticker);
             } else if (data.type === 'deleted_sticker' && callbacks.onDeletedSticker) {

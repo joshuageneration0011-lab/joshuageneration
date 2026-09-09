@@ -96,10 +96,13 @@ let memoryPrayerMessages = [
     user_name: 'Joshua Generation Altar',
     message: 'Welcome to the 24/7 Prayer Altar. The Lord is in this place! Type your Amens and prayer points below.',
     type: 'announcement',
+    is_pinned: true,
     sticker: '',
     created_at: new Date().toISOString()
   }
 ];
+
+let memoryPinnedMessage = memoryPrayerMessages[0];
 
 let memoryCustomStickers = [
   {
@@ -153,6 +156,7 @@ function broadcastPrayerRoomEvent(eventType, payload) {
 
 // Active Call Participants Roster: id -> { id, name, role, isMuted, isSpeaking, avatarColor, joinedAt }
 const prayerCallParticipants = new Map();
+const kickedCallParticipants = new Set();
 const PRAYER_MODERATOR_KEY = process.env.PRAYER_MODERATOR_KEY || 'jgprayer2026';
 
 function isPrayerAdminAuthorized(req, bodyKey) {
@@ -977,6 +981,7 @@ async function initDb() {
         );
 
         ALTER TABLE prayer_room_messages ADD COLUMN IF NOT EXISTS sticker TEXT DEFAULT '';
+        ALTER TABLE prayer_room_messages ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
 
         CREATE TABLE IF NOT EXISTS prayer_room_stickers (
           id VARCHAR(100) PRIMARY KEY,
@@ -3961,18 +3966,28 @@ Joshua's Generation`;
   // 4. GET /api/prayer-room/messages (Last 50 messages)
   if (pathname === '/api/prayer-room/messages' && method === 'GET') {
     try {
+      let currentPinned = memoryPinnedMessage;
       if (pool) {
+        const pinRes = await pool.query(
+          'SELECT id, user_name, message, type, sticker, is_pinned, created_at FROM prayer_room_messages WHERE is_pinned = TRUE ORDER BY created_at DESC LIMIT 1'
+        );
+        if (pinRes.rows.length > 0) {
+          currentPinned = pinRes.rows[0];
+        } else {
+          currentPinned = null;
+        }
+
         const msgRes = await pool.query(
-          'SELECT id, user_name, message, type, sticker, created_at FROM prayer_room_messages ORDER BY created_at DESC LIMIT 50'
+          'SELECT id, user_name, message, type, sticker, is_pinned, created_at FROM prayer_room_messages ORDER BY created_at DESC LIMIT 50'
         );
         const rows = msgRes.rows.reverse();
-        sendJson(res, 200, { success: true, messages: rows });
+        sendJson(res, 200, { success: true, messages: rows, pinned_message: currentPinned });
         return;
       }
-      sendJson(res, 200, { success: true, messages: memoryPrayerMessages.slice(-50) });
+      sendJson(res, 200, { success: true, messages: memoryPrayerMessages.slice(-50), pinned_message: memoryPinnedMessage });
     } catch (e) {
       console.error('Error fetching prayer messages:', e);
-      sendJson(res, 200, { success: true, messages: memoryPrayerMessages.slice(-50) });
+      sendJson(res, 200, { success: true, messages: memoryPrayerMessages.slice(-50), pinned_message: memoryPinnedMessage });
     }
     return;
   }
@@ -3981,7 +3996,7 @@ Joshua's Generation`;
   if (pathname === '/api/prayer-room/messages' && method === 'POST') {
     try {
       const body = await getJsonBody(req);
-      const { user_name, message, type = 'message', sticker = '' } = body;
+      const { user_name, message, type = 'message', sticker = '', admin_key } = body;
 
       if (!user_name || (!message && !sticker)) {
         sendJson(res, 400, { error: 'User name and message/sticker are required' });
@@ -3992,18 +4007,28 @@ Joshua's Generation`;
       const cleanMessage = String(message || '').trim().slice(0, 600);
       const cleanSticker = sticker ? String(sticker).slice(0, 500000) : '';
 
+      // Link Restriction: Only admins can post links
+      const LINK_REGEX = /(https?:\/\/|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|io|ng|co|app|me|xyz|top|site|link|info|live|tv|cc|biz|online|tech|store|shop|club|edu|gov)\b)/i;
+      if (cleanMessage && LINK_REGEX.test(cleanMessage)) {
+        if (!isPrayerAdminAuthorized(req, admin_key)) {
+          sendJson(res, 403, { success: false, error: 'Only administrators are permitted to share links in the prayer room.' });
+          return;
+        }
+      }
+
       let savedMsg = {
         id: Date.now(),
         user_name: cleanName,
         message: cleanMessage,
         type,
         sticker: cleanSticker,
+        is_pinned: false,
         created_at: new Date().toISOString()
       };
 
       if (pool) {
         const insRes = await pool.query(
-          'INSERT INTO prayer_room_messages (user_name, message, type, sticker, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, user_name, message, type, sticker, created_at',
+          'INSERT INTO prayer_room_messages (user_name, message, type, sticker, is_pinned, created_at) VALUES ($1, $2, $3, $4, FALSE, NOW()) RETURNING id, user_name, message, type, sticker, is_pinned, created_at',
           [cleanName, cleanMessage, type, cleanSticker]
         );
         if (insRes.rows.length > 0) {
@@ -4109,6 +4134,60 @@ Joshua's Generation`;
     } catch (e) {
       console.error('Error clearing chat:', e);
       sendJson(res, 500, { error: 'Failed to clear chat' });
+    }
+    return;
+  }
+
+  // 7c2. POST /api/prayer-room/messages/pin (Admin pin/unpin message)
+  if (pathname === '/api/prayer-room/messages/pin' && method === 'POST') {
+    try {
+      const body = await getJsonBody(req);
+      const { id, is_pinned, admin_key } = body;
+
+      if (!isPrayerAdminAuthorized(req, admin_key)) {
+        sendJson(res, 401, { error: 'Unauthorized: admin credentials required' });
+        return;
+      }
+
+      const shouldPin = Boolean(is_pinned);
+      let targetMessage = null;
+
+      if (pool) {
+        if (shouldPin) {
+          await pool.query('UPDATE prayer_room_messages SET is_pinned = FALSE');
+          const updRes = await pool.query(
+            'UPDATE prayer_room_messages SET is_pinned = TRUE WHERE id = $1 RETURNING id, user_name, message, type, sticker, is_pinned, created_at',
+            [id]
+          );
+          if (updRes.rows.length > 0) {
+            targetMessage = updRes.rows[0];
+          }
+        } else {
+          await pool.query('UPDATE prayer_room_messages SET is_pinned = FALSE WHERE id = $1', [id]);
+        }
+      }
+
+      memoryPrayerMessages.forEach(m => {
+        if (String(m.id) === String(id)) {
+          m.is_pinned = shouldPin;
+          if (shouldPin) targetMessage = m;
+        } else if (shouldPin) {
+          m.is_pinned = false;
+        }
+      });
+
+      memoryPinnedMessage = shouldPin ? targetMessage : null;
+
+      broadcastPrayerRoomEvent('message_pinned', {
+        id,
+        is_pinned: shouldPin,
+        message: targetMessage
+      });
+
+      sendJson(res, 200, { success: true, is_pinned: shouldPin, message: targetMessage });
+    } catch (e) {
+      console.error('Error pinning message:', e);
+      sendJson(res, 500, { error: 'Failed to pin message' });
     }
     return;
   }
@@ -4238,6 +4317,10 @@ Joshua's Generation`;
         sendJson(res, 400, { error: 'id and name are required' });
         return;
       }
+      if (kickedCallParticipants.has(String(id))) {
+        sendJson(res, 403, { success: false, error: 'You have been removed from this live prayer session by an administrator for violating rules.' });
+        return;
+      }
       const participant = {
         id: String(id),
         name: String(name).trim().slice(0, 60),
@@ -4341,12 +4424,17 @@ Joshua's Generation`;
           prayerCallParticipants.set(String(targetId), p);
           broadcastPrayerRoomEvent('call_roster', { participants: Array.from(prayerCallParticipants.values()) });
         }
-      } else if (action === 'remove' && targetId) {
-        if (prayerCallParticipants.has(String(targetId))) {
-          prayerCallParticipants.delete(String(targetId));
-          broadcastPrayerRoomEvent('call_user_ejected', { targetId: String(targetId) });
-          broadcastPrayerRoomEvent('call_roster', { participants: Array.from(prayerCallParticipants.values()) });
+      } else if ((action === 'remove' || action === 'kick') && targetId) {
+        const tid = String(targetId);
+        kickedCallParticipants.add(tid);
+        if (prayerCallParticipants.has(tid)) {
+          prayerCallParticipants.delete(tid);
         }
+        broadcastPrayerRoomEvent('call_user_ejected', {
+          targetId: tid,
+          reason: 'Removed by administrator for violating altar rules'
+        });
+        broadcastPrayerRoomEvent('call_roster', { participants: Array.from(prayerCallParticipants.values()) });
       }
 
       sendJson(res, 200, { success: true, participants: Array.from(prayerCallParticipants.values()) });
@@ -4399,6 +4487,11 @@ Joshua's Generation`;
     try {
       const body = await getJsonBody(req);
       const { identity, name, room = 'jg-247-prayer' } = body;
+
+      if (identity && kickedCallParticipants.has(String(identity))) {
+        sendJson(res, 403, { success: false, error: 'Access denied: You have been removed from the live session by an administrator.' });
+        return;
+      }
       
       const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://project-247-prayers-jg-22ebdx44.livekit.cloud';
       const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APIpReTdJGd3Jac';
