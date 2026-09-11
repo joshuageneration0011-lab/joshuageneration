@@ -635,6 +635,7 @@ async function initDb() {
       } catch (err) {
         console.warn("Failed to clean up unsubscribed contacts on startup:", err.message);
       }
+      try {
         await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS audios JSONB DEFAULT '[]'::jsonb");
       } catch (err) {
         console.warn("Failed to check/add audios column to sermons table:", err.message);
