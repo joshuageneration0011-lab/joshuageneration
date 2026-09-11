@@ -623,11 +623,17 @@ async function initDb() {
         console.warn("Failed to check/add first_name/last_name column to old_subscribers table:", err.message);
       }
       try {
-
-      try {
         await pool.query("ALTER TABLE subscribers ADD COLUMN IF NOT EXISTS name VARCHAR");
       } catch (err) {
         console.warn("Failed to check/add name column to subscribers table:", err.message);
+      }
+      try {
+        await pool.query("DELETE FROM old_subscribers WHERE is_active = false");
+        await pool.query("DELETE FROM subscribers WHERE is_active = false");
+        await pool.query("DELETE FROM sa_subscribers WHERE is_active = false");
+        await pool.query("DELETE FROM sd_subscribers WHERE is_active = false");
+      } catch (err) {
+        console.warn("Failed to clean up unsubscribed contacts on startup:", err.message);
       }
         await pool.query("ALTER TABLE sermons ADD COLUMN IF NOT EXISTS audios JSONB DEFAULT '[]'::jsonb");
       } catch (err) {
@@ -1830,14 +1836,14 @@ Joshua's Generation`;
     }
     try {
       if (pool) {
-        const result = await pool.query('SELECT * FROM subscribers ORDER BY created_at DESC');
+        const result = await pool.query('SELECT * FROM subscribers WHERE is_active = true ORDER BY created_at DESC');
         return sendJson(res, 200, result.rows);
       } else {
         let subscribers = [];
         if (fs.existsSync(SUBSCRIBERS_FILE)) {
           subscribers = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
         }
-        return sendJson(res, 200, subscribers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+        return sendJson(res, 200, subscribers.filter(s => s.is_active !== false).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       }
     } catch (err) {
       console.error('Fetch subscribers error:', err);
@@ -1957,14 +1963,14 @@ Joshua's Generation`;
     }
     try {
       if (pool) {
-        const result = await pool.query('SELECT * FROM sa_subscribers ORDER BY created_at DESC');
+        const result = await pool.query('SELECT * FROM sa_subscribers WHERE is_active = true ORDER BY created_at DESC');
         return sendJson(res, 200, result.rows);
       } else {
         let subscribers = [];
         if (fs.existsSync(SA_SUBSCRIBERS_FILE)) {
           subscribers = JSON.parse(fs.readFileSync(SA_SUBSCRIBERS_FILE, 'utf-8'));
         }
-        return sendJson(res, 200, subscribers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+        return sendJson(res, 200, subscribers.filter(s => s.is_active !== false).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       }
     } catch (err) {
       console.error('Fetch SA subscribers error:', err);
@@ -2085,14 +2091,14 @@ Joshua's Generation`;
     }
     try {
       if (pool) {
-        const result = await pool.query('SELECT * FROM sd_subscribers ORDER BY created_at DESC');
+        const result = await pool.query('SELECT * FROM sd_subscribers WHERE is_active = true ORDER BY created_at DESC');
         return sendJson(res, 200, result.rows);
       } else {
         let subscribers = [];
         if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
           subscribers = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
         }
-        return sendJson(res, 200, subscribers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+        return sendJson(res, 200, subscribers.filter(s => s.is_active !== false).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       }
     } catch (err) {
       console.error('Fetch SD subscribers error:', err);
@@ -2213,14 +2219,14 @@ Joshua's Generation`;
     }
     try {
       if (pool) {
-        const result = await pool.query('SELECT * FROM old_subscribers ORDER BY created_at DESC');
+        const result = await pool.query('SELECT * FROM old_subscribers WHERE is_active = true ORDER BY created_at DESC');
         return sendJson(res, 200, result.rows);
       } else {
         let subscribers = [];
         if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
           subscribers = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
         }
-        return sendJson(res, 200, subscribers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+        return sendJson(res, 200, subscribers.filter(s => s.is_active !== false).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       }
     } catch (err) {
       console.error('Fetch old subscribers error:', err);
@@ -2342,57 +2348,60 @@ Joshua's Generation`;
       return res.end('<h1>Invalid Request</h1><p>Missing email parameter.</p>');
     }
     try {
+      const cleanEmail = email.trim();
       if (segment === 'sa') {
         if (pool) {
-          await pool.query('UPDATE sa_subscribers SET is_active = false WHERE email = $1', [email]);
-        } else {
-          if (fs.existsSync(SA_SUBSCRIBERS_FILE)) {
-            const subs = JSON.parse(fs.readFileSync(SA_SUBSCRIBERS_FILE, 'utf-8'));
-            const idx = subs.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
-            if (idx !== -1) {
-              subs[idx].is_active = false;
-              fs.writeFileSync(SA_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
-            }
-          }
+          await pool.query('DELETE FROM sa_subscribers WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+        }
+        if (fs.existsSync(SA_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(SA_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.email.trim().toLowerCase() !== cleanEmail.toLowerCase());
+          fs.writeFileSync(SA_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
         }
       } else if (segment === 'sd') {
         if (pool) {
-          await pool.query('UPDATE sd_subscribers SET is_active = false WHERE email = $1', [email]);
-        } else {
-          if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
-            const subs = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
-            const idx = subs.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
-            if (idx !== -1) {
-              subs[idx].is_active = false;
-              fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
-            }
-          }
+          await pool.query('DELETE FROM sd_subscribers WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+        }
+        if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.email.trim().toLowerCase() !== cleanEmail.toLowerCase());
+          fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
         }
       } else if (segment === 'old') {
         if (pool) {
-          await pool.query('UPDATE old_subscribers SET is_active = false WHERE email = $1', [email]);
-        } else {
-          if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
-            const subs = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
-            const idx = subs.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
-            if (idx !== -1) {
-              subs[idx].is_active = false;
-              fs.writeFileSync(OLD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
-            }
-          }
+          await pool.query('DELETE FROM old_subscribers WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+        }
+        if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.email.trim().toLowerCase() !== cleanEmail.toLowerCase());
+          fs.writeFileSync(OLD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
         }
       } else {
         if (pool) {
-          await pool.query('UPDATE subscribers SET is_active = false WHERE email = $1', [email]);
-        } else {
-          if (fs.existsSync(SUBSCRIBERS_FILE)) {
-            const subs = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
-            const idx = subs.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
-            if (idx !== -1) {
-              subs[idx].is_active = false;
-              fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
-            }
-          }
+          await pool.query('DELETE FROM subscribers WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+          await pool.query('DELETE FROM old_subscribers WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+          await pool.query('DELETE FROM sa_subscribers WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+          await pool.query('DELETE FROM sd_subscribers WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+        }
+        if (fs.existsSync(SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.email.trim().toLowerCase() !== cleanEmail.toLowerCase());
+          fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+        }
+        if (fs.existsSync(OLD_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(OLD_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.email.trim().toLowerCase() !== cleanEmail.toLowerCase());
+          fs.writeFileSync(OLD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+        }
+        if (fs.existsSync(SA_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(SA_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.email.trim().toLowerCase() !== cleanEmail.toLowerCase());
+          fs.writeFileSync(SA_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
+        }
+        if (fs.existsSync(SD_SUBSCRIBERS_FILE)) {
+          let subs = JSON.parse(fs.readFileSync(SD_SUBSCRIBERS_FILE, 'utf-8'));
+          subs = subs.filter(s => s.email.trim().toLowerCase() !== cleanEmail.toLowerCase());
+          fs.writeFileSync(SD_SUBSCRIBERS_FILE, JSON.stringify(subs, null, 2), 'utf-8');
         }
       }
       res.writeHead(200, { 'Content-Type': 'text/html' });

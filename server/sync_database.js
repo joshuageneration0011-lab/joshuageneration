@@ -200,11 +200,12 @@ async function syncData() {
         ALTER TABLE old_subscribers ADD COLUMN IF NOT EXISTS last_name VARCHAR;
       `);
 
-      // Clear existing old_subscribers to apply clean deduplicated dataset with updated names
-      await pool.query('DELETE FROM old_subscribers');
+      // Clean up any unsubscribed contacts so they never persist
+      await pool.query('DELETE FROM old_subscribers WHERE is_active = false');
 
-      const oldSubs = JSON.parse(fs.readFileSync(oldSubsFile, 'utf-8'));
-      console.log(`Syncing ${oldSubs.length} old subscribers in batches...`);
+      const rawOldSubs = JSON.parse(fs.readFileSync(oldSubsFile, 'utf-8'));
+      const oldSubs = Array.isArray(rawOldSubs) ? rawOldSubs.filter(s => s.is_active !== false) : [];
+      console.log(`Syncing ${oldSubs.length} active old subscribers in batches...`);
       const batchSize = 500;
       for (let i = 0; i < oldSubs.length; i += batchSize) {
         const batch = oldSubs.slice(i, i + batchSize);
@@ -219,7 +220,7 @@ async function syncData() {
             s.name || '',
             s.first_name || '',
             s.last_name || '',
-            s.is_active !== false,
+            true,
             s.created_at || new Date().toISOString()
           );
           paramIdx += 7;

@@ -479,7 +479,7 @@ function SubscribersTab() {
     try {
       setLoading(true);
       const data = await api.admin.getSubscribers();
-      setSubscribers(data);
+      setSubscribers(Array.isArray(data) ? data.filter((s: any) => s.is_active !== false) : []);
     } catch (err) {
       console.error('Failed to fetch subscribers:', err);
     } finally {
@@ -1051,7 +1051,7 @@ function SASubscribersTab() {
     try {
       setLoading(true);
       const data = await api.admin.getSASubscribers();
-      setSubscribers(data);
+      setSubscribers(Array.isArray(data) ? data.filter((s: any) => s.is_active !== false) : []);
     } catch (err) {
       console.error('Failed to fetch SA subscribers:', err);
     } finally {
@@ -1580,7 +1580,7 @@ function SDSubscribersTab() {
     try {
       setLoading(true);
       const data = await api.admin.getSDSubscribers();
-      setSubscribers(data);
+      setSubscribers(Array.isArray(data) ? data.filter((s: any) => s.is_active !== false) : []);
     } catch (err) {
       console.error('Failed to fetch SD subscribers:', err);
     } finally {
@@ -2109,7 +2109,7 @@ function OldSubscribersTab() {
     try {
       setLoading(true);
       const data = await api.admin.getOldSubscribers();
-      setSubscribers(data);
+      setSubscribers(Array.isArray(data) ? data.filter((s: any) => s.is_active !== false) : []);
     } catch (err) {
       console.error('Failed to fetch old subscribers:', err);
     } finally {
