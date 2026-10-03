@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Play, Pause, Volume2, VolumeX, Download, Copy,
   Headphones, Calendar, Eye, Clock, Check, Heart, MessageSquare
@@ -102,7 +102,12 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     ? rawAudios
     : [{ id: sermon.id, title: sermon.title || '', duration: sermon.duration || '', audioUrl: sermon.audioUrl || '' }];
 
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const firstPlayableIndex = useMemo(() => {
+    const idx = tracks.findIndex(t => t.audioUrl && t.audioUrl.trim() !== '');
+    return idx !== -1 ? idx : 0;
+  }, [tracks]);
+
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(firstPlayableIndex);
   const activeTrack = tracks[currentTrackIndex] || tracks[0] || { id: sermon.id, title: sermon.title || '', duration: sermon.duration || '', audioUrl: sermon.audioUrl || '' };
 
   const formatTrackTitle = (title: string | undefined | null, showDownloadWord: boolean = false) => {
@@ -183,13 +188,16 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
     // Pause any media playing when sermon changes
     setIsPlaying(false);
     setCurrentTime(0);
-    setDuration(parseDurationToSeconds(activeTrack.duration));
-    setCurrentTrackIndex(0);
+    const validIdx = tracks.findIndex(t => t.audioUrl && t.audioUrl.trim() !== '');
+    const targetIdx = validIdx !== -1 ? validIdx : 0;
+    setCurrentTrackIndex(targetIdx);
+    const currentTrack = tracks[targetIdx] || tracks[0];
+    setDuration(parseDurationToSeconds(currentTrack?.duration || ''));
     
     // Sync views
     setLocalViews(sermon.views);
     setLocalDownloads(sermon.downloads || 0);
-  }, [sermon.id, sermon.views]);
+  }, [sermon.id, sermon.views, tracks]);
 
   // Sync duration state when the track duration or sermon changes as a robust metadata fallback
   useEffect(() => {
@@ -221,8 +229,10 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   // Bulk download helper
   const downloadAllTracks = () => {
     if (!sermon.audios || sermon.audios.length === 0) return;
+    const validTracks = sermon.audios.filter(t => t.audioUrl && t.audioUrl.trim() !== '');
+    if (validTracks.length === 0) return;
     handleDownloadIncrement();
-    sermon.audios.forEach((track, index) => {
+    validTracks.forEach((track, index) => {
       setTimeout(() => {
         const link = document.createElement('a');
         link.href = resolveApiUrl(track.audioUrl);
@@ -243,6 +253,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   };
 
   const togglePlay = () => {
+    if (!activeTrack.audioUrl) return;
     const media = activeMediaRef.current;
     if (!media) return;
 
@@ -270,12 +281,15 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   };
 
   const handleMediaEnd = () => {
-    if (sermon.audios && sermon.audios.length > 0 && currentTrackIndex < sermon.audios.length - 1) {
-      setCurrentTrackIndex((prev) => prev + 1);
-    } else {
-      setIsPlaying(false);
-      setCurrentTime(0);
+    if (sermon.audios && sermon.audios.length > 0) {
+      const nextIndex = sermon.audios.findIndex((t, idx) => idx > currentTrackIndex && t.audioUrl && t.audioUrl.trim() !== '');
+      if (nextIndex !== -1) {
+        setCurrentTrackIndex(nextIndex);
+        return;
+      }
     }
+    setIsPlaying(false);
+    setCurrentTime(0);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -441,7 +455,14 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                     {/* Play/Pause */}
                     <button
                       onClick={togglePlay}
-                      className="w-11 h-11 rounded-full bg-royal-blue-600 hover:bg-royal-blue-500 flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-royal-blue-500/30"
+                      disabled={!activeTrack.audioUrl}
+                      className={cn(
+                        "w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-all shadow-lg",
+                        !activeTrack.audioUrl
+                          ? "bg-gray-800 text-gray-500 cursor-not-allowed shadow-none"
+                          : "bg-royal-blue-600 hover:bg-royal-blue-500 text-white shadow-royal-blue-500/30"
+                      )}
+                      title={!activeTrack.audioUrl ? "Audio not available" : (isPlaying ? "Pause" : "Play")}
                     >
                       {isPlaying ? (
                         <Pause className="w-5 h-5 text-white fill-white" />
@@ -514,6 +535,7 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                 <div className="divide-y divide-gray-100">
                   {sermon.audios.map((track, idx) => {
                     const isActive = idx === currentTrackIndex;
+                    const hasAudio = !!(track.audioUrl && track.audioUrl.trim() !== '');
                     return (
                       <div
                         key={track.id}
@@ -521,12 +543,13 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                           'flex items-center justify-between py-3.5 px-4 -mx-4 rounded-xl transition-all',
                           isActive 
                             ? 'bg-royal-blue-50/70 border border-royal-blue-100' 
-                            : 'hover:bg-gray-50/50'
+                            : hasAudio ? 'hover:bg-gray-50/50' : 'opacity-60 bg-gray-50/30'
                         )}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <button
                             onClick={() => {
+                              if (!hasAudio) return;
                               setCurrentTrackIndex(idx);
                               setIsPlaying(true);
                               setTimeout(() => {
@@ -536,11 +559,14 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                                 }
                               }, 100);
                             }}
+                            disabled={!hasAudio}
                             className={cn(
                               'w-8 h-8 rounded-full flex items-center justify-center transition-all',
-                              isActive 
-                                ? 'bg-royal-blue-600 text-white' 
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              !hasAudio
+                                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                : isActive 
+                                  ? 'bg-royal-blue-600 text-white' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             )}
                           >
                             {isActive && isPlaying ? (
@@ -562,17 +588,23 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                           </div>
                         </div>
 
-                        <a
-                          href={resolveApiUrl(track.audioUrl)}
-                          download={getDownloadFilename(track.title)}
-                          onClick={handleDownloadIncrement}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg hover:bg-gray-100 text-gray-450 hover:text-gray-700 transition-colors"
-                          title={`Download ${formatTrackTitle(track.title)}`}
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
+                        {hasAudio ? (
+                          <a
+                            href={resolveApiUrl(track.audioUrl)}
+                            download={getDownloadFilename(track.title)}
+                            onClick={handleDownloadIncrement}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg hover:bg-gray-100 text-gray-450 hover:text-gray-700 transition-colors"
+                            title={`Download ${formatTrackTitle(track.title)}`}
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                            Pending
+                          </span>
+                        )}
                       </div>
                     );
                   })}
