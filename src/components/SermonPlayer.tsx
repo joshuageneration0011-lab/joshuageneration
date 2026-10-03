@@ -94,13 +94,15 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   };
 
   // Series additions
-  const rawAudios = Array.isArray(sermon.audios)
-    ? sermon.audios
-    : (typeof sermon.audios === 'string' ? JSON.parse(sermon.audios) : []);
+  const tracks = useMemo(() => {
+    const rawAudios = Array.isArray(sermon.audios)
+      ? sermon.audios
+      : (typeof sermon.audios === 'string' ? JSON.parse(sermon.audios) : []);
 
-  const tracks = (rawAudios && rawAudios.length > 0)
-    ? rawAudios
-    : [{ id: sermon.id, title: sermon.title || '', duration: sermon.duration || '', audioUrl: sermon.audioUrl || '' }];
+    return (rawAudios && rawAudios.length > 0)
+      ? rawAudios
+      : [{ id: sermon.id, title: sermon.title || '', duration: sermon.duration || '', audioUrl: sermon.audioUrl || '' }];
+  }, [sermon.id, sermon.audios, sermon.title, sermon.duration, sermon.audioUrl]);
 
   const firstPlayableIndex = useMemo(() => {
     const idx = tracks.findIndex(t => t.audioUrl && t.audioUrl.trim() !== '');
@@ -109,6 +111,8 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
   const [currentTrackIndex, setCurrentTrackIndex] = useState(firstPlayableIndex);
   const activeTrack = tracks[currentTrackIndex] || tracks[0] || { id: sermon.id, title: sermon.title || '', duration: sermon.duration || '', audioUrl: sermon.audioUrl || '' };
+  const activeAudioUrl = resolveApiUrl(activeTrack.audioUrl);
+  const prevAudioUrlRef = useRef(activeAudioUrl);
 
   const formatTrackTitle = (title: string | undefined | null, showDownloadWord: boolean = false) => {
     if (!title) return '';
@@ -174,49 +178,56 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
   };
 
   const audioRef = useRef<HTMLAudioElement>(null);
-
   const activeMediaRef = audioRef;
 
-  // Load saved notes from local storage
+  // Load saved notes and reset player ONLY when sermon ID changes
   useEffect(() => {
     const savedNotes = localStorage.getItem(`jgen_notes_${sermon.id}`);
-    if (savedNotes) {
-      setNotes(savedNotes);
-    } else {
-      setNotes('');
+    setNotes(savedNotes || '');
+
+    // Reset playback for the new sermon
+    const media = audioRef.current;
+    if (media) {
+      media.pause();
     }
-    // Pause any media playing when sermon changes
     setIsPlaying(false);
     setCurrentTime(0);
+
     const validIdx = tracks.findIndex(t => t.audioUrl && t.audioUrl.trim() !== '');
     const targetIdx = validIdx !== -1 ? validIdx : 0;
     setCurrentTrackIndex(targetIdx);
+
     const currentTrack = tracks[targetIdx] || tracks[0];
-    setDuration(parseDurationToSeconds(currentTrack?.duration || ''));
+    const initialDuration = parseDurationToSeconds(currentTrack?.duration || '');
+    if (initialDuration > 0) {
+      setDuration(initialDuration);
+    }
     
-    // Sync views
+    // Sync views & downloads
     setLocalViews(sermon.views);
     setLocalDownloads(sermon.downloads || 0);
-  }, [sermon.id, sermon.views, tracks]);
+  }, [sermon.id]);
 
-  // Sync duration state when the track duration or sermon changes as a robust metadata fallback
+  // Sync duration state when activeTrack duration metadata is available
   useEffect(() => {
     const parsedSecs = parseDurationToSeconds(activeTrack.duration);
-    if (parsedSecs > 0) {
+    if (parsedSecs > 0 && duration === 0) {
       setDuration(parsedSecs);
     }
-  }, [activeTrack.duration, sermon.id]);
+  }, [activeTrack.duration]);
 
-  // Trigger audio reload/play when track or sermon changes
+  // Trigger audio reload only when the track source URL actually changes
   useEffect(() => {
     const media = audioRef.current;
-    if (media) {
+    if (!media) return;
+    if (prevAudioUrlRef.current !== activeAudioUrl) {
+      prevAudioUrlRef.current = activeAudioUrl;
       media.load();
       if (isPlaying) {
         media.play().catch((err) => console.log('Playback failed:', err));
       }
     }
-  }, [currentTrackIndex, activeTrack.audioUrl, sermon.id]);
+  }, [activeAudioUrl, isPlaying]);
 
   const handleDownloadIncrement = () => {
     api.incrementSermonDownloads(sermon.id)
@@ -254,22 +265,30 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
 
   const togglePlay = () => {
     if (!activeTrack.audioUrl) return;
-    const media = activeMediaRef.current;
+    const media = audioRef.current;
     if (!media) return;
 
-    if (isPlaying) {
-      media.pause();
+    if (media.paused) {
+      media.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.log('Playback failed:', err);
+          setIsPlaying(false);
+        });
     } else {
-      media.play().catch((err) => console.log('Playback failed:', err));
+      media.pause();
+      setIsPlaying(false);
     }
-    setIsPlaying((prev) => !prev);
   };
 
   // Media events
   const handleTimeUpdate = () => {
-    const media = activeMediaRef.current;
+    const media = audioRef.current;
     if (media) {
       setCurrentTime(media.currentTime);
+      if (isFinite(media.duration) && media.duration > 0 && (!duration || duration === 0)) {
+        setDuration(media.duration);
+      }
     }
   };
 
@@ -367,10 +386,13 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
               {/* Audio Element (hidden) */}
               <audio
                 ref={audioRef}
-                src={resolveApiUrl(activeTrack.audioUrl)}
+                src={activeAudioUrl}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
                 onEnded={handleMediaEnd}
+                preload="metadata"
               />
 
               {/* Audio Visual Display */}
@@ -439,7 +461,8 @@ export default function SermonPlayer({ sermons, sermon, onSermonSelect }: Sermon
                   <input
                     type="range"
                     min={0}
-                    max={duration || 100}
+                    max={duration > 0 ? duration : 100}
+                    step={0.1}
                     value={currentTime}
                     onChange={handleSeek}
                     className="flex-1 accent-royal-blue-500 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer outline-none"
