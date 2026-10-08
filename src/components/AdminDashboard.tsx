@@ -7,7 +7,7 @@ import {
   MoreHorizontal, Download, ChevronRight, UserPlus, Eye, EyeOff, Clock,
   Heart, Gift, ArrowUp, ArrowDown, Plus, Edit3, Trash2,
   Filter, Star, CheckCircle, AlertCircle, Globe,
-  Monitor, Moon, Sun, Mail, Phone,
+  Monitor, Moon, Sun, Mail, Phone, Image as ImageIcon,
   Upload, ExternalLink, Link2, Copy,
   Check, AlertTriangle, RefreshCw, PenTool,
   Type, TrendingUp, Radio, Headphones,
@@ -18,6 +18,7 @@ import type { Subscriber, BlogPost, Book, Sermon, Donation, SermonAudio, Event, 
 import { api, resolveApiUrl, type RedirectLink } from '@/utils/api';
 import { compressImage } from '@/utils/image';
 import { getSavedTestimonies, saveTestimony, deleteTestimony } from '@/data/testimonyStore';
+import { EmailPhotoModal, type EmailPhotoPosition } from '@/components/EmailPhotoModal';
 
 type AdminTab = 'dashboard' | 'users' | 'sermons' | 'sons-daughters-sermons' | 'partners-sermons' | 'books' | 'blog' | 'radio' | 'donations' | 'analytics' | 'prayer' | 'moderation' | 'settings' | 'events' | 'messages' | 'subscribers' | 'sa-subscribers' | 'sd-subscribers' | 'old-subscribers' | 'testimonies' | 'redirect-links' | 'form-builder';
 
@@ -435,6 +436,26 @@ interface DashboardTabProps {
   books: Book[];
 }
 
+export function renderEmailPreviewHtml(body: string): string {
+  if (!body.trim()) {
+    return '<span style="color: #94a3b8; font-style: italic;">Your message content will be formatted and displayed here inside the JGen template layout...</span>';
+  }
+  const sample = body
+    .replace(/\{\{name\}\}/gi, '<strong>Recipient Name</strong>')
+    .replace(/\{\{firstName\}\}/gi, '<strong>Firstname</strong>')
+    .replace(/\{\{lastName\}\}/gi, '<strong>Lastname</strong>');
+
+  const paragraphs = sample
+    .replace(/\r\n/g, '\n')
+    .split(/\n\n+/)
+    .map(p => {
+      const lineBreaks = p.replace(/\n/g, '<br />');
+      return `<p style="margin-bottom: 12px; line-height: 1.6; color: #334155;">${lineBreaks}</p>`;
+    })
+    .join('');
+
+  return paragraphs;
+}
 
 function SubscribersTab() {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -447,11 +468,40 @@ function SubscribersTab() {
 
   // Bulk Email Composer State
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendMode, setSendMode] = useState<'broadcast' | 'test'>('test');
   const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  const handleInsertPhoto = (pos: EmailPhotoPosition, htmlSnippet: string) => {
+    const textarea = document.getElementById('newsletter-body-textarea') as HTMLTextAreaElement;
+    setEmailBody(prev => {
+      const trimmed = prev.trim();
+      if (pos === 'header') {
+        return trimmed ? `${htmlSnippet}\n\n${trimmed}` : htmlSnippet;
+      } else if (pos === 'foot') {
+        return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+      } else {
+        if (textarea && textarea.selectionStart !== undefined && textarea.selectionEnd !== undefined) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const before = prev.substring(0, start);
+          const after = prev.substring(end);
+          return `${before}\n\n${htmlSnippet}\n\n${after}`.trim();
+        } else {
+          const parts = prev.split('\n\n');
+          if (parts.length > 1) {
+            const mid = Math.floor(parts.length / 2);
+            parts.splice(mid, 0, htmlSnippet);
+            return parts.join('\n\n');
+          }
+          return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+        }
+      }
+    });
+  };
 
   const insertPlaceholder = (tag: string) => {
     const textarea = document.getElementById('newsletter-body-textarea') as HTMLTextAreaElement;
@@ -843,7 +893,15 @@ function SubscribersTab() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Email Body Message</label>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsPhotoModalOpen(true)}
+                        className="px-2.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-300 transition-colors cursor-pointer flex items-center gap-1 shadow-xs mr-1"
+                        title="Insert Photo in Header, Centre, or Foot"
+                      >
+                        <ImageIcon className="w-3 h-3 text-amber-600" /> + Add Photo
+                      </button>
                       <button
                         type="button"
                         onClick={() => insertPlaceholder('{{firstName}}')}
@@ -984,9 +1042,12 @@ function SubscribersTab() {
                     <h2 className="text-md font-bold text-gray-900 mt-0 mb-3 border-b border-gray-50 pb-2">
                       {emailSubject.trim() || 'Email Subject Header'}
                     </h2>
-                    <div className="text-xs text-gray-600 space-y-2 leading-relaxed whitespace-pre-line font-sans break-words">
-                      {emailBody.trim() || 'Your message content will be formatted and displayed here inside the JGen template layout...'}
-                    </div>
+                    <div 
+                      className="text-xs text-gray-600 leading-relaxed font-sans break-words"
+                      dangerouslySetInnerHTML={{
+                        __html: renderEmailPreviewHtml(emailBody)
+                      }}
+                    />
                   </div>
 
                   {/* Email Footer */}
@@ -1002,6 +1063,14 @@ function SubscribersTab() {
               </div>
             </div>
           </div>
+
+          {/* Email Photo Inserter Modal */}
+          <EmailPhotoModal
+            isOpen={isPhotoModalOpen}
+            onClose={() => setIsPhotoModalOpen(false)}
+            onInsertPhoto={handleInsertPhoto}
+            themeColor="royal-blue"
+          />
         </div>
       )}
     </div>
@@ -1019,11 +1088,40 @@ function SASubscribersTab() {
 
   // Bulk Email Composer State
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendMode, setSendMode] = useState<'broadcast' | 'test'>('test');
   const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  const handleInsertPhoto = (pos: EmailPhotoPosition, htmlSnippet: string) => {
+    const textarea = document.getElementById('newsletter-body-textarea-sa') as HTMLTextAreaElement;
+    setEmailBody(prev => {
+      const trimmed = prev.trim();
+      if (pos === 'header') {
+        return trimmed ? `${htmlSnippet}\n\n${trimmed}` : htmlSnippet;
+      } else if (pos === 'foot') {
+        return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+      } else {
+        if (textarea && textarea.selectionStart !== undefined && textarea.selectionEnd !== undefined) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const before = prev.substring(0, start);
+          const after = prev.substring(end);
+          return `${before}\n\n${htmlSnippet}\n\n${after}`.trim();
+        } else {
+          const parts = prev.split('\n\n');
+          if (parts.length > 1) {
+            const mid = Math.floor(parts.length / 2);
+            parts.splice(mid, 0, htmlSnippet);
+            return parts.join('\n\n');
+          }
+          return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+        }
+      }
+    });
+  };
 
   const insertPlaceholder = (tag: string) => {
     const textarea = document.getElementById('newsletter-body-textarea-sa') as HTMLTextAreaElement;
@@ -1372,7 +1470,15 @@ function SASubscribersTab() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Email Body Message</label>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsPhotoModalOpen(true)}
+                        className="px-2.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300 transition-colors cursor-pointer flex items-center gap-1 shadow-xs mr-1"
+                        title="Insert Photo in Header, Centre, or Foot"
+                      >
+                        <ImageIcon className="w-3 h-3 text-emerald-600" /> + Add Photo
+                      </button>
                       <button
                         type="button"
                         onClick={() => insertPlaceholder('{{firstName}}')}
@@ -1513,9 +1619,12 @@ function SASubscribersTab() {
                     <h2 className="text-md font-bold text-gray-900 mt-0 mb-3 border-b border-gray-50 pb-2">
                       {emailSubject.trim() || 'Email Subject Header'}
                     </h2>
-                    <div className="text-xs text-gray-600 space-y-2 leading-relaxed whitespace-pre-line font-sans break-words">
-                      {emailBody.trim() || 'Your message content will be formatted and displayed here inside the JGen template layout...'}
-                    </div>
+                    <div 
+                      className="text-xs text-gray-600 leading-relaxed font-sans break-words"
+                      dangerouslySetInnerHTML={{
+                        __html: renderEmailPreviewHtml(emailBody)
+                      }}
+                    />
                   </div>
 
                   {/* Email Footer */}
@@ -1531,6 +1640,14 @@ function SASubscribersTab() {
               </div>
             </div>
           </div>
+
+          {/* Email Photo Inserter Modal */}
+          <EmailPhotoModal
+            isOpen={isPhotoModalOpen}
+            onClose={() => setIsPhotoModalOpen(false)}
+            onInsertPhoto={handleInsertPhoto}
+            themeColor="emerald"
+          />
         </div>
       )}
     </div>
@@ -1548,11 +1665,40 @@ function SDSubscribersTab() {
 
   // Bulk Email Composer State
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendMode, setSendMode] = useState<'broadcast' | 'test'>('test');
   const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  const handleInsertPhoto = (pos: EmailPhotoPosition, htmlSnippet: string) => {
+    const textarea = document.getElementById('newsletter-body-textarea-sd') as HTMLTextAreaElement;
+    setEmailBody(prev => {
+      const trimmed = prev.trim();
+      if (pos === 'header') {
+        return trimmed ? `${htmlSnippet}\n\n${trimmed}` : htmlSnippet;
+      } else if (pos === 'foot') {
+        return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+      } else {
+        if (textarea && textarea.selectionStart !== undefined && textarea.selectionEnd !== undefined) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const before = prev.substring(0, start);
+          const after = prev.substring(end);
+          return `${before}\n\n${htmlSnippet}\n\n${after}`.trim();
+        } else {
+          const parts = prev.split('\n\n');
+          if (parts.length > 1) {
+            const mid = Math.floor(parts.length / 2);
+            parts.splice(mid, 0, htmlSnippet);
+            return parts.join('\n\n');
+          }
+          return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+        }
+      }
+    });
+  };
 
   const insertPlaceholder = (tag: string) => {
     const textarea = document.getElementById('newsletter-body-textarea-sd') as HTMLTextAreaElement;
@@ -1901,7 +2047,15 @@ function SDSubscribersTab() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Email Body Message</label>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsPhotoModalOpen(true)}
+                        className="px-2.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-300 transition-colors cursor-pointer flex items-center gap-1 shadow-xs mr-1"
+                        title="Insert Photo in Header, Centre, or Foot"
+                      >
+                        <ImageIcon className="w-3 h-3 text-amber-600" /> + Add Photo
+                      </button>
                       <button
                         type="button"
                         onClick={() => insertPlaceholder('{{firstName}}')}
@@ -2042,9 +2196,12 @@ function SDSubscribersTab() {
                     <h2 className="text-md font-bold text-gray-900 mt-0 mb-3 border-b border-gray-50 pb-2">
                       {emailSubject.trim() || 'Email Subject Header'}
                     </h2>
-                    <div className="text-xs text-gray-600 space-y-2 leading-relaxed whitespace-pre-line font-sans break-words">
-                      {emailBody.trim() || 'Your message content will be formatted and displayed here inside the JGen template layout...'}
-                    </div>
+                    <div 
+                      className="text-xs text-gray-600 leading-relaxed font-sans break-words"
+                      dangerouslySetInnerHTML={{
+                        __html: renderEmailPreviewHtml(emailBody)
+                      }}
+                    />
                   </div>
 
                   {/* Email Footer */}
@@ -2060,6 +2217,14 @@ function SDSubscribersTab() {
               </div>
             </div>
           </div>
+
+          {/* Email Photo Inserter Modal */}
+          <EmailPhotoModal
+            isOpen={isPhotoModalOpen}
+            onClose={() => setIsPhotoModalOpen(false)}
+            onInsertPhoto={handleInsertPhoto}
+            themeColor="royal-blue"
+          />
         </div>
       )}
     </div>
@@ -2077,11 +2242,40 @@ function OldSubscribersTab() {
 
   // Bulk Email Composer State
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendMode, setSendMode] = useState<'broadcast' | 'test'>('test');
   const [testEmailAddress, setTestEmailAddress] = useState('');
+
+  const handleInsertPhoto = (pos: EmailPhotoPosition, htmlSnippet: string) => {
+    const textarea = document.getElementById('newsletter-body-textarea-old') as HTMLTextAreaElement;
+    setEmailBody(prev => {
+      const trimmed = prev.trim();
+      if (pos === 'header') {
+        return trimmed ? `${htmlSnippet}\n\n${trimmed}` : htmlSnippet;
+      } else if (pos === 'foot') {
+        return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+      } else {
+        if (textarea && textarea.selectionStart !== undefined && textarea.selectionEnd !== undefined) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const before = prev.substring(0, start);
+          const after = prev.substring(end);
+          return `${before}\n\n${htmlSnippet}\n\n${after}`.trim();
+        } else {
+          const parts = prev.split('\n\n');
+          if (parts.length > 1) {
+            const mid = Math.floor(parts.length / 2);
+            parts.splice(mid, 0, htmlSnippet);
+            return parts.join('\n\n');
+          }
+          return trimmed ? `${trimmed}\n\n${htmlSnippet}` : htmlSnippet;
+        }
+      }
+    });
+  };
 
   const insertPlaceholder = (tag: string) => {
     const textarea = document.getElementById('newsletter-body-textarea-old') as HTMLTextAreaElement;
@@ -2484,7 +2678,15 @@ function OldSubscribersTab() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-gray-700">Email Body (Plain Text or HTML)</label>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsPhotoModalOpen(true)}
+                        className="px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-300 transition-colors cursor-pointer flex items-center gap-1 shadow-xs mr-1"
+                        title="Insert Photo in Header, Centre, or Foot"
+                      >
+                        <ImageIcon className="w-3 h-3 text-amber-600" /> + Add Photo
+                      </button>
                       <button
                         type="button"
                         onClick={() => insertPlaceholder('{{name}}')}
@@ -2602,9 +2804,12 @@ function OldSubscribersTab() {
                     <h2 className="text-md font-bold text-gray-900 mt-0 mb-3 border-b border-gray-50 pb-2">
                       {emailSubject.trim() || 'Email Subject Header'}
                     </h2>
-                    <div className="text-xs text-gray-600 space-y-2 leading-relaxed whitespace-pre-line font-sans break-words">
-                      {emailBody.trim() || 'Your message content will be formatted and displayed here inside the JGen template layout...'}
-                    </div>
+                    <div 
+                      className="text-xs text-gray-600 leading-relaxed font-sans break-words"
+                      dangerouslySetInnerHTML={{
+                        __html: renderEmailPreviewHtml(emailBody)
+                      }}
+                    />
                   </div>
 
                   {/* Email Footer */}
@@ -2616,6 +2821,14 @@ function OldSubscribersTab() {
                 </div>
               </div>
             </div>
+
+            {/* Email Photo Inserter Modal */}
+            <EmailPhotoModal
+              isOpen={isPhotoModalOpen}
+              onClose={() => setIsPhotoModalOpen(false)}
+              onInsertPhoto={handleInsertPhoto}
+              themeColor="royal-blue"
+            />
           </div>
         </div>
       )}

@@ -258,7 +258,12 @@ async function sendZeptoEmail(toEmail, toName, subject, htmlBody) {
 }
 
 function wrapInEmailTemplate(subject, content) {
-  const bodyHtml = content
+  const baseUrl = process.env.PUBLIC_URL || 'https://joshuasgeneration.com';
+  const cleanContent = (content || '')
+    .replace(/src=["']\/api\/uploads\//g, `src="${baseUrl}/api/uploads/`)
+    .replace(/src=["']api\/uploads\//g, `src="${baseUrl}/api/uploads/`);
+
+  const bodyHtml = cleanContent
     .replace(/\r\n/g, '\n')
     .replace(/\n\n/g, '</p><p style="margin-bottom: 16px; color: #334155; line-height: 1.6; font-size: 16px;">')
     .replace(/\n/g, '<br />');
