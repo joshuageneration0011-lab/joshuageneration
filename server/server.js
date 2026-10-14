@@ -4933,6 +4933,11 @@ Joshua's Generation`;
       }
       const form = formRes.rows[0];
 
+      if (form.is_active === false) {
+        sendJson(res, 403, { error: 'This form has been closed and is no longer accepting responses.' });
+        return;
+      }
+
       const subId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
       const userAgent = req.headers['user-agent'] || '';

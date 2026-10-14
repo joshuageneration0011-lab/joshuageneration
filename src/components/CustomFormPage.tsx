@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, resolveApiUrl } from '../utils/api';
 import type { CustomForm, FormField } from '../types';
-import { CheckCircle2, ArrowRight, AlertCircle, Send, Sparkles, Home } from 'lucide-react';
+import { CheckCircle2, ArrowRight, AlertCircle, Send, Sparkles, Home, Lock } from 'lucide-react';
 
 interface CustomFormPageProps {
   slug: string;
@@ -125,7 +125,37 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900">Form Not Found</h2>
-            <p className="text-sm text-gray-500 mt-2">{error || 'This form does not exist or is no longer active.'}</p>
+            <p className="text-sm text-gray-500 mt-2">{error || 'This form does not exist.'}</p>
+          </div>
+          {onNavigateHome && (
+            <button
+              onClick={onNavigateHome}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold transition-all cursor-pointer shadow-md"
+            >
+              <Home className="w-4 h-4" /> Return to Home
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // If the admin has closed the form because the function date passed or responses are stopped
+  if (!form.is_active) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-20 px-4">
+        <div className="max-w-md w-full bg-white border border-amber-200/80 rounded-3xl p-8 text-center space-y-6 shadow-xl">
+          <div className="w-16 h-16 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center mx-auto text-amber-700">
+            <Lock className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold uppercase tracking-wider">
+              Form Closed
+            </span>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 pt-1">{form.title}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed pt-1">
+              This form has been closed and is no longer accepting new submissions.
+            </p>
           </div>
           {onNavigateHome && (
             <button

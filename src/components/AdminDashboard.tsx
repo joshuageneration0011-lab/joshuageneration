@@ -10425,6 +10425,25 @@ function FormBuilderTab() {
     }
   };
 
+  const handleToggleFormStatus = async (form: any) => {
+    const nextStatus = !form.is_active;
+    const confirmMsg = nextStatus
+      ? `Re-open "${form.title}" to accept responses again?`
+      : `Close "${form.title}"?\n\nPeople who open the link will no longer be able to submit the form (e.g. if the function date has passed).`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.saveForm({
+        id: form.id,
+        is_active: nextStatus
+      });
+      setForms(prev => prev.map(f => f.id === form.id ? { ...f, is_active: nextStatus } : f));
+    } catch (err: any) {
+      alert(err.message || 'Failed to update form status');
+    }
+  };
+
   const handleCopyLink = (formSlug: string) => {
     const fullUrl = `${window.location.origin}/form/${formSlug}`;
     navigator.clipboard.writeText(fullUrl);
@@ -10527,12 +10546,20 @@ function FormBuilderTab() {
               <div key={form.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
                 <div>
                   <div className="flex items-start justify-between gap-3">
-                    <span className={cn(
-                      "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                      form.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-                    )}>
-                      {form.is_active ? "Active Form" : "Disabled"}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFormStatus(form)}
+                      title={form.is_active ? "Click to Close Form (stop responses)" : "Click to Re-open Form"}
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 border",
+                        form.is_active
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
+                      )}
+                    >
+                      <span className={cn("w-1.5 h-1.5 rounded-full", form.is_active ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
+                      {form.is_active ? "Open / Accepting" : "Closed"}
+                    </button>
                     <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 font-bold text-[11px] rounded-md border border-blue-100">
                       {form.response_count || 0} Submissions
                     </span>
@@ -10576,6 +10603,29 @@ function FormBuilderTab() {
                   </div>
 
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFormStatus(form)}
+                      title={form.is_active ? "Close Form (Stop people from submitting)" : "Re-open Form (Accept submissions)"}
+                      className={cn(
+                        "px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition cursor-pointer border",
+                        form.is_active
+                          ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                          : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
+                      )}
+                    >
+                      {form.is_active ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Close Form</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Re-open</span>
+                        </>
+                      )}
+                    </button>
                     <button
                       onClick={() => openEditModal(form)}
                       className="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition cursor-pointer"
@@ -10651,6 +10701,28 @@ function FormBuilderTab() {
                       className="w-full py-2.5 pr-3 bg-transparent text-gray-900 font-mono outline-none"
                     />
                   </div>
+                </div>
+
+                {/* Form Acceptance Status Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-900 uppercase tracking-wider">Form Status</label>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      {isActive
+                        ? "Currently accepting submissions from visitors."
+                        : "Closed — visitors will see a notice that the form is closed."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsActive(!isActive)}
+                    className={cn(
+                      "w-12 h-6 rounded-full transition-colors relative p-1 cursor-pointer",
+                      isActive ? "bg-emerald-500" : "bg-gray-300"
+                    )}
+                  >
+                    <div className={cn("w-4 h-4 rounded-full bg-white transition-transform", isActive ? "translate-x-6" : "translate-x-0")} />
+                  </button>
                 </div>
 
                 {/* 1. Header Banner Upload & Position Adjustment */}
