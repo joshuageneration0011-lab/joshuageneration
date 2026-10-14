@@ -404,7 +404,7 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
               <div className="pt-2 space-y-4">
                 <button
                   onClick={handleCompletionRedirect}
-                  className="w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-600 hover:to-amber-800 transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl shadow-amber-500/20 flex items-center justify-center gap-3 cursor-pointer group"
+                  className="w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-emerald-600 via-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-3 cursor-pointer group"
                 >
                   <span>{submissionResult.redirectButtonLabel || 'CLICK HERE TO COMPLETE REGISTRATION'}</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
