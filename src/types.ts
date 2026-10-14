@@ -154,6 +154,7 @@ export interface FormField {
   required: boolean;
   placeholder?: string;
   helpText?: string;
+  textColor?: string;
 }
 
 export interface CustomForm {

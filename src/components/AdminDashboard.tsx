@@ -11039,7 +11039,8 @@ function FormBuilderTab() {
                             value={field.label}
                             onChange={(e) => handleFieldChange(idx, 'label', e.target.value)}
                             placeholder="Question label / title"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-medium"
+                            style={field.textColor ? { color: field.textColor } : undefined}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold outline-none focus:border-[#0b1329] transition-colors"
                           />
                         </div>
                         <div>
@@ -11059,6 +11060,63 @@ function FormBuilderTab() {
                             <option value="date">Date</option>
                           </select>
                         </div>
+                      </div>
+
+                      {/* Question Text Color Picker & Presets */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full border border-gray-300 inline-block"
+                            style={{ backgroundColor: field.textColor || '#111827' }}
+                          />
+                          Text Color:
+                        </span>
+
+                        {/* Quick Presets */}
+                        {[
+                          { label: 'Default', color: '' },
+                          { label: 'Red', color: '#dc2626' },
+                          { label: 'Blue', color: '#2563eb' },
+                          { label: 'Gold/Amber', color: '#d97706' },
+                          { label: 'Green', color: '#059669' },
+                          { label: 'Purple', color: '#7c3aed' },
+                          { label: 'Dark Gray', color: '#374151' }
+                        ].map((preset) => {
+                          const isSelected = (field.textColor || '') === preset.color;
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => handleFieldChange(idx, 'textColor', preset.color)}
+                              className={cn(
+                                "px-2 py-0.5 rounded-md text-[10px] font-bold transition-all border cursor-pointer flex items-center gap-1",
+                                isSelected
+                                  ? "bg-gray-900 text-white border-gray-900 shadow-sm"
+                                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"
+                              )}
+                            >
+                              {preset.color && (
+                                <span
+                                  className="w-2 h-2 rounded-full inline-block"
+                                  style={{ backgroundColor: preset.color }}
+                                />
+                              )}
+                              <span>{preset.label}</span>
+                            </button>
+                          );
+                        })}
+
+                        {/* Custom Color Input */}
+                        <label className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer shadow-sm ml-auto sm:ml-0">
+                          <span>Custom:</span>
+                          <input
+                            type="color"
+                            value={field.textColor || '#111827'}
+                            onChange={(e) => handleFieldChange(idx, 'textColor', e.target.value)}
+                            className="w-4 h-4 rounded border-0 cursor-pointer p-0 bg-transparent"
+                            title="Choose custom color"
+                          />
+                        </label>
                       </div>
 
                       {/* Interactive Options list for Select, Radio, Checkbox */}

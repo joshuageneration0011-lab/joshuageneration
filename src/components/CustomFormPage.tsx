@@ -226,7 +226,10 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
 
             return (
               <div key={field.id} className="space-y-3 pb-6 border-b border-gray-100 last:border-b-0 last:pb-0">
-                <label className="block text-sm font-bold text-gray-900">
+                <label
+                  className="block text-sm font-bold text-gray-900 transition-colors"
+                  style={field.textColor ? { color: field.textColor } : undefined}
+                >
                   {index + 1}. {field.label}
                   {field.required && <span className="text-amber-600 ml-1.5 font-bold">*</span>}
                 </label>
