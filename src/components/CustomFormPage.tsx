@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, resolveApiUrl } from '../utils/api';
 import type { CustomForm, FormField } from '../types';
-import { CheckCircle2, ArrowRight, AlertCircle, Send, Sparkles, Home, Lock } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowDown, AlertCircle, Send, Sparkles, Home, Lock } from 'lucide-react';
 
 interface CustomFormPageProps {
   slug: string;
@@ -391,8 +391,8 @@ export default function CustomFormPage({ slug, onNavigateHome }: CustomFormPageP
       {showSuccessModal && submissionResult && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white border border-gray-200 rounded-3xl max-w-lg w-full shadow-2xl p-8 text-center space-y-6 relative overflow-hidden">
-            <div className="w-20 h-20 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mx-auto text-emerald-600 animate-bounce">
-              <CheckCircle2 className="w-10 h-10" />
+            <div className="w-20 h-20 bg-emerald-50 border-2 border-emerald-300 rounded-full flex items-center justify-center mx-auto text-emerald-600 shadow-md shadow-emerald-500/10 animate-bounce">
+              <ArrowDown className="w-10 h-10 stroke-[2.5]" />
             </div>
 
             <div className="space-y-3">
